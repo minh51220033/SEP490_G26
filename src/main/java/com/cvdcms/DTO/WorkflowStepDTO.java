@@ -39,6 +39,8 @@ public class WorkflowStepDTO {
     private String completedAt;
     private String resultNote;
     private String staffName;
+    private Long assignedStaffId;
+    private Boolean readOnlyByOtherDoctor;
 
     @Builder.Default
     private Map<String, Object> resultData = new LinkedHashMap<>();

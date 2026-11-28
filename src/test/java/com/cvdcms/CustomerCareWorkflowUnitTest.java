@@ -146,7 +146,7 @@ class CustomerCareWorkflowUnitTest {
     }
 
     @Test
-    @DisplayName("Phân quyền: Chặn các role không thuộc ADMIN, LE_TAN, BAC_SI (ví dụ QUAN_LY_KHO, BENH_NHAN)")
+    @DisplayName("Authorization: Reject non-care roles outside ADMIN, LE_TAN, BAC_SI (e.g. QUAN_LY_KHO)")
     void testRejectUnauthorizedRole() {
         when(userRepository.findById(30L)).thenReturn(Optional.of(warehouseUser));
         when(userRepository.hasActiveAdminRole(30L)).thenReturn(false);
@@ -158,7 +158,7 @@ class CustomerCareWorkflowUnitTest {
     }
 
     @Test
-    @DisplayName("Phân quyền theo Cơ sở: Lễ tân ở CN01 không được phép xem hoặc tiếp nhận bệnh nhân của CN02")
+    @DisplayName("Branch Isolation: Receptionist in branch CN01 cannot view or handle patients in CN02")
     void testReceptionistBranchIsolation() {
         when(userRepository.findById(10L)).thenReturn(Optional.of(receptionistUser));
         when(userRepository.hasActiveAdminRole(10L)).thenReturn(false);
@@ -173,7 +173,7 @@ class CustomerCareWorkflowUnitTest {
     }
 
     @Test
-    @DisplayName("SCR-44.1 & SCR-44.2: Tính toán chính xác 4 chỉ số KPI Dashboard và số lượng từng tab phân nhóm")
+    @DisplayName("SCR-44.1 & SCR-44.2: Accurately calculate KPI Dashboard metrics and group counts")
     void testGetSummarySuccess() {
         when(userRepository.findById(1L)).thenReturn(Optional.of(adminUser));
         when(userRepository.hasActiveAdminRole(1L)).thenReturn(true);
@@ -217,7 +217,7 @@ class CustomerCareWorkflowUnitTest {
     }
 
     @Test
-    @DisplayName("SCR-44.3: Tạo công việc CSKH mới thuộc nhóm mở rộng (Nhắc trả góp) không lỗi ENUM MySQL")
+    @DisplayName("SCR-44.3: Create care task with extended careGroup (INSTALLMENT_REMINDER) without MySQL ENUM errors")
     void testCreateTaskWithExtendedCareGroup() {
         when(userRepository.findById(10L)).thenReturn(Optional.of(receptionistUser));
         when(userRepository.hasActiveAdminRole(10L)).thenReturn(false);
@@ -252,7 +252,7 @@ class CustomerCareWorkflowUnitTest {
     }
 
     @Test
-    @DisplayName("SCR-44.4: Ghi nhận liên hệ NO_ANSWER nhưng thiếu thời điểm gọi lại (nextRetryAt) phải báo lỗi 400")
+    @DisplayName("SCR-44.4: Recording NO_ANSWER interaction without nextRetryAt must fail with HTTP 400")
     void testRecordInteractionNoAnswerRequiresNextRetryAt() {
         when(userRepository.findById(10L)).thenReturn(Optional.of(receptionistUser));
         when(userRepository.hasActiveAdminRole(10L)).thenReturn(false);
@@ -275,7 +275,7 @@ class CustomerCareWorkflowUnitTest {
     }
 
     @Test
-    @DisplayName("SCR-44.5: Lễ tân chuyển tiếp Bác sĩ thành công; chỉ Bác sĩ hoặc Admin mới được nhập phản hồi chuyên môn")
+    @DisplayName("SCR-44.5: Receptionist escalates to Doctor successfully; only Doctor or Admin can submit clinical response")
     void testEscalateToDoctorAndDoctorResponsePermission() {
         // 1. Lễ tân tại CN01 chuyển tiếp Bác sĩ
         when(userRepository.findById(10L)).thenReturn(Optional.of(receptionistUser));

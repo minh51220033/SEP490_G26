@@ -1,8 +1,21 @@
+/**
+ * @fileoverview Script điều khiển toàn bộ giao diện Quản lý kho vật tư ({@code inventory/list.html}).
+ * <p>Kết nối REST API của các module:</p>
+ * <ul>
+ *   <li>Tồn kho &amp; KPI tổng quan: {@code /api/inventory}, {@code /api/inventory/summary}, {@code /api/inventory/picker-materials}</li>
+ *   <li>Lô &amp; Hạn sử dụng: {@code /api/inventory/batches}, {@code /api/inventory/batches/available}</li>
+ *   <li>Phiếu nhập / xuất / điều chuyển: {@code /api/inventory/receipts}, {@code /api/inventory/issues}, {@code /api/inventory/transfers}</li>
+ *   <li>Danh mục vật tư &amp; Nhóm vật tư: {@code /api/materials}</li>
+ *   <li>Nhà cung cấp &amp; Thanh toán công nợ: {@code /api/suppliers}, {@code /api/inventory/supplier-payments}</li>
+ * </ul>
+ */
 (() => {
     "use strict";
 
+    /** Tiện ích rút gọn {@code document.getElementById}. */
     const $ = (id) => document.getElementById(id);
 
+    /** Gắn sự kiện an toàn cho phần tử DOM (bỏ qua nếu phần tử không tồn tại do phân quyền). */
     const safeOn = (id, event, handler, options) => {
         const el = typeof id === "string" ? $(id) : id;
         if (el && typeof el.addEventListener === "function") {
@@ -12,6 +25,7 @@
         return null;
     };
 
+    /** Tập biểu thức chính quy validate phía client khớp quy tắc Backend (số lô, hóa đơn, mã VT, mã NCC, MST, SĐT, số chứng từ). */
     const REGEX = {
         BATCH_NUMBER: /^[A-Za-z0-9._/-]{2,50}$/,
         INVOICE_NO: /^[A-Za-z0-9._/-]{1,50}$/,
@@ -22,6 +36,7 @@
         REFERENCE_NO: /^[A-Za-z0-9._/-]{1,100}$/
     };
 
+    /** Trạng thái dùng chung của trang kho (chi nhánh hiện tại, danh mục cache, tab đang mở và chỉ số phân trang của từng bảng). */
     const state = {
         branchId: null,
         branchSelectionAllowed: false,
@@ -53,12 +68,7 @@
         materialsTotalPages: 0,
 
         paymentsPage: 0,
-        paymentsTotalPages: 0,
-
-        // Quản lý ngữ cảnh bảng ký điện tử (receipt-draft, issue-draft, transfer-draft, receipt-existing, issue-existing)
-        signContext: null,
-        signTargetId: null,
-        hasSignatureStrokes: false
+        paymentsTotalPages: 0
     };
 
     // Quản lý AbortController theo từng nhóm truy vấn để tránh kết quả cũ ghi đè kết quả mới
@@ -113,6 +123,13 @@
         el.hidden = !text;
     }
 
+    /**
+     * Gọi REST API nội bộ kèm cookie phiên ({@code same-origin}), tự động parse JSON và chuẩn hóa thông báo lỗi tiếng Việt.
+     * Tự động không gắn {@code Content-Type: application/json} khi gửi {@link FormData}.
+     * @param {string} url đường dẫn API
+     * @param {RequestInit} [options] cấu hình fetch (method, body, signal, headers)
+     * @returns {Promise<any>} dữ liệu JSON hoặc chuỗi phản hồi từ server
+     */
     async function request(url, options = {}) {
         const isFormData = options.body instanceof FormData;
         const headers = isFormData
@@ -157,6 +174,12 @@
         if ($("imageLightboxModal")) $("imageLightboxModal").hidden = false;
     }
 
+    /**
+     * Mở trang xem trước &amp; in phiếu chuẩn A4 trong tab mới kèm cờ {@code autoprint=true} để tự động gọi {@code window.print()}.
+     * Nếu trình duyệt chặn popup, hiển thị liên kết mở thủ công trên thanh thông báo.
+     * Được gọi từ nút "In A4" trên bảng lịch sử phiếu nhập / xuất / điều chuyển.
+     * @param {string} baseUrl URL trang in (ví dụ {@code /inventory/receipts/{id}/print})
+     */
     function printInventoryDocument(baseUrl) {
         if (!baseUrl) return;
         const separator = baseUrl.includes("?") ? "&" : "?";
@@ -220,6 +243,11 @@
         if ($("statTotalDebtSub")) $("statTotalDebtSub").textContent = errorMsg;
     }
 
+    /**
+     * Tải và cập nhật 4 thẻ KPI tổng quan kho đầu trang từ {@code GET /api/inventory/summary?branchId=...}:
+     * (1) Tổng mặt hàng trong kho, (2) Cảnh báo sắp hết/hết tồn, (3) Lô hết hạn/sắp hết hạn, (4) Tổng công nợ NCC.
+     * Được gọi khi đổi chi nhánh, làm mới dữ liệu hoặc sau khi lập phiếu nhập/xuất/điều chuyển/thanh toán.
+     */
     async function updateSummaryStats() {
         if (!state.branchId) {
             setKpiError("Chưa chọn chi nhánh");
@@ -277,6 +305,12 @@
         }
     }
 
+    /**
+     * Tải danh sách chi nhánh người dùng được phép truy cập ({@code GET /api/branches/accessible}) và toàn bộ chi nhánh
+     * đang hoạt động ({@code GET /api/branches/active}) để dựng dropdown chọn cơ sở và chi nhánh đích điều chuyển.
+     * Sau khi xác định {@code state.branchId}, đồng thời nạp danh mục vật tư, danh mục NCC và làm mới toàn bộ dữ liệu kho.
+     * Được gọi khi khởi tạo trang trong {@code DOMContentLoaded}.
+     */
     async function loadBranches() {
         const select = $("branchId");
         setKpiLoading();
@@ -573,6 +607,15 @@
         });
     }
 
+    /**
+     * Cập nhật thanh phân trang chuẩn MISA AMIS (tổng số bản ghi, khoảng hiển thị {@code from - to}, dropdown pageSize
+     * và trạng thái bật/tắt 4 nút điều hướng Đầu / Trước / Sau / Cuối) cho từng bảng dữ liệu trong 8 tab.
+     * @param {string} labelPrefix tiền tố ID nhãn (ví dụ {@code "Inventory"}, {@code "Batches"}, {@code "Receipts"})
+     * @param {number} page chỉ số trang hiện tại (0-based)
+     * @param {number} totalElements tổng số bản ghi khớp bộ lọc
+     * @param {number} totalPages tổng số trang
+     * @param {string|null} [idPrefix] tiền tố ID nút/select nếu khác {@code labelPrefix.toLowerCase()}
+     */
     function updateMisaPagination(labelPrefix, page, totalElements, totalPages, idPrefix = null) {
         const idPfx = idPrefix || labelPrefix.toLowerCase();
         const fromItem = totalElements === 0 ? 0 : (page * state.pageSize) + 1;
@@ -641,6 +684,12 @@
         loadPaymentHistory(0);
     };
 
+    /**
+     * Tải danh sách tồn kho tổng hợp phân trang tại chi nhánh hiện tại ({@code GET /api/inventory})
+     * theo từ khóa tìm kiếm và checkbox lọc "Sắp hết / chạm ngưỡng", sau đó render các cột đang bật trong {@code invColumns}.
+     * Sử dụng {@code AbortController} để hủy yêu cầu cũ khi người dùng gõ tìm kiếm liên tục.
+     * @param {number} [page=state.inventoryPage] chỉ số trang cần tải (0-based)
+     */
     async function loadInventory(page = state.inventoryPage) {
         if (!requireBranch()) return;
         state.inventoryPage = page;
@@ -706,6 +755,12 @@
     // 2. TAB LÔ & HẠN SỬ DỤNG
     // =========================================================================
 
+    /**
+     * Tải danh sách lô vật tư &amp; hạn sử dụng phân trang tại chi nhánh ({@code GET /api/inventory/batches}),
+     * sắp xếp theo hạn sử dụng tăng dần (FEFO) và hỗ trợ lọc theo từ khóa cùng khoảng ngày {@code expiryFrom} – {@code expiryTo}.
+     * Hiển thị nhãn cảnh báo: Đã hết tồn (0), Đã hết hạn, Sắp hết hạn (≤ 30 ngày) hoặc Còn hạn.
+     * @param {number} [page=state.batchesPage] chỉ số trang cần tải (0-based)
+     */
     async function loadBatches(page = state.batchesPage) {
         if (!requireBranch()) return;
         state.batchesPage = page;
@@ -757,7 +812,7 @@
     }
 
     // =========================================================================
-    // 3. TAB PHIẾU NHẬP KHO (UPLOAD HÓA ĐƠN, THANH TOÁN, KÝ ĐIỆN TỬ, LỊCH SỬ, PDF)
+    // 3. TAB PHIẾU NHẬP KHO (UPLOAD HÓA ĐƠN, THANH TOÁN, LỊCH SỬ, PDF)
     // =========================================================================
 
     function reindexAndUpdateVoucherRows(formType) {
@@ -942,7 +997,6 @@
         $("receiptDate").value = new Date().toISOString().slice(0, 10);
         $("receiptItems").innerHTML = "";
         clearUploadedInvoice();
-        clearDraftSignature("receipt");
         if ($("receiptPaidAmount")) $("receiptPaidAmount").value = "0";
         if ($("receiptPaymentMethod")) $("receiptPaymentMethod").value = "BANK_TRANSFER";
         if ($("receiptPaymentRefNo")) $("receiptPaymentRefNo").value = "";
@@ -976,6 +1030,14 @@
         }
     }
 
+    /**
+     * Xử lý submit biểu mẫu lập Phiếu nhập kho ({@code #receiptForm} → {@code POST /api/inventory/receipts}).
+     * Quy trình: kiểm tra số hóa đơn NCC, tự động tải lên tệp hóa đơn bắt buộc nếu chưa upload xong,
+     * validate từng dòng vật tư (không trùng mã VT + số lô, regex số lô, HSD ≥ ngày nhập, SL nguyên &gt; 0, đơn giá ≥ 0),
+     * kiểm tra số tiền thanh toán ngay ≤ tổng tiền nhập, gửi JSON lên server, hiển thị hộp kết quả kèm nút In A4 / Xuất PDF
+     * và làm mới lại tồn kho + lịch sử phiếu nhập.
+     * @param {SubmitEvent} event sự kiện submit của form {@code #receiptForm}
+     */
     async function submitReceipt(event) {
         event.preventDefault();
         if (!requireBranch()) return;
@@ -1079,7 +1141,6 @@
             paidAmount,
             paymentMethod: $("receiptPaymentMethod")?.value || "BANK_TRANSFER",
             paymentReferenceNo: paymentRefNo || null,
-            signatureData: $("receiptSignatureData")?.value || null,
             items
         };
         if (!payload.supplierId) {
@@ -1139,18 +1200,16 @@
             </div>`;
     }
 
-    function renderSignatureCell(signatureUrl, signedByName, recordId, type) {
-        if (signatureUrl) {
-            return `<span class="status status-good" title="Người ký: ${escapeHtml(signedByName || "")}">Đã ký (${escapeHtml(signedByName || "NV")})</span>`;
-        }
-        const attr = type === "receipt" ? `data-sign-receipt="${recordId}"` : `data-sign-issue="${recordId}"`;
-        return `<button type="button" class="button button-secondary button-sm" ${attr}>Ký điện tử</button>`;
-    }
-
+    /**
+     * Tải và phân trang lịch sử phiếu nhập kho tại chi nhánh ({@code GET /api/inventory/receipts})
+     * theo từ khóa, nhà cung cấp ({@code #receiptFilterSupplier}) và khoảng ngày nhập.
+     * Render bảng kèm thumbnail/PDF hóa đơn, tổng tiền, đã trả, còn nợ và các nút Chi tiết / PDF / In A4.
+     * @param {number} [page=state.receiptsPage] chỉ số trang cần tải (0-based)
+     */
     async function loadReceiptHistory(page = state.receiptsPage) {
         if (!requireBranch()) return;
         state.receiptsPage = page;
-        $("receiptHistoryTable").innerHTML = '<tr><td colspan="9" class="empty">Đang tải lịch sử phiếu nhập...</td></tr>';
+        $("receiptHistoryTable").innerHTML = '<tr><td colspan="8" class="empty">Đang tải lịch sử phiếu nhập...</td></tr>';
 
         const params = new URLSearchParams({
             branchId: state.branchId,
@@ -1183,7 +1242,6 @@
                     <td><strong>${money(r.totalAmount)}</strong></td>
                     <td class="stock-good">${money(r.paidAmount)}</td>
                     <td class="${debt > 0 ? "stock-low" : "stock-good"}">${money(debt)}</td>
-                    <td>${renderSignatureCell(r.signatureUrl, r.signedByName, r.receiptId, "receipt")}</td>
                     <td>
                         <div class="row-actions">
                             <button type="button" class="button button-secondary button-sm" data-view-receipt="${r.receiptId}">Chi tiết</button>
@@ -1192,16 +1250,21 @@
                         </div>
                     </td>
                 </tr>`;
-            }).join("") : '<tr><td colspan="9" class="empty">Chưa có phiếu nhập kho phù hợp.</td></tr>';
+            }).join("") : '<tr><td colspan="8" class="empty">Chưa có phiếu nhập kho phù hợp.</td></tr>';
 
             const totalReceipts = Number(data?.totalElements || 0);
             updateMisaPagination("Receipts", page, totalReceipts, state.receiptsTotalPages, "receiptHistory");
         } catch (error) {
             if (error.name === "AbortError") return;
-            $("receiptHistoryTable").innerHTML = `<tr><td colspan="9" class="empty">${escapeHtml(error.message)}</td></tr>`;
+            $("receiptHistoryTable").innerHTML = `<tr><td colspan="8" class="empty">${escapeHtml(error.message)}</td></tr>`;
         }
     }
 
+    /**
+     * Tải chi tiết một phiếu nhập kho ({@code GET /api/inventory/receipts/{receiptId}}) và hiển thị trong Modal chi tiết ({@code #detailModal})
+     * gồm thông tin chung, ảnh/PDF hóa đơn đính kèm, bảng chi tiết vật tư/lô và các nút Tải PDF / Xem bản in A4.
+     * @param {number|string} receiptId mã định danh phiếu nhập kho
+     */
     async function viewReceiptDetail(receiptId) {
         try {
             const r = await request(`/api/inventory/receipts/${receiptId}`);
@@ -1233,20 +1296,6 @@
                        </div>`)
                 : `<span style="color:#94a3b8;">Không có ảnh hóa đơn</span>`;
 
-            const signatureBlock = r.signatureUrl
-                ? `<div style="display:flex; align-items:center; gap:14px;">
-                       <img src="${escapeHtml(r.signatureUrl)}" alt="Chữ ký điện tử" class="detail-signature-img">
-                       <div>
-                           <div>Người ký: <strong>${escapeHtml(r.signedByName || r.receiverName || "—")}</strong></div>
-                           <div style="font-size:12px; color:#64748b;">Thời gian ký: ${escapeHtml(formatDateTime(r.signedAt))}</div>
-                           <span class="status status-good" style="margin-top:4px; display:inline-block;">Chữ ký hợp lệ (Đã khóa)</span>
-                       </div>
-                   </div>`
-                : `<div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
-                       <span style="color:#64748b;">Phiếu nhập này chưa được ký điện tử.</span>
-                       <button type="button" class="button button-primary button-sm" data-sign-receipt="${r.receiptId}">Ký điện tử ngay</button>
-                   </div>`;
-
             $("detailModalBody").innerHTML = `
                 <div class="detail-meta-grid">
                     <div class="detail-meta-item"><span>Mã phiếu nhập</span><strong>${escapeHtml(r.receiptCode)}</strong></div>
@@ -1260,15 +1309,9 @@
                     <div class="detail-meta-item"><span>Công nợ còn lại</span><strong class="${Number(r.remainingDebt || 0) > 0 ? "stock-low" : "stock-good"}">${money(r.remainingDebt)}</strong></div>
                 </div>
                 ${r.notes ? `<p style="margin-bottom:10px;"><strong>Ghi chú:</strong> ${escapeHtml(r.notes)}</p>` : ""}
-                <div class="detail-attachments-grid">
-                    <div class="detail-attachment-card">
-                        <h4>Ảnh / Chứng từ hóa đơn</h4>
-                        ${invoiceBlock}
-                    </div>
-                    <div class="detail-attachment-card">
-                        <h4>Chữ ký điện tử người lập</h4>
-                        ${signatureBlock}
-                    </div>
+                <div class="detail-attachment-card" style="margin: 12px 0;">
+                    <h4>Ảnh / Chứng từ hóa đơn</h4>
+                    ${invoiceBlock}
                 </div>
                 <div class="table-wrap">
                     <table>
@@ -1394,7 +1437,6 @@
         $("issueForm").reset();
         $("issueDate").value = new Date().toISOString().slice(0, 10);
         $("issueItems").innerHTML = "";
-        clearDraftSignature("issue");
         syncIssueReasonVisibility();
         reindexAndUpdateVoucherRows("issue");
     }
@@ -1404,7 +1446,6 @@
         $("transferDate").value = new Date().toISOString().slice(0, 10);
         populateDestinationBranches();
         $("transferItems").innerHTML = "";
-        clearDraftSignature("transfer");
         reindexAndUpdateVoucherRows("transfer");
     }
 
@@ -1432,6 +1473,13 @@
         });
     }
 
+    /**
+     * Xử lý submit biểu mẫu lập Phiếu xuất kho ({@code #issueForm} → {@code POST /api/inventory/issues}).
+     * Quy trình: kiểm tra danh sách dòng vật tư, số lượng nguyên &gt; 0, đối chiếu tổng SL yêu cầu với tồn khả dụng
+     * (theo từng lô đã chọn và tổng theo vật tư, chỉ cho phép lô hết hạn khi {@code issueType === "DISCARD_EXPIRED"}),
+     * bắt buộc lý do khi chọn {@code OTHER}, gửi request tạo phiếu và làm mới tồn kho + lịch sử xuất.
+     * @param {SubmitEvent} event sự kiện submit của form {@code #issueForm}
+     */
     async function submitIssue(event) {
         event.preventDefault();
         if (!requireBranch()) return;
@@ -1496,7 +1544,6 @@
             issueReason: selectedIssueType === "OTHER" ? rawIssueReason : null,
             issueDate: $("issueDate").value,
             notes: $("issueNotes").value.trim() || null,
-            signatureData: $("issueSignatureData")?.value || null,
             items
         };
 
@@ -1518,6 +1565,12 @@
         }
     }
 
+    /**
+     * Xử lý submit biểu mẫu lập Phiếu điều chuyển vật tư liên chi nhánh ({@code #transferForm} → {@code POST /api/inventory/transfers}).
+     * Kiểm tra chi nhánh đích khác chi nhánh nguồn, danh sách dòng vật tư và số lượng nguyên &gt; 0,
+     * sau đó gửi payload với {@code issueType: "TRANSFER"} và làm mới tồn kho + lịch sử điều chuyển.
+     * @param {SubmitEvent} event sự kiện submit của form {@code #transferForm}
+     */
     async function submitTransfer(event) {
         event.preventDefault();
         if (!requireBranch()) return;
@@ -1558,7 +1611,6 @@
             destinationBranchId: destBranchId,
             issueDate: $("transferDate").value,
             notes: $("transferNotes").value.trim() || null,
-            signatureData: $("transferSignatureData")?.value || null,
             items
         };
 
@@ -1580,10 +1632,16 @@
         }
     }
 
+    /**
+     * Tải và phân trang lịch sử phiếu xuất kho ({@code GET /api/inventory/issues?excludeTransfer=true})
+     * theo từ khóa, loại xuất kho ({@code #issueFilterType}) và khoảng ngày.
+     * Render bảng kèm badge phân loại (Nội bộ, Đơn thuốc, Hoàn kho đơn thuốc, Hủy hết hạn, Mục đích khác) và nút Chi tiết / PDF / In A4.
+     * @param {number} [page=state.issuesPage] chỉ số trang cần tải (0-based)
+     */
     async function loadIssueHistory(page = state.issuesPage) {
         if (!requireBranch()) return;
         state.issuesPage = page;
-        $("issueHistoryTable").innerHTML = '<tr><td colspan="9" class="empty">Đang tải lịch sử phiếu xuất...</td></tr>';
+        $("issueHistoryTable").innerHTML = '<tr><td colspan="8" class="empty">Đang tải lịch sử phiếu xuất...</td></tr>';
 
         const params = new URLSearchParams({
             branchId: state.branchId,
@@ -1607,9 +1665,20 @@
             $("issueHistoryTable").innerHTML = rows.length ? rows.map(si => {
                 const isDiscard = si.issueType === "DISCARD_EXPIRED";
                 const isOther = si.issueType === "OTHER";
-                const typeLabel = isDiscard ? "Xuất hủy hết hạn" : (isOther ? "Mục đích khác" : "Xuất sử dụng nội bộ");
-                const typeCls = isDiscard ? "status-danger" : (isOther ? "status-warning" : "status-info");
-                const noteOrReasonHtml = (isOther && si.issueReason) ? `<div><strong>Lý do:</strong> ${escapeHtml(si.issueReason)}</div>${si.notes ? `<div class="text-muted small">${escapeHtml(si.notes)}</div>` : ""}` : escapeHtml(si.notes || "—");
+                const isPrescOut = si.issueType === "PRESCRIPTION_OUT";
+                const isPrescReturn = si.issueType === "PRESCRIPTION_RETURN";
+                const typeLabel = isDiscard ? "Xuất hủy hết hạn"
+                    : (isPrescOut ? "Xuất theo đơn thuốc"
+                    : (isPrescReturn ? "Hoàn kho đơn thuốc"
+                    : (isOther ? "Mục đích khác" : "Xuất sử dụng nội bộ")));
+                const typeCls = isDiscard ? "status-danger"
+                    : (isPrescOut ? "status-primary"
+                    : (isPrescReturn ? "status-success"
+                    : (isOther ? "status-warning" : "status-info")));
+                const prescTag = si.prescriptionCode ? `<div class="small text-primary fw-semibold">Đơn thuốc: ${escapeHtml(si.prescriptionCode)}</div>` : "";
+                const noteOrReasonHtml = ((isOther || isPrescOut || isPrescReturn) && si.issueReason)
+                    ? `${prescTag}<div><strong>Lý do:</strong> ${escapeHtml(si.issueReason)}</div>${si.notes ? `<div class="text-muted small">${escapeHtml(si.notes)}</div>` : ""}`
+                    : `${prescTag}${escapeHtml(si.notes || "—")}`;
                 return `<tr>
                     <td class="code">${escapeHtml(si.issueCode)}</td>
                     <td>${escapeHtml(si.issueDate)}</td>
@@ -1617,7 +1686,6 @@
                     <td>${escapeHtml(si.issuerName || "—")}</td>
                     <td><strong>${escapeHtml(fmtQty(si.totalQuantity))}</strong> (${escapeHtml(si.itemCount)} dòng)</td>
                     <td>${money(si.totalEstimatedValue)}</td>
-                    <td>${renderSignatureCell(si.signatureUrl, si.signedByName, si.issueId, "issue")}</td>
                     <td>${noteOrReasonHtml}</td>
                     <td>
                         <div class="row-actions">
@@ -1627,16 +1695,21 @@
                         </div>
                     </td>
                 </tr>`;
-            }).join("") : '<tr><td colspan="9" class="empty">Chưa có phiếu xuất kho phù hợp.</td></tr>';
+            }).join("") : '<tr><td colspan="8" class="empty">Chưa có phiếu xuất kho phù hợp.</td></tr>';
 
             const totalIssues = Number(data?.totalElements || 0);
             updateMisaPagination("Issues", page, totalIssues, state.issuesTotalPages, "issueHistory");
         } catch (error) {
             if (error.name === "AbortError") return;
-            $("issueHistoryTable").innerHTML = `<tr><td colspan="9" class="empty">${escapeHtml(error.message)}</td></tr>`;
+            $("issueHistoryTable").innerHTML = `<tr><td colspan="8" class="empty">${escapeHtml(error.message)}</td></tr>`;
         }
     }
 
+    /**
+     * Tải và phân trang lịch sử giao dịch điều chuyển kho ({@code GET /api/inventory/transfers})
+     * liên quan đến chi nhánh hiện tại (hiển thị hướng "Chuyển đi (-)" hoặc "Nhận về (+)") kèm nút Chi tiết / PDF / In A4.
+     * @param {number} [page=state.transfersPage] chỉ số trang cần tải (0-based)
+     */
     async function loadTransferHistory(page = state.transfersPage) {
         if (!requireBranch()) return;
         state.transfersPage = page;
@@ -1690,6 +1763,11 @@
         }
     }
 
+    /**
+     * Tải chi tiết một phiếu xuất kho hoặc phiếu điều chuyển ({@code GET /api/inventory/issues/{issueId}})
+     * và hiển thị trong Modal chi tiết ({@code #detailModal}) cùng bảng lô đã xuất và liên kết tải PDF / xem bản in A4.
+     * @param {number|string} issueId mã định danh phiếu xuất / điều chuyển
+     */
     async function viewIssueDetail(issueId) {
         try {
             const si = await request(`/api/inventory/issues/${issueId}`);
@@ -1713,25 +1791,12 @@
                 </tr>
             `).join("");
 
-            const signatureBlock = si.signatureUrl
-                ? `<div style="display:flex; align-items:center; gap:14px;">
-                       <img src="${escapeHtml(si.signatureUrl)}" alt="Chữ ký điện tử" class="detail-signature-img">
-                       <div>
-                           <div>Người ký: <strong>${escapeHtml(si.signedByName || si.issuerName || "—")}</strong></div>
-                           <div style="font-size:12px; color:#64748b;">Thời gian ký: ${escapeHtml(formatDateTime(si.signedAt))}</div>
-                           <span class="status status-good" style="margin-top:4px; display:inline-block;">Chữ ký hợp lệ (Đã khóa)</span>
-                       </div>
-                   </div>`
-                : `<div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
-                       <span style="color:#64748b;">Phiếu xuất này chưa được ký điện tử.</span>
-                       <button type="button" class="button button-primary button-sm" data-sign-issue="${si.issueId}">Ký điện tử ngay</button>
-                   </div>`;
-
             $("detailModalBody").innerHTML = `
                 <div class="detail-meta-grid">
                     <div class="detail-meta-item"><span>Mã phiếu</span><strong>${escapeHtml(si.issueCode)}</strong></div>
                     <div class="detail-meta-item"><span>Ngày lập</span><strong>${escapeHtml(si.issueDate)}</strong></div>
-                    <div class="detail-meta-item"><span>Loại giao dịch</span><strong>${escapeHtml(si.issueType === "TRANSFER" ? "Điều chuyển liên chi nhánh" : (si.issueType === "DISCARD_EXPIRED" ? "Xuất hủy vật tư hết hạn" : (si.issueType === "OTHER" ? "Mục đích khác" : "Xuất sử dụng nội bộ")))}</strong></div>
+                    <div class="detail-meta-item"><span>Loại giao dịch</span><strong>${escapeHtml(si.issueType === "TRANSFER" ? "Điều chuyển liên chi nhánh" : (si.issueType === "DISCARD_EXPIRED" ? "Xuất hủy vật tư hết hạn" : (si.issueType === "PRESCRIPTION_OUT" ? "Xuất theo đơn thuốc (FEFO)" : (si.issueType === "PRESCRIPTION_RETURN" ? "Hoàn kho do sửa/hủy đơn thuốc" : (si.issueType === "OTHER" ? "Mục đích khác" : "Xuất sử dụng nội bộ")))))}</strong></div>
+                    ${si.prescriptionCode ? `<div class="detail-meta-item"><span>Mã đơn thuốc</span><strong>${escapeHtml(si.prescriptionCode)}</strong></div>` : ""}
                     ${si.issueReason ? `<div class="detail-meta-item"><span>Lý do xuất kho</span><strong>${escapeHtml(si.issueReason)}</strong></div>` : ""}
                     <div class="detail-meta-item"><span>Chi nhánh xuất</span><strong>${escapeHtml(si.branchName)}</strong></div>
                     ${isTransfer ? `<div class="detail-meta-item"><span>Chi nhánh nhận</span><strong>${escapeHtml(si.destinationBranchName || "—")}</strong></div>` : ""}
@@ -1740,10 +1805,6 @@
                     <div class="detail-meta-item"><span>Tổng giá trị vốn</span><strong>${money(si.totalEstimatedValue)}</strong></div>
                 </div>
                 ${si.notes ? `<p style="margin-bottom:10px;"><strong>Ghi chú:</strong> ${escapeHtml(si.notes)}</p>` : ""}
-                <div class="detail-attachment-card" style="margin-bottom:14px;">
-                    <h4>Chữ ký điện tử người lập phiếu xuất</h4>
-                    ${signatureBlock}
-                </div>
                 <div class="table-wrap">
                     <table>
                         <thead>
@@ -1773,184 +1834,14 @@
     }
 
     // =========================================================================
-    // A4. BẢNG KÝ ĐIỆN TỬ (HTML5 CANVAS - MOUSE, TOUCH, STYLUS)
-    // =========================================================================
-
-    function initSignatureCanvas() {
-        const canvas = $("signatureCanvas");
-        if (!canvas) return;
-        const ctx = canvas.getContext("2d");
-
-        const resetCtxStyle = () => {
-            ctx.strokeStyle = "#0f172a";
-            ctx.lineWidth = 2.4;
-            ctx.lineCap = "round";
-            ctx.lineJoin = "round";
-        };
-        resetCtxStyle();
-
-        let drawing = false;
-        let lastX = 0;
-        let lastY = 0;
-
-        const getPoint = (e) => {
-            const rect = canvas.getBoundingClientRect();
-            const scaleX = canvas.width / (rect.width || canvas.width);
-            const scaleY = canvas.height / (rect.height || canvas.height);
-            let clientX = e.clientX;
-            let clientY = e.clientY;
-            if (e.touches && e.touches.length > 0) {
-                clientX = e.touches[0].clientX;
-                clientY = e.touches[0].clientY;
-            }
-            return {
-                x: (clientX - rect.left) * scaleX,
-                y: (clientY - rect.top) * scaleY
-            };
-        };
-
-        const startDraw = (e) => {
-            if (e.cancelable) e.preventDefault();
-            drawing = true;
-            state.hasSignatureStrokes = true;
-            const pt = getPoint(e);
-            lastX = pt.x;
-            lastY = pt.y;
-            ctx.beginPath();
-            ctx.moveTo(lastX, lastY);
-            ctx.lineTo(lastX + 0.1, lastY + 0.1);
-            ctx.stroke();
-        };
-
-        const moveDraw = (e) => {
-            if (!drawing) return;
-            if (e.cancelable) e.preventDefault();
-            const pt = getPoint(e);
-            ctx.beginPath();
-            ctx.moveTo(lastX, lastY);
-            ctx.lineTo(pt.x, pt.y);
-            ctx.stroke();
-            lastX = pt.x;
-            lastY = pt.y;
-        };
-
-        const endDraw = () => {
-            drawing = false;
-        };
-
-        canvas.addEventListener("mousedown", startDraw);
-        canvas.addEventListener("mousemove", moveDraw);
-        window.addEventListener("mouseup", endDraw);
-
-        canvas.addEventListener("touchstart", startDraw, { passive: false });
-        canvas.addEventListener("touchmove", moveDraw, { passive: false });
-        window.addEventListener("touchend", endDraw);
-    }
-
-    function clearSignatureCanvas() {
-        const canvas = $("signatureCanvas");
-        if (!canvas) return;
-        const ctx = canvas.getContext("2d");
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        state.hasSignatureStrokes = false;
-    }
-
-    function openSignatureModal(context, targetId = null) {
-        state.signContext = context;
-        state.signTargetId = targetId;
-        clearSignatureCanvas();
-        if ($("signatureModal")) $("signatureModal").hidden = false;
-    }
-
-    function clearDraftSignature(formKind) {
-        if (formKind === "receipt") {
-            if ($("receiptSignatureData")) $("receiptSignatureData").value = "";
-            if ($("receiptSignPreview")) { $("receiptSignPreview").src = ""; $("receiptSignPreview").hidden = true; }
-            if ($("receiptSignStatus")) $("receiptSignStatus").textContent = "Chưa ký (Có thể ký ngay hoặc ký sau trong lịch sử phiếu)";
-            if ($("clearReceiptSignBtn")) $("clearReceiptSignBtn").hidden = true;
-        } else if (formKind === "issue") {
-            if ($("issueSignatureData")) $("issueSignatureData").value = "";
-            if ($("issueSignPreview")) { $("issueSignPreview").src = ""; $("issueSignPreview").hidden = true; }
-            if ($("issueSignStatus")) $("issueSignStatus").textContent = "Chưa ký (Có thể ký ngay hoặc ký sau trong lịch sử phiếu)";
-            if ($("clearIssueSignBtn")) $("clearIssueSignBtn").hidden = true;
-        } else if (formKind === "transfer") {
-            if ($("transferSignatureData")) $("transferSignatureData").value = "";
-            if ($("transferSignPreview")) { $("transferSignPreview").src = ""; $("transferSignPreview").hidden = true; }
-            if ($("transferSignStatus")) $("transferSignStatus").textContent = "Chưa ký";
-            if ($("clearTransferSignBtn")) $("clearTransferSignBtn").hidden = true;
-        }
-    }
-
-    async function confirmSignature() {
-        const canvas = $("signatureCanvas");
-        if (!canvas || !state.hasSignatureStrokes) {
-            showMessage("Vui lòng vẽ chữ ký rõ ràng lên vùng ký trước khi bấm Xác nhận.", "warning");
-            return;
-        }
-        const dataUrl = canvas.toDataURL("image/png");
-        const btn = $("confirmSignatureBtn");
-
-        if (state.signContext === "receipt-draft") {
-            $("receiptSignatureData").value = dataUrl;
-            $("receiptSignPreview").src = dataUrl;
-            $("receiptSignPreview").hidden = false;
-            $("receiptSignStatus").textContent = "Đã ký nháp (Sẽ lưu cùng phiếu nhập)";
-            $("clearReceiptSignBtn").hidden = false;
-            $("signatureModal").hidden = true;
-            return;
-        }
-        if (state.signContext === "issue-draft") {
-            $("issueSignatureData").value = dataUrl;
-            $("issueSignPreview").src = dataUrl;
-            $("issueSignPreview").hidden = false;
-            $("issueSignStatus").textContent = "Đã ký nháp (Sẽ lưu cùng phiếu xuất)";
-            $("clearIssueSignBtn").hidden = false;
-            $("signatureModal").hidden = true;
-            return;
-        }
-        if (state.signContext === "transfer-draft") {
-            $("transferSignatureData").value = dataUrl;
-            $("transferSignPreview").src = dataUrl;
-            $("transferSignPreview").hidden = false;
-            $("transferSignStatus").textContent = "Đã ký nháp (Sẽ lưu cùng phiếu điều chuyển)";
-            $("clearTransferSignBtn").hidden = false;
-            $("signatureModal").hidden = true;
-            return;
-        }
-
-        btn.disabled = true;
-        try {
-            if (state.signContext === "receipt-existing" && state.signTargetId) {
-                const updated = await request(`/api/inventory/receipts/${state.signTargetId}/sign`, {
-                    method: "POST",
-                    body: JSON.stringify({ signatureData: dataUrl })
-                });
-                $("signatureModal").hidden = true;
-                showMessage(`Đã ký điện tử phiếu nhập ${updated.receiptCode} bởi ${updated.signedByName}.`, "success");
-                await loadReceiptHistory(state.receiptsPage);
-                if (!$("detailModal").hidden) await viewReceiptDetail(state.signTargetId);
-            } else if (state.signContext === "issue-existing" && state.signTargetId) {
-                const updated = await request(`/api/inventory/issues/${state.signTargetId}/sign`, {
-                    method: "POST",
-                    body: JSON.stringify({ signatureData: dataUrl })
-                });
-                $("signatureModal").hidden = true;
-                showMessage(`Đã ký điện tử phiếu xuất ${updated.issueCode} bởi ${updated.signedByName}.`, "success");
-                await loadIssueHistory(state.issuesPage);
-                await loadTransferHistory(state.transfersPage);
-                if (!$("detailModal").hidden) await viewIssueDetail(state.signTargetId);
-            }
-        } catch (err) {
-            showMessage(err.message || "Không thể lưu chữ ký điện tử.", "error");
-        } finally {
-            btn.disabled = false;
-        }
-    }
-
-    // =========================================================================
     // 6. TAB DANH MỤC VẬT TƯ & 7. TAB NHÓM VẬT TƯ
     // =========================================================================
 
+    /**
+     * Tải và phân trang bảng Danh mục vật tư ({@code GET /api/materials}) đồng thời cập nhật danh sách nhóm vật tư
+     * ({@code GET /api/materials/categories}) cho bộ lọc và gợi ý datalist.
+     * @param {number} [page=state.materialsPage] chỉ số trang cần tải (0-based)
+     */
     async function loadMaterialsTable(page = state.materialsPage) {
         state.materialsPage = page;
         $("materialsTable").innerHTML = '<tr><td colspan="7" class="empty">Đang tải danh mục vật tư...</td></tr>';
@@ -2058,6 +1949,12 @@
         $("materialModal").hidden = false;
     }
 
+    /**
+     * Xử lý submit Modal thêm mới hoặc chỉnh sửa vật tư ({@code #materialForm} → {@code POST /api/materials} hoặc {@code PUT /api/materials/{id}}).
+     * Kiểm tra định dạng mã vật tư ({@code REGEX.MATERIAL_CODE}) và ngưỡng tồn tối thiểu nguyên không âm,
+     * sau đó lưu xuống server và làm mới đồng thời danh mục vật tư, bảng vật tư và bảng nhóm vật tư.
+     * @param {SubmitEvent} event sự kiện submit của form {@code #materialForm}
+     */
     async function submitMaterialForm(event) {
         event.preventDefault();
         const editId = $("editMaterialId").value;
@@ -2098,6 +1995,10 @@
     // 8. TAB NHÀ CUNG CẤP & THANH TOÁN CÔNG NỢ NCC (A3)
     // =========================================================================
 
+    /**
+     * Tải bảng tổng hợp công nợ nhà cung cấp tại chi nhánh hiện tại ({@code GET /api/inventory/supplier-payments/debts}),
+     * lưu vào {@code state.supplierDebtsMap} để phục vụ validate khi thanh toán và render bảng công nợ kèm nút Thanh toán / Sửa / Ngừng.
+     */
     async function loadSupplierDebts() {
         if (!requireBranch()) return;
         $("supplierDebtTable").innerHTML = '<tr><td colspan="10" class="empty">Đang tải dữ liệu công nợ...</td></tr>';
@@ -2147,6 +2048,11 @@
         }
     }
 
+    /**
+     * Tải và phân trang lịch sử các phiếu chi thanh toán nhà cung cấp ({@code GET /api/inventory/supplier-payments})
+     * theo từ khóa, nhà cung cấp ({@code #paymentFilterSupplier}) và khoảng ngày chi.
+     * @param {number} [page=state.paymentsPage] chỉ số trang cần tải (0-based)
+     */
     async function loadPaymentHistory(page = state.paymentsPage) {
         if (!requireBranch()) return;
         state.paymentsPage = page;
@@ -2249,6 +2155,12 @@
         }
     }
 
+    /**
+     * Xử lý submit Modal lập phiếu thanh toán công nợ NCC ({@code #paymentForm} → {@code POST /api/inventory/supplier-payments}).
+     * Validate nhà cung cấp, số chứng từ, số tiền &gt; 0 và không vượt công nợ còn lại của phiếu nhập hoặc tổng công nợ NCC;
+     * gắn {@code clientRequestId} (UUID) chống double-submit, sau đó làm mới công nợ, lịch sử chi trả và KPI tổng quan.
+     * @param {SubmitEvent} event sự kiện submit của form {@code #paymentForm}
+     */
     async function submitPaymentForm(event) {
         event.preventDefault();
         if (!requireBranch()) return;
@@ -2332,6 +2244,11 @@
         $("quickSupplierModal").hidden = false;
     }
 
+    /**
+     * Xử lý submit Modal thêm mới hoặc chỉnh sửa nhanh Nhà cung cấp ({@code #quickSupplierForm} → {@code POST/PUT /api/suppliers}).
+     * Kiểm tra regex mã NCC, mã số thuế và số điện thoại, sau đó làm mới dropdown NCC và bảng công nợ.
+     * @param {SubmitEvent} event sự kiện submit của form {@code #quickSupplierForm}
+     */
     async function submitQuickSupplierForm(event) {
         event.preventDefault();
         const editId = $("qsEditSupplierId")?.value || "";
@@ -2379,6 +2296,12 @@
     // SWITCH TABS & EVENT BINDINGS
     // =========================================================================
 
+    /**
+     * Chuyển đổi giữa 8 tab chức năng Quản lý kho ({@code inventory}, {@code batches}, {@code receipt}, {@code issue},
+     * {@code transfer}, {@code materials}, {@code categories}, {@code supplier-payments}), ẩn/hiện panel tương ứng
+     * và tự động nạp dữ liệu mới nhất cho tab vừa chọn.
+     * @param {string} tab tên khóa tab cần hiển thị
+     */
     function switchTab(tab) {
         state.activeTab = tab;
         const panels = {
@@ -2511,6 +2434,11 @@
         });
     }
 
+    /**
+     * Khởi tạo toàn bộ trạng thái mặc định (ngày hiện tại cho các form, trạng thái thu gọn section, số thứ tự dòng phiếu),
+     * gắn toàn bộ event listener cho tabs, KPI cards, tìm kiếm toàn cục, phân trang 7 bảng, Material Picker Modal,
+     * các form/modal CRUD và delegated table actions, sau đó gọi {@link loadBranches} để bắt đầu tải dữ liệu kho.
+     */
     document.addEventListener("DOMContentLoaded", () => {
         const todayStr = new Date().toISOString().slice(0, 10);
         if ($("receiptDate")) $("receiptDate").value = todayStr;
@@ -2518,7 +2446,6 @@
         if ($("transferDate")) $("transferDate").value = todayStr;
         if ($("payDate")) $("payDate").value = todayStr;
 
-        initSignatureCanvas();
         initInventorySectionCollapse();
         reindexAndUpdateVoucherRows("receipt");
         reindexAndUpdateVoucherRows("issue");
@@ -2594,19 +2521,6 @@
                 }
             });
         }
-
-        // A4: Digital signature modal bindings
-        if ($("openReceiptSignBtn")) safeOn("openReceiptSignBtn", "click", () => openSignatureModal("receipt-draft"));
-        if ($("clearReceiptSignBtn")) safeOn("clearReceiptSignBtn", "click", () => clearDraftSignature("receipt"));
-        if ($("openIssueSignBtn")) safeOn("openIssueSignBtn", "click", () => openSignatureModal("issue-draft"));
-        if ($("clearIssueSignBtn")) safeOn("clearIssueSignBtn", "click", () => clearDraftSignature("issue"));
-        if ($("openTransferSignBtn")) safeOn("openTransferSignBtn", "click", () => openSignatureModal("transfer-draft"));
-        if ($("clearTransferSignBtn")) safeOn("clearTransferSignBtn", "click", () => clearDraftSignature("transfer"));
-
-        if ($("clearSignatureCanvasBtn")) safeOn("clearSignatureCanvasBtn", "click", clearSignatureCanvas);
-        if ($("closeSignatureModalBtn")) safeOn("closeSignatureModalBtn", "click", () => { $("signatureModal").hidden = true; });
-        if ($("cancelSignatureModalBtn")) safeOn("cancelSignatureModalBtn", "click", () => { $("signatureModal").hidden = true; });
-        if ($("confirmSignatureBtn")) safeOn("confirmSignatureBtn", "click", confirmSignature);
 
         if ($("closeLightboxBtn")) safeOn("closeLightboxBtn", "click", () => { $("imageLightboxModal").hidden = true; });
         if ($("closeLightboxFooterBtn")) safeOn("closeLightboxFooterBtn", "click", () => { $("imageLightboxModal").hidden = true; });
@@ -2722,6 +2636,12 @@
             }
         }
 
+        /**
+         * Mở Modal tìm kiếm &amp; chọn nhiều vật tư ({@code #materialPickerModal}) cho loại phiếu đích
+         * ({@code "receipt"}, {@code "issue"}, hoặc {@code "transfer"}), tự chọn bộ lọc tồn kho mặc định phù hợp
+         * (tất cả / khả dụng / hết hạn) và gọi {@link loadMaterialPickerItems}.
+         * @param {"receipt"|"issue"|"transfer"} targetFormType loại phiếu đang lập
+         */
         function openMaterialPickerModal(targetFormType) {
             if (!requireBranch()) return;
             pickerState.targetFormType = targetFormType || "receipt";
@@ -2777,6 +2697,11 @@
             }
         }
 
+        /**
+         * Gọi {@code GET /api/inventory/picker-materials} theo chi nhánh, từ khóa, nhóm vật tư và bộ lọc tồn kho
+         * (dùng {@code AbortController} + {@code requestSeq} chống race condition), cập nhật danh sách nhóm và render bảng chọn.
+         * @param {boolean} [append=false] {@code true} để nối thêm trang kế tiếp ("Tải thêm vật tư"), {@code false} để tải lại từ trang 0
+         */
         async function loadMaterialPickerItems(append = false) {
             if (!state.branchId) return;
             const tbody = $("matPickerTableBody");
@@ -2928,6 +2853,10 @@
         // Fallback backward-compatibility safe no-op
         window.refreshMaterialSelectsInForms = function() {};
 
+        /**
+         * Xác nhận thêm tất cả vật tư đã tick trong {@code pickerState.selectedMap} (loại trừ vật tư đã tồn tại trong phiếu)
+         * vào bảng chi tiết tương ứng (phiếu nhập / xuất / điều chuyển), đánh lại STT, tính lại tổng tiền và đóng modal.
+         */
         function confirmMaterialPickerSelection() {
             syncPickerExistingMaterials();
             const selectedItems = Array.from(pickerState.selectedMap.values())
@@ -3084,7 +3013,7 @@
         safeOn("closeDetailModalBtn", "click", () => { $("detailModal").hidden = true; });
         $("closeDetailModalFooterBtn")?.addEventListener("click", () => { $("detailModal").hidden = true; });
 
-        ["materialModal", "paymentModal", "quickSupplierModal", "detailModal", "signatureModal", "imageLightboxModal", "materialPickerModal"].forEach(modalId => {
+        ["materialModal", "paymentModal", "quickSupplierModal", "detailModal", "imageLightboxModal", "materialPickerModal"].forEach(modalId => {
             const modalEl = $(modalId);
             if (modalEl) {
                 modalEl.addEventListener("click", (e) => {
@@ -3095,7 +3024,7 @@
 
         document.addEventListener("keydown", (e) => {
             if (e.key === "Escape") {
-                ["materialModal", "paymentModal", "quickSupplierModal", "detailModal", "signatureModal", "imageLightboxModal", "materialPickerModal"].forEach(modalId => {
+                ["materialModal", "paymentModal", "quickSupplierModal", "detailModal", "imageLightboxModal", "materialPickerModal"].forEach(modalId => {
                     const modalEl = $(modalId);
                     if (modalEl && !modalEl.hidden) modalEl.hidden = true;
                 });
@@ -3107,18 +3036,6 @@
             const zoomBtn = e.target.closest("[data-zoom-image]");
             if (zoomBtn) {
                 openImageLightbox(zoomBtn.dataset.zoomImage, zoomBtn.dataset.zoomTitle || "Chứng từ hóa đơn");
-                return;
-            }
-
-            const signReceiptBtn = e.target.closest("[data-sign-receipt]");
-            if (signReceiptBtn) {
-                openSignatureModal("receipt-existing", Number(signReceiptBtn.dataset.signReceipt));
-                return;
-            }
-
-            const signIssueBtn = e.target.closest("[data-sign-issue]");
-            if (signIssueBtn) {
-                openSignatureModal("issue-existing", Number(signIssueBtn.dataset.signIssue));
                 return;
             }
 

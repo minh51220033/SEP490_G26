@@ -1,4 +1,11 @@
 <!DOCTYPE html>
+<!--
+  Trang xem trước & in Phiếu điều chuyển kho liên chi nhánh chuẩn A4 (inventory/print-transfer.html).
+  Controller: InventoryPageController.printTransferPage (GET /inventory/transfers/{transferId}/print)
+              hoặc printIssuePage khi issueType == 'TRANSFER'.
+  Model đầu vào: issue (StockIssueResponseDTO), printedAt (LocalDateTime).
+  Hỗ trợ tải PDF trực tiếp (/api/inventory/transfers/{id}/pdf?download=true) và tự động mở hộp thoại in khi có ?autoprint=true.
+-->
 <html lang="vi" xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{fragments/head :: head('Xem trước & In phiếu điều chuyển kho - ' + ${issue.issueCode})}"></head>
 <body class="app-body">
@@ -137,7 +144,7 @@
                         </div>
                     </div>
 
-                    <!-- CHỮ KÝ ĐIỆN TỬ & XÁC NHẬN BÀN GIAO LIÊN CHI NHÁNH -->
+                    <!-- CHỮ KÝ XÁC NHẬN BÀN GIAO LIÊN CHI NHÁNH -->
                     <div class="sig-grid">
                         <div>
                             <div class="sig-title">ĐẠI DIỆN CHI NHÁNH NHẬN</div>
@@ -150,17 +157,11 @@
 
                         <div>
                             <div class="sig-title">NGƯỜI LẬP PHIẾU ĐIỀU CHUYỂN</div>
-                            <div class="sig-sub">(Chữ ký điện tử &amp; họ tên)</div>
+                            <div class="sig-sub">(Ký và ghi rõ họ tên)</div>
                             <div class="sig-box">
-                                <img th:if="${issue.signatureUrl != null and !#strings.isEmpty(issue.signatureUrl)}"
-                                     th:src="${issue.signatureUrl}"
-                                     alt="Chữ ký điện tử"/>
-                                <span th:if="${issue.signatureUrl == null or #strings.isEmpty(issue.signatureUrl)}"
-                                      class="sig-unsigned">(Chưa ký điện tử)</span>
+                                <span class="sig-unsigned">(Ký xác nhận khi lập phiếu)</span>
                             </div>
-                            <div class="sig-name" th:text="${issue.signedByName != null ? issue.signedByName : issue.issuerName}">Thủ kho chi nhánh xuất</div>
-                            <div class="sig-time" th:if="${issue.signedAt != null}"
-                                 th:text="'Đã ký: ' + ${#temporals.format(issue.signedAt, 'dd/MM/yyyy HH:mm')}">Đã ký: 31/10/2026 10:15</div>
+                            <div class="sig-name" th:text="${issue.issuerName}">Thủ kho chi nhánh xuất</div>
                         </div>
                     </div>
 
@@ -171,6 +172,7 @@
     </div>
 </div>
 
+<!-- Script tự động chờ font & hình ảnh tải xong rồi kích hoạt window.print() khi mở với tham số ?autoprint=true -->
 <script>
 (function() {
     const params = new URLSearchParams(window.location.search);

@@ -14,7 +14,9 @@ import java.time.LocalDateTime;
 @Table(
         name = "customer_care_tasks",
         uniqueConstraints = {
-                @UniqueConstraint(name = "uk_cct_code", columnNames = "task_code")
+                @UniqueConstraint(name = "uk_cct_code", columnNames = "task_code"),
+                @UniqueConstraint(name = "uk_cct_leave_appt", columnNames = {"leave_request_id", "appointment_id", "task_type"}),
+                @UniqueConstraint(name = "uk_cct_installment", columnNames = {"installment_id", "task_type"})
         },
         indexes = {
                 @Index(name = "idx_cct_assigned", columnList = "assigned_staff_id, due_date, status")
@@ -42,7 +44,7 @@ public class CustomerCareTask {
     private Branch branch;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "task_type", nullable = false, length = 30)
+    @Column(name = "task_type", nullable = false, length = 50)
     private CustomerCareTaskType taskType;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -86,6 +88,18 @@ public class CustomerCareTask {
 
     @Column(name = "escalated_by_user_id")
     private Long escalatedByUserId;
+
+    @Column(name = "leave_request_id")
+    private Long leaveRequestId;
+
+    @Column(name = "installment_id")
+    private Long installmentId;
+
+    @Column(name = "reminder_stage", length = 20)
+    private String reminderStage;
+
+    @Column(name = "last_reminded_at")
+    private LocalDateTime lastRemindedAt;
 
     @PrePersist
     public void prePersist() {

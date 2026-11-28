@@ -58,7 +58,7 @@ class MaterialBatchServiceTest {
     }
 
     @Test
-    @DisplayName("searchBatches - Báo lỗi khi branchId null hoặc <= 0")
+    @DisplayName("searchBatches - Reject when branchId is null or <= 0")
     void searchBatches_invalidBranchId_throwsException() {
         Pageable pageable = PageRequest.of(0, 10);
         assertThrows(IllegalArgumentException.class,
@@ -69,7 +69,7 @@ class MaterialBatchServiceTest {
     }
 
     @Test
-    @DisplayName("searchBatches - Báo lỗi khi expiryFrom sau expiryTo")
+    @DisplayName("searchBatches - Reject when expiryFrom is after expiryTo")
     void searchBatches_invalidDateRange_throwsException() {
         Pageable pageable = PageRequest.of(0, 10);
         LocalDate from = LocalDate.now().plusDays(10);
@@ -82,7 +82,7 @@ class MaterialBatchServiceTest {
     }
 
     @Test
-    @DisplayName("searchBatches - Phân loại chính xác 3 mức cảnh báo EXPIRED, EXPIRING_SOON (<=30 ngày) và NONE (>30 ngày)")
+    @DisplayName("searchBatches - Accurately classify EXPIRED, EXPIRING_SOON (<=30 days), and NONE (>30 days) warnings")
     void searchBatches_classifiesExpiryWarningsAndNullSupplier() {
         LocalDate today = LocalDate.now();
         Pageable pageable = PageRequest.of(0, 10);
@@ -113,7 +113,7 @@ class MaterialBatchServiceTest {
     }
 
     @Test
-    @DisplayName("searchBatches - Trim keyword hợp lệ trước khi truy vấn")
+    @DisplayName("searchBatches - Trim valid keyword before querying")
     void searchBatches_trimsKeyword() {
         Pageable pageable = PageRequest.of(0, 10);
         when(batchRepository.searchBatches(1L, "LO-01", null, null, pageable))
@@ -125,7 +125,7 @@ class MaterialBatchServiceTest {
     }
 
     @Test
-    @DisplayName("getBatchesWithStock - Báo lỗi khi branchId không hợp lệ")
+    @DisplayName("getBatchesWithStock - Reject when branchId is invalid")
     void getBatchesWithStock_invalidBranchId_throwsException() {
         assertThrows(IllegalArgumentException.class, () -> batchService.getBatchesWithStock(null, 100L));
         assertThrows(IllegalArgumentException.class, () -> batchService.getBatchesWithStock(-1L, 100L));
@@ -133,7 +133,7 @@ class MaterialBatchServiceTest {
     }
 
     @Test
-    @DisplayName("getBatchesWithStock - Trả về danh sách DTO còn tồn theo chi nhánh và vật tư")
+    @DisplayName("getBatchesWithStock - Return DTO list with remaining stock by branch and material")
     void getBatchesWithStock_returnsMappedDtos() {
         MaterialBatch b = buildBatch(5L, "LO-STOCK", LocalDate.now().plusDays(15), BatchStatus.ACTIVE, supplier);
         when(batchRepository.findBatchesWithStockByBranch(1L, 100L)).thenReturn(List.of(b));

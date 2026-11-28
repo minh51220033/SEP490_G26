@@ -256,7 +256,7 @@
                     </div>
                     <div class="small text-muted">
                         ${a.requestedDoctorName
-                            ? `<i class="bi bi-person-fill text-primary me-1"></i>BS. ${escapeHtml(a.requestedDoctorName)}`
+                            ? `<i class="bi bi-person-fill text-primary me-1"></i>${escapeHtml(/^\s*BS\.?\s*/i.test(a.requestedDoctorName) ? a.requestedDoctorName : 'BS. ' + a.requestedDoctorName)}`
                             : `<i class="bi bi-shuffle text-secondary me-1"></i>Lễ tân điều phối`}
                     </div>
                 `;
@@ -440,11 +440,13 @@
                 $('slotDurationNote').textContent = `Thời lượng dự kiến: ${duration} phút`;
             }
             select.disabled = true;
+            if ($('submitAppointment')) $('submitAppointment').disabled = true;
             select.replaceChildren(option('', 'Đang kiểm tra giờ khám…'));
             const params = new URLSearchParams({
                 branchId: $('branchId').value,
                 date: $('appointmentDate').value,
-                sessionPeriod: $('preferredSession').value
+                sessionPeriod: $('preferredSession').value,
+                includeOverlap: 'true'
             });
             const chosenDoctorId = $('doctorId').value;
             if (chosenDoctorId) params.set('doctorId', chosenDoctorId);
@@ -463,20 +465,23 @@
             if (list && list.length > 0 && !hasSessionConflict) {
                 list.forEach(slot => {
                     const start = slot.time.slice(0, 5);
-                    select.appendChild(option(start, start));
+                    const label = slot.remaining > 0 ? start : `${start} (Có thể đông/trùng)`;
+                    select.appendChild(option(start, label));
                 });
                 if (previous && list.some(slot => slot.time.slice(0, 5) === previous)) {
                     select.value = previous;
                 } else {
-                    select.value = list[0].time.slice(0, 5);
+                    const firstFree = list.find(slot => slot.remaining > 0);
+                    select.value = (firstFree || list[0]).time.slice(0, 5);
                 }
                 select.disabled = false;
                 $('submitAppointment').disabled = false;
                 if (chosenDoctorId) {
                     const selectedDocName = $('doctorId').selectedOptions[0]?.textContent || 'bác sĩ đã chọn';
-                    $('availabilityMessage').innerHTML = `<i class="bi bi-person-check-fill fs-5 me-2 text-primary"></i><span>Đang hiển thị <strong>${list.length} mốc giờ khả dụng</strong> của ${escapeHtml(selectedDocName)}.</span>`;
+                    $('availabilityMessage').innerHTML = `<i class="bi bi-person-check-fill fs-5 me-2 text-primary"></i><span>Đang hiển thị <strong>${list.length} mốc giờ</strong> của ${escapeHtml(selectedDocName)}.</span>`;
                     $('availabilityMessage').className = 'appointment-availability is-success d-flex align-items-center';
                 }
+                await checkOverlapForSelectedSlot(token);
             } else if (hasSessionConflict) {
                 select.appendChild(option('', 'Hồ sơ đã có lịch hẹn trong buổi này'));
                 select.disabled = true;
@@ -511,22 +516,36 @@
             }
             message.innerHTML = '<div class="spinner-border spinner-border-sm text-primary me-2"></div><span>Đang kiểm tra khả năng tiếp nhận…</span>';
             const exclude = editing ? `&excludeAppointmentId=${encodeURIComponent(id)}` : '';
-            const profParam = (!editing && $('profileId').value) ? `&profileId=${encodeURIComponent($('profileId').value)}` : '';
+            const activeProfileId = editing ? (current?.patientProfileId || $('profileId').value) : $('profileId').value;
+            const profParam = activeProfileId ? `&profileId=${encodeURIComponent(activeProfileId)}` : '';
             const result = await request(`/availability?branchId=${encodeURIComponent(branchId)}&date=${encodeURIComponent(date)}&sessionPeriod=${encodeURIComponent(session)}${exclude}${profParam}`);
             if (token !== sequence) return;
 
             if (result.patientHasSameSessionConflict) {
                 hasSessionConflict = true;
-                message.innerHTML = `<i class="bi bi-exclamation-octagon-fill fs-5 me-2 text-danger"></i><span>${escapeHtml(result.conflictMessage || 'Hồ sơ này đã có lịch hẹn trong cùng buổi.')} <a href="/portal/appointments" class="btn btn-sm btn-outline-danger ms-2 fw-semibold">Xem lịch hiện tại</a></span>`;
+                message.innerHTML = `<i class="bi bi-exclamation-octagon-fill fs-5 me-2 text-danger"></i><span>${escapeHtml(result.conflictMessage || 'Hồ sơ này đã có lịch hẹn chưa hoàn thành trong cùng ngày.')} <a href="/portal/appointments" class="btn btn-sm btn-outline-danger ms-2 fw-semibold">Xem lịch hiện tại</a></span>`;
                 message.className = 'appointment-availability is-error d-flex align-items-center';
-                $('slotTime').replaceChildren(option('', 'Không thể đặt thêm lịch cùng buổi'));
+                $('slotTime').replaceChildren(option('', 'Không thể đặt thêm lịch trong cùng ngày'));
                 $('slotTime').disabled = true;
                 return;
             }
 
             if (!result.available) {
-                message.innerHTML = `<i class="bi bi-exclamation-octagon-fill fs-5 me-2 text-danger"></i><span>${escapeHtml(result.reason || 'Buổi này phòng khám đã kín chỗ.')}</span>`;
-                message.className = 'appointment-availability is-error d-flex align-items-center';
+                const isSoftFullSession = result.reason && result.reason.includes('đầy');
+                if (!isSoftFullSession) {
+                    message.innerHTML = `<i class="bi bi-exclamation-octagon-fill fs-5 me-2 text-danger"></i><span>${escapeHtml(result.reason || 'Buổi khám hiện không khả dụng.')}</span>`;
+                    message.className = 'appointment-availability is-error d-flex align-items-center';
+                    return;
+                }
+                if (Array.isArray(result.doctors)) {
+                    result.doctors.forEach(d => doctor.appendChild(option(d.id, `${d.name}${d.specialty ? ' · ' + d.specialty : ''}`)));
+                }
+                doctor.disabled = false;
+                available = true;
+                button.disabled = false;
+                message.innerHTML = `<i class="bi bi-exclamation-triangle-fill fs-5 me-2 text-warning"></i><span>Buổi khám này hiện có thể đông khách. Bạn vẫn có thể chọn giờ mong muốn hoặc đổi sang ca khám khác trống hơn.</span>`;
+                message.className = 'appointment-availability is-warning d-flex align-items-center';
+                await loadSlots(token);
                 return;
             }
 
@@ -542,6 +561,225 @@
             message.innerHTML = `<i class="bi bi-check-circle-fill fs-5 me-2 text-success"></i><span>Buổi khám còn <strong>${result.remainingBranch} chỗ</strong>. Bạn có thể chọn bác sĩ chỉ định hoặc để hệ thống phân bổ phù hợp.</span>`;
             message.className = 'appointment-availability is-success d-flex align-items-center';
             await loadSlots(token);
+        }
+
+        let currentOverlapState = { hasWarning: false, confirmOverlap: false };
+        let originalOverlapSlot = null;
+
+        if ($('slotTime')) {
+            $('slotTime').addEventListener('change', () => {
+                originalOverlapSlot = null;
+                checkOverlapForSelectedSlot(sequence).catch(() => {});
+            });
+        }
+
+        function collectFriendlySuggestions(res) {
+            const seen = new Set();
+            const merged = [];
+            [res.combinedSuggestions, res.clinicSuggestions, res.doctorSuggestions].forEach(list => {
+                if (!Array.isArray(list)) return;
+                list.forEach(s => {
+                    const start = String(s.startTime || '').slice(0, 5);
+                    if (start && !seen.has(start)) {
+                        seen.add(start);
+                        merged.push(start);
+                    }
+                });
+            });
+            return merged;
+        }
+
+        async function checkOverlapForSelectedSlot(token) {
+            const panel = $('overlapWarningPanel');
+            if (!panel) return;
+            const slotVal = $('slotTime')?.value?.trim();
+            if (!slotVal || !$('branchId')?.value || !$('appointmentDate')?.value || !$('preferredSession')?.value) {
+                panel.hidden = true;
+                panel.replaceChildren();
+                currentOverlapState = { hasWarning: false, confirmOverlap: false };
+                return;
+            }
+            const params = new URLSearchParams({
+                branchId: $('branchId').value,
+                date: $('appointmentDate').value,
+                sessionPeriod: $('preferredSession').value,
+                expectedTime: slotVal
+            });
+            if ($('doctorId')?.value) params.set('doctorId', $('doctorId').value);
+            if (!editing && $('serviceId')?.value) params.set('serviceId', $('serviceId').value);
+            if (editing) params.set('excludeAppointmentId', id);
+
+            let res;
+            try {
+                res = await request(`/overlap-check?${params}`);
+            } catch (err) {
+                panel.hidden = true;
+                return;
+            }
+            if (token !== sequence) return;
+
+            if (!res.validOperatingWindow && res.operatingError) {
+                panel.hidden = false;
+                panel.innerHTML = `<div class="alert alert-danger mb-0"><i class="bi bi-exclamation-octagon-fill me-2"></i>${escapeHtml(res.operatingError)}</div>`;
+                $('submitAppointment').disabled = true;
+                currentOverlapState = { hasWarning: false, confirmOverlap: false };
+                return;
+            }
+            $('submitAppointment').disabled = false;
+
+            if (!res.clinicOverlap && !res.doctorOverlap) {
+                currentOverlapState = { hasWarning: false, confirmOverlap: false };
+                if (originalOverlapSlot && originalOverlapSlot !== slotVal) {
+                    panel.hidden = false;
+                    panel.innerHTML = `
+                        <div class="p-3 rounded-3 border bg-success-subtle d-flex align-items-center justify-content-between flex-wrap gap-2">
+                            <span class="small fw-semibold text-success-emphasis">
+                                <i class="bi bi-check-circle-fill me-1"></i>Đã chọn khung giờ ${escapeHtml(slotVal)}.
+                            </span>
+                            <button type="button" id="btnRestoreOriginalSlot" class="btn btn-sm btn-outline-secondary">
+                                Quay lại giờ ban đầu (${escapeHtml(originalOverlapSlot)})
+                            </button>
+                        </div>
+                    `;
+                    const restoreBtn = $('btnRestoreOriginalSlot');
+                    if (restoreBtn) {
+                        restoreBtn.addEventListener('click', () => {
+                            const back = originalOverlapSlot;
+                            originalOverlapSlot = null;
+                            if ($('slotTime') && back) {
+                                $('slotTime').value = back;
+                                checkOverlapForSelectedSlot(sequence).catch(() => {});
+                            }
+                        });
+                    }
+                } else {
+                    panel.hidden = true;
+                    panel.replaceChildren();
+                }
+                return;
+            }
+
+            currentOverlapState = { hasWarning: true, confirmOverlap: false };
+            const suggestions = collectFriendlySuggestions(res);
+            const altSessions = Array.isArray(res.alternativeSessionSuggestions) ? res.alternativeSessionSuggestions : [];
+            const isFullSessionBusy = suggestions.length === 0;
+            const warningBodyText = isFullSessionBusy
+                ? 'Buổi khám này có thể đông. Bạn có thể chọn ca khám khác để tránh chờ đợi hoặc giữ nguyên giờ đã chọn.'
+                : 'Thời gian bạn chọn có thể đông khách. Bạn vẫn muốn đặt lịch vào khung giờ này chứ?';
+
+            let chipsHtml = '';
+            if (suggestions.length) {
+                chipsHtml = suggestions.map((start, idx) => {
+                    const hiddenCls = idx >= 3 ? ' d-none js-extra-suggest-chip' : '';
+                    return `<button type="button" class="btn btn-outline-primary fw-semibold px-3 py-2 js-overlap-suggest-btn${hiddenCls}" data-slot="${escapeHtml(start)}">${escapeHtml(start)}</button>`;
+                }).join('');
+            } else if (altSessions.length) {
+                chipsHtml = altSessions.map(alt => {
+                    const startShort = String(alt.startTime || '').slice(0, 5);
+                    const dParts = String(alt.date || '').split('-');
+                    const dateFmt = dParts.length === 3 ? `${dParts[2]}/${dParts[1]}` : String(alt.date || '');
+                    const chipLabel = `${alt.sessionLabel || alt.session} (${dateFmt}) · ${startShort}`;
+                    return `<button type="button" class="btn btn-outline-primary fw-semibold px-3 py-2 js-alt-session-btn" data-date="${escapeHtml(alt.date)}" data-session="${escapeHtml(alt.session)}" data-slot="${escapeHtml(startShort)}">${escapeHtml(chipLabel)}</button>`;
+                }).join('');
+            } else {
+                chipsHtml = '<span class="small text-muted">Hiện chưa có khung giờ trống khác phù hợp trong buổi này.</span>';
+            }
+            const moreBtnHtml = suggestions.length > 3
+                ? `<button type="button" class="btn btn-sm btn-link text-decoration-none px-1 js-show-more-slots">Xem thêm</button>`
+                : '';
+
+            panel.innerHTML = `
+                <div class="p-3 rounded-3 border mb-3" style="background:#fffbeb;border-color:#fcd34d !important;">
+                    <div class="fw-bold text-dark mb-1"><i class="bi bi-exclamation-circle-fill text-warning me-2"></i>Lưu ý về thời gian đặt lịch</div>
+                    <p class="small text-dark mb-3">${escapeHtml(warningBodyText)}</p>
+                    <div class="d-flex flex-wrap align-items-center gap-2">
+                        <button type="button" id="btnKeepOverlapSlot" class="btn btn-sm btn-outline-warning text-dark fw-semibold px-3">
+                            Vẫn chọn giờ này
+                        </button>
+                        <button type="button" id="btnPickOtherSlot" class="btn btn-sm btn-primary fw-semibold px-3">
+                            ${isFullSessionBusy && altSessions.length ? 'Đổi ca tốt hơn' : 'Chọn giờ khác'}
+                        </button>
+                        <span id="keepOverlapStatus" class="small text-success fw-semibold ms-1" hidden>
+                            <i class="bi bi-check-circle-fill me-1"></i>Đã xác nhận giữ giờ ${escapeHtml(slotVal)}
+                        </span>
+                    </div>
+                </div>
+                <div id="overlapSuggestSection" class="p-3 rounded-3 border bg-light">
+                    <div class="fw-bold text-dark mb-1">${isFullSessionBusy && altSessions.length ? 'Gợi ý ca khám ít đông hơn' : 'Gợi ý thời gian hợp lý'}</div>
+                    <p class="small text-muted mb-2">${isFullSessionBusy && altSessions.length ? 'Bạn có thể chuyển nhanh sang một trong các ca khám trống dưới đây.' : 'Bạn có thể cân nhắc những giờ sau để hạn chế phải chờ.'}</p>
+                    <div class="d-flex flex-wrap align-items-center gap-2 js-suggest-group">
+                        ${chipsHtml}
+                        ${moreBtnHtml}
+                    </div>
+                </div>
+            `;
+            panel.hidden = false;
+
+            const keepBtn = $('btnKeepOverlapSlot');
+            const pickBtn = $('btnPickOtherSlot');
+            const keepStatus = $('keepOverlapStatus');
+            const suggestBox = $('overlapSuggestSection');
+
+            if (keepBtn) {
+                keepBtn.addEventListener('click', () => {
+                    currentOverlapState.confirmOverlap = true;
+                    clearError();
+                    keepBtn.classList.remove('btn-outline-warning');
+                    keepBtn.classList.add('btn-warning');
+                    if (keepStatus) keepStatus.hidden = false;
+                });
+            }
+            if (pickBtn) {
+                pickBtn.addEventListener('click', () => {
+                    currentOverlapState.confirmOverlap = false;
+                    if (keepBtn) {
+                        keepBtn.classList.add('btn-outline-warning');
+                        keepBtn.classList.remove('btn-warning');
+                    }
+                    if (keepStatus) keepStatus.hidden = true;
+                    if (suggestBox) {
+                        suggestBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                        const firstChip = suggestBox.querySelector('.js-overlap-suggest-btn, .js-alt-session-btn');
+                        if (firstChip) firstChip.focus();
+                    }
+                });
+            }
+            panel.querySelectorAll('.js-overlap-suggest-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const targetSlot = btn.getAttribute('data-slot');
+                    if (targetSlot && $('slotTime')) {
+                        if (!originalOverlapSlot) {
+                            originalOverlapSlot = slotVal;
+                        }
+                        $('slotTime').value = targetSlot;
+                        checkOverlapForSelectedSlot(sequence).catch(() => {});
+                    }
+                });
+            });
+            panel.querySelectorAll('.js-alt-session-btn').forEach(btn => {
+                btn.addEventListener('click', async () => {
+                    const targetDate = btn.getAttribute('data-date');
+                    const targetSession = btn.getAttribute('data-session');
+                    const targetSlot = btn.getAttribute('data-slot');
+                    if (targetDate && $('appointmentDate')) $('appointmentDate').value = targetDate;
+                    if (targetSession && $('preferredSession')) $('preferredSession').value = targetSession;
+                    originalOverlapSlot = null;
+                    await checkAvailability();
+                    if (targetSlot && $('slotTime')) {
+                        $('slotTime').value = targetSlot;
+                        await checkOverlapForSelectedSlot(sequence).catch(() => {});
+                    }
+                });
+            });
+            panel.querySelectorAll('.js-show-more-slots').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const group = btn.closest('.js-suggest-group');
+                    if (group) {
+                        group.querySelectorAll('.js-extra-suggest-chip').forEach(el => el.classList.remove('d-none'));
+                    }
+                    btn.remove();
+                });
+            });
         }
 
         async function loadPortalSessions(branchId) {
@@ -620,6 +858,10 @@
         form.addEventListener('submit', async event => {
             event.preventDefault(); clearError();
             if (!form.reportValidity() || !available) return;
+            if (currentOverlapState.hasWarning && !currentOverlapState.confirmOverlap) {
+                error('Thời gian bạn chọn có thể đông khách. Vui lòng bấm "Vẫn chọn giờ này" hoặc chọn một giờ gợi ý bên dưới.');
+                return;
+            }
             const button = $('submitAppointment'); button.disabled = true;
             try {
                 const rawTime = $('slotTime')?.value?.trim();
@@ -627,7 +869,8 @@
                     date: $('appointmentDate').value,
                     session: $('preferredSession').value,
                     expectedTime: rawTime && rawTime.length >= 4 ? rawTime : null,
-                    doctorId: $('doctorId').value ? Number($('doctorId').value) : null
+                    doctorId: $('doctorId').value ? Number($('doctorId').value) : null,
+                    confirmOverlap: currentOverlapState.confirmOverlap
                 };
                 let saved;
                 if (editing) {
@@ -682,7 +925,7 @@
                     const wins = await res.json();
                     const matched = Array.isArray(wins) ? wins.find(w => w.session === a.session) : null;
                     if (matched) {
-                        if (matched.label && matched.startTime && matched.endTime) {
+                        if (matched.label && matched.startTime && matched.endTime && !matched.label.includes('(')) {
                             dynamicSessionLabel = `${matched.label} (${matched.startTime.slice(0, 5)} – ${matched.endTime.slice(0, 5)})`;
                         } else if (matched.label) {
                             dynamicSessionLabel = matched.label;
@@ -694,7 +937,7 @@
 
         const facts = $('appointmentFacts');
         const items = [
-            ['Mã lịch hẹn', a.code + (a.code.startsWith('TK') ? ' (Lịch tái khám chỉ định FT18)' : '')],
+            ['Mã lịch hẹn', a.code + (a.code.startsWith('TK') ? ' (Lịch tái khám)' : '')],
             ['Người đi khám', a.patientName],
             ['Cơ sở khám', a.branchName],
             ['Ngày khám', dateLabel(a.date)],

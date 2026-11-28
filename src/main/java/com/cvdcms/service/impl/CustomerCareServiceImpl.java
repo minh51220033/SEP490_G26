@@ -55,6 +55,12 @@ public class CustomerCareServiceImpl implements CustomerCareService {
     @Autowired(required = false)
     private com.cvdcms.service.SystemAuditLogService systemAuditLogService;
 
+    @Autowired(required = false)
+    private LeaveRequestRepository leaveRequestRepository;
+
+    @Autowired(required = false)
+    private TreatmentPlanInstallmentRepository installmentRepository;
+
     private final CustomerCareTaskRepository taskRepository;
     private final CustomerCareInteractionRepository interactionRepository;
     private final PatientProfileRepository patientRepository;
@@ -130,6 +136,11 @@ public class CustomerCareServiceImpl implements CustomerCareService {
     // 0. KIỂM TRA PHÂN QUYỀN VAI TRÒ & CƠ SỞ (ROLE & BRANCH AUTHORIZATION)
     // =========================================================================
 
+    /**
+     * Xác thực phiên và trả về vai trò CSKH hợp lệ của người dùng ({@code ADMIN}, {@code LE_TAN} hoặc {@code BAC_SI}).
+     * Kiểm tra lần lượt quyền ADMIN, quyền {@code CUSTOMER_CARE_MANAGE}, danh sách role đang hoạt động và hồ sơ nhân sự;
+     * ném 401/403 nếu tài khoản bị khóa hoặc không thuộc nhóm vai trò được phép.
+     */
     @Override
     @Transactional(readOnly = true)
     public String requireCareRole(Long userId) {
@@ -202,6 +213,10 @@ public class CustomerCareServiceImpl implements CustomerCareService {
         );
     }
 
+    /**
+     * Trả về danh sách chi nhánh người dùng được phép truy cập ({@code ADMIN} thấy tất cả chi nhánh đang hoạt động;
+     * {@code LE_TAN}/{@code BAC_SI} chỉ thấy chi nhánh được phân công chính thức).
+     */
     private List<Branch> resolveAllowedBranches(Long userId, String careRole) {
         List<Branch> allActive = branchRepository.findByIsActiveTrueOrderByBranchNameAsc();
         if (allActive.isEmpty()) {
@@ -225,6 +240,10 @@ public class CustomerCareServiceImpl implements CustomerCareService {
                 .toList();
     }
 
+    /**
+     * Xác thực quyền truy cập vào {@code requestedBranchId} theo vai trò; tự động chọn chi nhánh đầu tiên cho nhân viên
+     * nếu không truyền {@code requestedBranchId}, và chặn 403 nếu truy cập chéo chi nhánh.
+     */
     private Long resolveAndAuthorizeBranchId(Long requestedBranchId, Long userId, boolean requireSpecificBranch) {
         String careRole = requireCareRole(userId);
         validateBranchIdIfPresent(requestedBranchId);
@@ -262,6 +281,9 @@ public class CustomerCareServiceImpl implements CustomerCareService {
         return requestedBranchId;
     }
 
+    /**
+     * Kiểm tra người dùng hiện tại có quyền truy cập vào công việc {@code task} hay không (đối chiếu chi nhánh đối với non-ADMIN).
+     */
     private String assertCanAccessTask(CustomerCareTask task, Long userId) {
         String careRole = requireCareRole(userId);
         if ("ADMIN".equals(careRole)) {
@@ -284,6 +306,10 @@ public class CustomerCareServiceImpl implements CustomerCareService {
     // 1. CHI NHÁNH & DANH MỤC TRA CỨU (LOOKUPS)
     // =========================================================================
 
+    /**
+     * Lấy danh sách chi nhánh khả dụng, vai trò CSKH, {@code branchSelectionAllowed} và thông tin nhân viên hiện tại
+     * cho bước khởi tạo giao diện {@code /customer-care}.
+     */
     @Override
     @Transactional(readOnly = true)
     public Map<String, Object> getAccessibleBranches(Long userId) {
@@ -312,6 +338,10 @@ public class CustomerCareServiceImpl implements CustomerCareService {
         return res;
     }
 
+    /**
+     * Lấy danh mục nhân viên CSKH, bác sĩ, bệnh nhân, lịch hẹn, lượt khám và đơn thuốc hợp lệ thuộc chi nhánh được phân quyền
+     * để đổ dữ liệu vào bộ lọc và các modal tạo/sửa/chuyển bác sĩ.
+     */
     @Override
     @Transactional(readOnly = true)
     public Map<String, Object> getLookups(Long branchId, Long userId) {
@@ -474,6 +504,10 @@ public class CustomerCareServiceImpl implements CustomerCareService {
     // 2. THỐNG KÊ KPI SUMMARY CARDS & ĐẾM SỐ LƯỢNG THEO NHÓM (SCR-44.1 & SCR-44.2)
     // =========================================================================
 
+    /**
+     * Tính toán các chỉ số KPI tổng quan (tổng công việc, đến hạn hôm nay, quá hạn, sắp tới, chờ bác sĩ phản hồi,
+     * bác sĩ đã phản hồi, hoàn thành, tỷ lệ hoàn thành) và bộ đếm {@code groupCounts} cho từng tab/nhóm CSKH.
+     */
     @Override
     @Transactional(readOnly = true)
     public Map<String, Object> getSummary(Long branchId, Long userId) {
@@ -618,6 +652,11 @@ public class CustomerCareServiceImpl implements CustomerCareService {
                 fromDate, toDate, keyword, null, null, null, false, pageable, userId);
     }
 
+    /**
+     * Tìm kiếm, lọc đa tiêu chí (tab Today/All/Overdue/Escalated/Actionable/Completed, trạng thái, nhân viên, bác sĩ,
+     * hạn xử lý, nhóm CSKH, phản hồi bác sĩ, công việc của tôi, từ khóa), sắp xếp ưu tiên (Quá hạn -> Hôm nay -> Sắp tới)
+     * và phân trang danh sách công việc CSKH.
+     */
     @Override
     @Transactional(readOnly = true)
     public Page<CustomerCareTaskDTO> searchTasks(
@@ -679,6 +718,9 @@ public class CustomerCareServiceImpl implements CustomerCareService {
         return new PageImpl<>(pageContent, pageable, total);
     }
 
+    /**
+     * Lấy toàn bộ công việc CSKH trong khoảng ngày {@code startDate..endDate} theo bộ lọc để hiển thị trên lưới Lịch (Calendar).
+     */
     @Override
     @Transactional(readOnly = true)
     public List<CustomerCareTaskDTO> getCalendarTasks(
@@ -716,6 +758,10 @@ public class CustomerCareServiceImpl implements CustomerCareService {
                 .toList();
     }
 
+    /**
+     * Áp dụng toàn bộ điều kiện lọc (tabGroup, myTasksOnly, careGroupFilter, dueFilter, doctorResponseFilter,
+     * status, assignedStaffId, escalatedToDoctorId, khoảng ngày và từ khóa) lên danh sách công việc tại chi nhánh.
+     */
     private List<CustomerCareTask> filterTasks(
             List<CustomerCareTask> allTasks,
             Map<Long, List<CustomerCareInteraction>> interactionsByTask,
@@ -830,6 +876,9 @@ public class CustomerCareServiceImpl implements CustomerCareService {
         };
     }
 
+    /**
+     * Lấy chi tiết đầy đủ một công việc CSKH kèm lịch sử tương tác, thông tin khám lâm sàng, chẩn đoán và đơn thuốc.
+     */
     @Override
     @Transactional(readOnly = true)
     public CustomerCareTaskDTO getTaskDetail(Long taskId, Long userId) {
@@ -848,6 +897,10 @@ public class CustomerCareServiceImpl implements CustomerCareService {
     // 4. LẬP LỊCH / PHÂN CÔNG THỦ CÔNG & TỰ ĐỘNG TỔNG HỢP CÔNG VIỆC (SCR-44.3)
     // =========================================================================
 
+    /**
+     * Tạo mới một công việc CSKH thủ công: kiểm tra quyền chi nhánh, chống tạo trùng task đang mở cho cùng bệnh nhân/hồ sơ,
+     * gán nhân viên phụ trách (mặc định là người tạo nếu không chỉ định), đính kèm liên kết khám/hẹn/đơn thuốc và gửi thông báo.
+     */
     @Override
     @Transactional
     public CustomerCareTaskDTO createTask(CustomerCareCreateDTO dto, Long userId) {
@@ -911,6 +964,10 @@ public class CustomerCareServiceImpl implements CustomerCareService {
         return toTaskDTO(resultTask, List.of(), true);
     }
 
+    /**
+     * Kiểm tra chống trùng lặp công việc CSKH đang hoạt động ({@code PENDING / IN_PROGRESS / ESCALATED_TO_DOCTOR})
+     * cho cùng bệnh nhân, cùng chi nhánh, cùng nhóm/loại và cùng ca khám / lịch hẹn / đơn thuốc / ngày hạn.
+     */
     private void assertNoActiveDuplicateTask(
             Long branchId,
             Long profileId,
@@ -963,6 +1020,10 @@ public class CustomerCareServiceImpl implements CustomerCareService {
         }
     }
 
+    /**
+     * Cập nhật thông tin/phân công lại một công việc CSKH đang mở (chặn sửa nếu đã {@code COMPLETED} hoặc {@code CANCELLED})
+     * và phát sự kiện realtime cập nhật bảng/KPI.
+     */
     @Override
     @Transactional
     public CustomerCareTaskDTO updateTask(Long taskId, CustomerCareCreateDTO dto, Long userId) {
@@ -1014,6 +1075,10 @@ public class CustomerCareServiceImpl implements CustomerCareService {
         return toTaskDTO(resultTask, interactions, true);
     }
 
+    /**
+     * Quét thủ công toàn bộ lượt khám đã hoàn thành, đơn thuốc hợp lệ và lịch hẹn (PENDING/CONFIRMED/NO_SHOW) tại chi nhánh
+     * để sinh bù các công việc CSKH còn thiếu và trả về thống kê chi tiết số lượng tạo mới.
+     */
     @Override
     @Transactional
     public Map<String, Object> autoGenerateTasks(Long branchId, Long userId) {
@@ -1148,6 +1213,15 @@ public class CustomerCareServiceImpl implements CustomerCareService {
     // 5. GHI KẾT QUẢ LIÊN HỆ & HẸN GỌI LẠI (SCR-44.4)
     // =========================================================================
 
+    /**
+     * Ghi nhận một lần liên hệ/tương tác CSKH cho công việc đang mở:
+     * <ul>
+     *   <li>Bắt buộc nhập {@code nextRetryAt} khi kết quả là {@code NO_ANSWER} hoặc {@code BUSY}.</li>
+     *   <li>Tự động cập nhật trạng thái công việc theo {@code nextStatus} hoặc theo kết quả liên hệ
+     *       ({@code NO_ANSWER/BUSY/FAILED -> IN_PROGRESS} và dời {@code dueDate}; {@code CONNECTED/SCHEDULED_APPOINTMENT -> COMPLETED}).</li>
+     *   <li>Phát sự kiện WebSocket cập nhật realtime.</li>
+     * </ul>
+     */
     @Override
     @Transactional
     public CustomerCareTaskDTO recordInteraction(Long taskId, CustomerCareInteractionCreateDTO dto, Long userId) {
@@ -1209,7 +1283,9 @@ public class CustomerCareServiceImpl implements CustomerCareService {
         if (requestedStatus != null) {
             task.setStatus(parseTaskStatus(requestedStatus));
         } else {
-            if (contactResult == ContactResult.NO_ANSWER || contactResult == ContactResult.BUSY) {
+            if (contactResult == ContactResult.NO_ANSWER
+                    || contactResult == ContactResult.BUSY
+                    || contactResult == ContactResult.FAILED) {
                 task.setStatus(CustomerCareTaskStatus.IN_PROGRESS);
                 if (dto.getNextRetryAt() != null) {
                     task.setDueDate(dto.getNextRetryAt().toLocalDate());
@@ -1237,6 +1313,11 @@ public class CustomerCareServiceImpl implements CustomerCareService {
     // 6. CHUYỂN BÁC SĨ HỖ TRỢ CHUYÊN MÔN & NHẬP PHẢN HỒI BÁC SĨ (SCR-44.5)
     // =========================================================================
 
+    /**
+     * Chuyển công việc CSKH lên Bác sĩ hỗ trợ chuyên môn ({@code ESCALATED_TO_DOCTOR}):
+     * lưu bác sĩ tiếp nhận, lý do chuyển (bảo toàn {@code task.notes} gốc), ghi thêm 1 mốc vào bảng tương tác
+     * và gửi thông báo ưu tiên cao (HIGH) + WebSocket cho Bác sĩ.
+     */
     @Override
     @Transactional
     public CustomerCareTaskDTO escalateToDoctor(Long taskId, CustomerCareEscalateDTO dto, Long userId) {
@@ -1299,6 +1380,12 @@ public class CustomerCareServiceImpl implements CustomerCareService {
         return toTaskDTO(task, interactions, true);
     }
 
+    /**
+     * Bác sĩ (hoặc Admin) nhập phản hồi / chỉ định chuyên môn cho công việc CSKH:
+     * chặn vai trò {@code LE_TAN} (403), cập nhật {@code doctorResponse}, chuyển trạng thái theo {@code nextStatus}
+     * (ví dụ {@code IN_PROGRESS} để chuyển lại lễ tân gọi báo bệnh nhân hoặc {@code COMPLETED} để hoàn tất),
+     * lưu log vào lịch sử tương tác và gửi thông báo cho lễ tân/nhân viên phụ trách.
+     */
     @Override
     @Transactional
     public CustomerCareTaskDTO submitDoctorResponse(Long taskId, CustomerCareEscalateDTO dto, Long userId) {
@@ -1394,6 +1481,10 @@ public class CustomerCareServiceImpl implements CustomerCareService {
     // 6B. MỞ LẠI CÔNG VIỆC ĐÃ HOÀN THÀNH (CHỈ ADMIN) - CÓ LÝ DO & AUDIT LOG
     // =========================================================================
 
+    /**
+     * Mở lại công việc CSKH đã {@code COMPLETED} về trạng thái {@code IN_PROGRESS} (chỉ dành cho {@code ADMIN}):
+     * bắt buộc nhập lý do (>= 5 ký tự), ghi mốc lịch sử tương tác, lưu {@code SystemAuditLog} kèm IP và thông báo cho nhân viên liên quan.
+     */
     @Override
     @Transactional
     public CustomerCareTaskDTO reopenTask(Long taskId, String reason, Long userId, String ipAddress) {
@@ -1469,6 +1560,10 @@ public class CustomerCareServiceImpl implements CustomerCareService {
     // 7. LỊCH SỬ CHĂM SÓC BỆNH NHÂN TIMELINE (SCR-44.6) & TÓM TẮT CA KHÁM LÂM SÀNG
     // =========================================================================
 
+    /**
+     * Tìm kiếm và phân trang lịch sử tương tác CSKH chung theo chi nhánh, bệnh nhân, khoảng thời gian (theo múi giờ VN),
+     * nhân viên thực hiện, bác sĩ liên quan, kênh liên hệ, kết quả, nhóm CSKH và từ khóa.
+     */
     @Override
     @Transactional(readOnly = true)
     public Page<CustomerCareInteractionDTO> searchInteractions(
@@ -1643,6 +1738,10 @@ public class CustomerCareServiceImpl implements CustomerCareService {
         return new PageImpl<>(dtos, pageable != null ? pageable : PageRequest.of(page, size), total);
     }
 
+    /**
+     * Lấy dòng thời gian (Timeline) toàn bộ công việc CSKH và lịch sử tương tác của một bệnh nhân cụ thể
+     * trong phạm vi chi nhánh được phân quyền.
+     */
     @Override
     @Transactional(readOnly = true)
     public Map<String, Object> getPatientCareHistory(Long profileId, Long branchId, Long userId) {
@@ -1722,6 +1821,10 @@ public class CustomerCareServiceImpl implements CustomerCareService {
         return result;
     }
 
+    /**
+     * Tổng hợp thông tin khám lâm sàng, chẩn đoán ICD-10, đơn thuốc, lời dặn bác sĩ và ngày tái khám của một lượt khám (chỉ đọc)
+     * để nhân viên CSKH tra cứu chính xác khi gọi điện chăm sóc bệnh nhân.
+     */
     @Override
     @Transactional(readOnly = true)
     public Map<String, Object> getVisitExaminationSummary(Long visitId, Long userId) {
@@ -1873,6 +1976,11 @@ public class CustomerCareServiceImpl implements CustomerCareService {
         return summary;
     }
 
+    /**
+     * Ghi nhận tương tác CSKH trực tiếp từ màn hình ca khám của Bác sĩ:
+     * ưu tiên gắn vào task đang mở của ca khám/bệnh nhân, nếu chưa có sẽ tự tạo 1 task {@code POST_TREATMENT_FOLLOWUP}
+     * rồi gọi {@link #recordInteraction(Long, CustomerCareInteractionCreateDTO, Long)}.
+     */
     @Override
     @Transactional
     public CustomerCareTaskDTO recordVisitInteraction(Long visitId, CustomerCareInteractionCreateDTO dto, Long userId) {
@@ -1954,6 +2062,12 @@ public class CustomerCareServiceImpl implements CustomerCareService {
     }
 
     private String resolveCareGroup(CustomerCareTask task) {
+        if (task.getTaskType() == CustomerCareTaskType.DOCTOR_LEAVE_RESCHEDULE) {
+            return "DOCTOR_LEAVE_RESCHEDULE";
+        }
+        if (task.getTaskType() == CustomerCareTaskType.PAYMENT_REMINDER) {
+            return "PAYMENT_REMINDER";
+        }
         String rawNotes = task.getNotes() != null ? task.getNotes() : "";
         String lowerNotes = rawNotes.toLowerCase(Locale.ROOT);
 
@@ -1973,6 +2087,12 @@ public class CustomerCareServiceImpl implements CustomerCareService {
     }
 
     private String resolveCareGroupLabel(String careGroup, CustomerCareTaskType taskType) {
+        if (taskType == CustomerCareTaskType.DOCTOR_LEAVE_RESCHEDULE || "DOCTOR_LEAVE_RESCHEDULE".equals(careGroup)) {
+            return "Bác sĩ nghỉ – Cần liên hệ bệnh nhân";
+        }
+        if (taskType == CustomerCareTaskType.PAYMENT_REMINDER || "PAYMENT_REMINDER".equals(careGroup)) {
+            return "Nhắc thanh toán";
+        }
         if ("INSTALLMENT_REMINDER".equals(careGroup)) return "Nhắc trả góp";
         if ("NO_SERVICE_FOLLOWUP".equals(careGroup)) return "Không làm dịch vụ";
         if ("FEEDBACK_COMPLAINT".equals(careGroup)) return "Phản ánh / Khiếu nại";
@@ -1983,6 +2103,10 @@ public class CustomerCareServiceImpl implements CustomerCareService {
         return careGroup;
     }
 
+    /**
+     * Kiểm tra một công việc CSKH có khớp với nhóm tab/bộ lọc ({@code ALL}, {@code ACTIONABLE}, {@code TODAY},
+     * {@code OVERDUE}, {@code ESCALATED}, {@code COMPLETED}, {@code DOCTOR_LEAVE}, {@code PAYMENT_REMINDER}...) hay không.
+     */
     private boolean matchesTabGroup(CustomerCareTask task, CustomerCareInteraction latest, String tabGroup, LocalDate today) {
         if (tabGroup == null || "ALL".equalsIgnoreCase(tabGroup)) {
             return true;
@@ -2014,7 +2138,8 @@ public class CustomerCareServiceImpl implements CustomerCareService {
             case "POST_TREATMENT" -> "POST_TREATMENT_FOLLOWUP".equals(careGroup)
                     || "MEDICATION_REMINDER".equals(careGroup);
             case "APPOINTMENT_REMINDER" -> "APPOINTMENT_REMINDER".equals(careGroup);
-            case "INSTALLMENT_REMINDER" -> "INSTALLMENT_REMINDER".equals(careGroup);
+            case "INSTALLMENT_REMINDER", "PAYMENT_REMINDER" -> "PAYMENT_REMINDER".equals(careGroup) || "INSTALLMENT_REMINDER".equals(careGroup);
+            case "DOCTOR_LEAVE", "DOCTOR_LEAVE_RESCHEDULE" -> "DOCTOR_LEAVE_RESCHEDULE".equals(careGroup);
             case "NO_SHOW_RECALL" -> "NO_SHOW_RECALL".equals(careGroup);
             case "NO_SERVICE_FOLLOWUP" -> "NO_SERVICE_FOLLOWUP".equals(careGroup);
             case "FEEDBACK_COMPLAINT" -> "FEEDBACK_COMPLAINT".equals(careGroup)
@@ -2051,6 +2176,8 @@ public class CustomerCareServiceImpl implements CustomerCareService {
         String upper = careGroup.trim().toUpperCase(Locale.ROOT);
         return switch (upper) {
             case "APPOINTMENT_REMINDER", "INSTALLMENT_REMINDER" -> CustomerCareTaskType.APPOINTMENT_REMINDER;
+            case "PAYMENT_REMINDER" -> CustomerCareTaskType.PAYMENT_REMINDER;
+            case "DOCTOR_LEAVE", "DOCTOR_LEAVE_RESCHEDULE" -> CustomerCareTaskType.DOCTOR_LEAVE_RESCHEDULE;
             case "MEDICATION_REMINDER" -> CustomerCareTaskType.MEDICATION_REMINDER;
             case "NO_SHOW_RECALL", "NO_SERVICE_FOLLOWUP" -> CustomerCareTaskType.NO_SHOW_RECALL;
             case "POST_TREATMENT", "POST_TREATMENT_FOLLOWUP", "FEEDBACK_COMPLAINT" -> CustomerCareTaskType.POST_TREATMENT_FOLLOWUP;
@@ -2166,6 +2293,10 @@ public class CustomerCareServiceImpl implements CustomerCareService {
                 || code.startsWith("lt") || code.startsWith("nv");
     }
 
+    /**
+     * Chuyển đổi thực thể {@link CustomerCareTask} cùng danh sách tương tác sang {@link CustomerCareTaskDTO},
+     * tự động làm giàu ngữ cảnh khám lâm sàng, chẩn đoán, đơn thuốc, thông tin bác sĩ nghỉ phép (FT01) và công nợ từng đợt (FT02).
+     */
     private CustomerCareTaskDTO toTaskDTO(
             CustomerCareTask t,
             List<CustomerCareInteraction> interactions,
@@ -2291,6 +2422,54 @@ public class CustomerCareServiceImpl implements CustomerCareService {
             dto.setLastInteractionNotes(latest.getNotes());
             dto.setLastContactAt(latest.getCreatedAt());
             dto.setNextRetryAt(latest.getNextRetryAt());
+        }
+
+        // FT01 — Metadata Bác sĩ nghỉ phép
+        dto.setLeaveRequestId(t.getLeaveRequestId());
+        if (t.getAppointment() != null) {
+            Appointment a = t.getAppointment();
+            dto.setAppointmentExpectedTime(a.getExpectedTime() != null ? a.getExpectedTime().toString() : null);
+            dto.setAppointmentStatus(a.getStatus() != null ? a.getStatus().name() : null);
+            if (dto.getDoctorName() == null && a.getDoctor() != null) {
+                dto.setDoctorId(a.getDoctor().getStaffId());
+                dto.setDoctorName(a.getDoctor().getFullName());
+            }
+        }
+        if (t.getLeaveRequestId() != null && leaveRequestRepository != null) {
+            leaveRequestRepository.findByIdWithDetails(t.getLeaveRequestId()).ifPresent(lr -> {
+                dto.setLeaveStartDate(lr.getStartDate());
+                dto.setLeaveEndDate(lr.getEndDate());
+                if (lr.getStaff() != null) {
+                    dto.setLeaveDoctorName(lr.getStaff().getFullName());
+                }
+                if (lr.getShift() != null) {
+                    dto.setLeaveShiftName(lr.getShift().getShiftName());
+                }
+            });
+        }
+
+        // FT02 — 8 chỉ số công nợ kế hoạch & từng đợt
+        dto.setInstallmentId(t.getInstallmentId());
+        dto.setReminderStage(t.getReminderStage());
+        dto.setLastRemindedAt(t.getLastRemindedAt());
+        if (t.getInstallmentId() != null && installmentRepository != null) {
+            installmentRepository.findById(t.getInstallmentId()).ifPresent(inst -> {
+                dto.setInstallmentOrder(inst.getInstallmentOrder());
+                dto.setInstallmentPhaseName(inst.getPhaseName());
+                dto.setInstallmentExpectedDate(inst.getExpectedDate());
+                dto.setInstallmentExpectedAmount(inst.getExpectedAmount());
+                dto.setInstallmentPaidAmount(inst.getPaidAmount());
+                dto.setInstallmentRemainingAmount(inst.getRemainingAmount());
+                if (inst.getPlan() != null) {
+                    TreatmentPlan plan = inst.getPlan();
+                    dto.setTreatmentPlanId(plan.getPlanId());
+                    dto.setTreatmentPlanCode(plan.getPlanCode());
+                    dto.setTreatmentPlanName(plan.getPlanName());
+                    dto.setPlanTotalCost(plan.getEstimatedCost());
+                    dto.setPlanPaidAmount(plan.getTotalPaidAmount());
+                    dto.setPlanRemainingAmount(plan.getRemainingCost());
+                }
+            });
         }
 
         if (includeFullInteractions) {
@@ -2479,6 +2658,7 @@ public class CustomerCareServiceImpl implements CustomerCareService {
             case NO_ANSWER -> "Không bắt máy";
             case BUSY -> "Máy bận";
             case SCHEDULED_APPOINTMENT -> "Đã đặt / đổi lịch hẹn";
+            case FAILED -> "Không liên lạc được / Sai số";
         };
     }
 
@@ -2501,7 +2681,7 @@ public class CustomerCareServiceImpl implements CustomerCareService {
         try {
             return ContactResult.valueOf(value.trim().toUpperCase(Locale.ROOT));
         } catch (IllegalArgumentException ex) {
-            bad("Kết quả liên hệ không hợp lệ (chỉ chấp nhận CONNECTED, NO_ANSWER, BUSY, SCHEDULED_APPOINTMENT).");
+            bad("Kết quả liên hệ không hợp lệ (chỉ chấp nhận CONNECTED, NO_ANSWER, BUSY, SCHEDULED_APPOINTMENT, FAILED).");
             return ContactResult.CONNECTED;
         }
     }

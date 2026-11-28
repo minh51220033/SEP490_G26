@@ -472,6 +472,24 @@
                                     </label>
                                     <textarea id="walkInSymptoms" name="symptoms" class="form-control rounded-3 flex-grow-1" rows="3" maxlength="500"
                                               placeholder="Mô tả triệu chứng hoặc lý do bệnh nhân đến khám..." required th:text="${savedSymptoms}"></textarea>
+                                    <div class="d-flex flex-wrap align-items-center gap-3 mt-2">
+                                        <div class="form-check mb-0">
+                                            <input class="form-check-input" type="checkbox" id="walkInPriority" name="priority" value="true">
+                                            <label class="form-check-label small fw-semibold text-primary" for="walkInPriority">
+                                                Ưu tiên (Người cao tuổi / Thai sản)
+                                            </label>
+                                        </div>
+                                        <div class="form-check mb-0">
+                                            <input class="form-check-input" type="checkbox" id="walkInEmergency" name="emergency" value="true"
+                                                   onchange="document.getElementById('walkInEmergencyHint').classList.toggle('d-none', !this.checked); document.getElementById('walkInSymptoms').minLength = this.checked ? 10 : 0;">
+                                            <label class="form-check-label small fw-semibold text-danger" for="walkInEmergency">
+                                                Cấp cứu (Bỏ qua giờ mở/đóng cửa, ưu tiên cao nhất)
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <small id="walkInEmergencyHint" class="text-danger mt-1 d-none">
+                                        Ca cấp cứu bắt buộc nhập triệu chứng chi tiết tối thiểu 10 ký tự.
+                                    </small>
                                 </div>
 
                                 <div class="d-flex justify-content-end align-items-center gap-2 pt-1">
@@ -745,6 +763,20 @@
                                                     title="In phiếu khám A6 tại chỗ">
                                                 <i class="bi bi-printer-fill"></i><span>In phiếu</span>
                                             </button>
+
+                                            <!-- Nút Hoàn tác check-in -->
+                                            <form th:if="${v.canRevert and v.appointmentId != null}"
+                                                  method="post"
+                                                  th:action="@{/reception/check-in/appointments/{id}/revert(id=${v.appointmentId})}"
+                                                  class="d-inline"
+                                                  onsubmit="return confirm('Xác nhận hoàn tác check-in cho lịch hẹn này?');">
+                                                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+                                                <input type="hidden" name="branchId" th:value="${dashboard.branchId}" />
+                                                <input type="hidden" name="day" th:value="${dashboard.day}" />
+                                                <button type="submit" class="dv-equal-btn-secondary text-danger" title="Hoàn tác check-in (trả lịch về Đã xác nhận)">
+                                                    <i class="bi bi-arrow-counterclockwise"></i><span>Hoàn tác</span>
+                                                </button>
+                                            </form>
 
                                             <!-- Nút Chi tiết -->
                                             <button type="button" class="dv-equal-btn-secondary btn-open-history-detail" title="Xem chi tiết tiếp đón">

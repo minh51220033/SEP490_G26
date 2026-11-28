@@ -21,6 +21,10 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.*;
 
+/**
+ * [Phân hệ]: Tài chính - Bảng lương nhân sự
+ * [Vai trò]: Triển khai toàn bộ vòng đời kỳ lương (khởi tạo, đồng bộ chấm công/hoa hồng/tạm ứng, điều chỉnh dòng lương, trình duyệt, phê duyệt, từ chối, chi trả kèm đối soát bất biến, tất toán tạm ứng và sinh phiếu chi tự động).
+ */
 @Service
 @Transactional
 public class PayrollServiceImpl implements PayrollService {
@@ -64,6 +68,10 @@ public class PayrollServiceImpl implements PayrollService {
         this.userRepository = userRepository;
     }
 
+    /**
+     * [Chức năng]: Tra cứu phân trang danh sách kỳ lương theo chi nhánh, tháng, năm và trạng thái trong phạm vi chi nhánh được phép.
+     * [Mục đích]: Giới hạn truy vấn trong allowedBranchIds để chống xem chéo chi nhánh và gọi PayrollPeriodRepository.findFilteredPeriods.
+     */
     @Override
     @Transactional(readOnly = true)
     public Page<PayrollPeriod> getPeriods(
@@ -100,6 +108,10 @@ public class PayrollServiceImpl implements PayrollService {
         );
     }
 
+    /**
+     * [Chức năng]: Lấy thông tin chi tiết một kỳ lương theo ID kèm kiểm tra quyền truy cập chi nhánh.
+     * [Mục đích]: Tải đầy đủ entity PayrollPeriod qua findWithDetailsById và gọi validateBranchAccess trước khi trả dữ liệu.
+     */
     @Override
     @Transactional(readOnly = true)
     public PayrollPeriod getPeriodDetail(Long periodId, Long currentUserId) {
@@ -110,6 +122,10 @@ public class PayrollServiceImpl implements PayrollService {
         return period;
     }
 
+    /**
+     * [Chức năng]: Lấy danh sách các dòng lương chi tiết (PayrollItem) của một kỳ lương và tự động đồng bộ ngày công thực tế khi kỳ ở trạng thái DRAFT.
+     * [Mục đích]: Kiểm tra quyền truy cập kỳ lương, tải các PayrollItem kèm thông tin nhân sự và cập nhật actualWorkDays từ dữ liệu chấm công nếu có sai khác ở bản nháp.
+     */
     @Override
     public List<PayrollItem> getPeriodItems(Long periodId, Long currentUserId) {
         PayrollPeriod period = getPeriodDetail(periodId, currentUserId);
@@ -134,6 +150,10 @@ public class PayrollServiceImpl implements PayrollService {
         return items;
     }
 
+    /**
+     * [Chức năng]: Khởi tạo mới một kỳ bảng lương ở trạng thái Nháp (DRAFT) cho chi nhánh theo tháng/năm và tự động tính dòng lương cho nhân sự đủ điều kiện.
+     * [Mục đích]: Kiểm tra quyền FINANCE_PAYROLL, quyền chi nhánh và chặn tạo trùng kỳ lương cùng chi nhánh/tháng/năm, lưu PayrollPeriod và gọi populatePeriodItems.
+     */
     @Override
     public PayrollPeriod createPeriod(PayrollPeriodCreateDTO dto, Long currentUserId) {
         if (currentUserId == null) {
@@ -179,6 +199,9 @@ public class PayrollServiceImpl implements PayrollService {
         }
     }
 
+    /**
+     * [Hàm hỗ trợ]: Nạp và tính toán toàn bộ dòng lương cho nhân sự ACTIVE thuộc chi nhánh (ưu tiên chi nhánh chính, chống trùng tháng/năm), khóa và gắn hoa hồng PENDING trong tháng, giữ chỗ khấu trừ tạm ứng (RESERVED) và cập nhật tổng kỳ lương.
+     */
     private void populatePeriodItems(PayrollPeriod period, Map<Long, ManualAdjustment> preservedAdjustments) {
         LocalDate periodStartDate = LocalDate.of(period.getYear(), period.getMonth(), 1);
         LocalDate periodEndDate = periodStartDate.plusMonths(1).minusDays(1);
@@ -319,10 +342,16 @@ public class PayrollServiceImpl implements PayrollService {
         recalculatePeriodTotals(period.getPeriodId());
     }
 
+    /**
+     * [Hàm hỗ trợ]: Giữ chỗ cấn trừ tạm ứng (RESERVED) cho một dòng lương và lưu trực tiếp các bản ghi phân bổ vào DB.
+     */
     private BigDecimal reserveAdvanceAllocationsForItem(PayrollItem item, BigDecimal netSalary) {
         return reserveAdvanceAllocationsForItem(item, netSalary, null);
     }
 
+    /**
+     * [Hàm hỗ trợ]: Khóa bi quan các khoản tạm ứng PAID còn số dư của nhân viên theo thứ tự ID tăng dần, tính số dư khả dụng (trừ phần đang RESERVED ở kỳ khác) và tạo phân bổ RESERVED tương ứng không vượt quá lương Net.
+     */
     private BigDecimal reserveAdvanceAllocationsForItem(PayrollItem item, BigDecimal netSalary, List<SalaryAdvanceAllocation> outAllocations) {
         if (netSalary.compareTo(BigDecimal.ZERO) <= 0) {
             return BigDecimal.ZERO;
@@ -385,6 +414,9 @@ public class PayrollServiceImpl implements PayrollService {
         return totalAllocated;
     }
 
+    /**
+     * [Hàm hỗ trợ]: Cộng dồn toàn bộ các cấu phần lương (lương cơ bản, phụ cấp, thưởng, hoa hồng, Gross, giảm trừ, Net, tạm ứng, thực nhận) từ các PayrollItem và lưu tổng vào PayrollPeriod.
+     */
     private void recalculatePeriodTotals(Long periodId) {
         PayrollPeriod period = payrollPeriodRepository.findById(periodId)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy kỳ lương"));
@@ -430,6 +462,10 @@ public class PayrollServiceImpl implements PayrollService {
         payrollPeriodRepository.save(period);
     }
 
+    /**
+     * [Chức năng]: Cập nhật tiền thưởng, khoản giảm trừ và ghi chú cho một dòng lương khi kỳ lương đang ở trạng thái DRAFT.
+     * [Mục đích]: Khóa kỳ lương (findByIdForUpdate), kiểm tra quyền FINANCE_PAYROLL và chi nhánh, xác thực không âm/không vượt Gross/bắt buộc có ghi chú khi điều chỉnh, tính lại lương Net, phân bổ lại tạm ứng RESERVED và cập nhật tổng kỳ lương.
+     */
     @Override
     public PayrollItem updateItem(Long itemId, PayrollItemUpdateDTO dto, Long currentUserId) {
         PayrollItem item = payrollItemRepository.findWithDetailsById(itemId)
@@ -495,6 +531,10 @@ public class PayrollServiceImpl implements PayrollService {
         return savedItem;
     }
 
+    /**
+     * [Chức năng]: Tính lại tổng hoa hồng, lương Gross, Net, phân bổ tạm ứng và thực nhận của một dòng lương DRAFT sau khi hoa hồng dịch vụ thay đổi.
+     * [Mục đích]: Được ServiceCommissionService gọi khi hủy hoặc tính lại hoa hồng dịch vụ, khóa kỳ lương đảm bảo đang DRAFT, cộng lại các hoa hồng PENDING còn gắn và cập nhật tổng kỳ lương.
+     */
     @Override
     public void recalculateDraftItemAfterCommissionChange(Long payrollItemId) {
         if (payrollItemId == null) {
@@ -552,6 +592,10 @@ public class PayrollServiceImpl implements PayrollService {
         recalculatePeriodTotals(period.getPeriodId());
     }
 
+    /**
+     * [Chức năng]: Tính toán lại toàn bộ kỳ bảng lương DRAFT (đồng bộ lại nhân sự, chấm công, hoa hồng, tạm ứng) nhưng vẫn bảo toàn các khoản thưởng/giảm trừ/ghi chú kế toán đã nhập tay.
+     * [Mục đích]: Khóa kỳ lương (findByIdForUpdate), lưu tạm điều chỉnh thủ công, gỡ liên kết hoa hồng/xóa allocation và dòng lương cũ, sau đó nạp lại toàn bộ qua populatePeriodItems.
+     */
     @Override
     public PayrollPeriod recalculatePeriod(Long periodId, Long currentUserId) {
         requirePayrollPermission(currentUserId);
@@ -584,6 +628,10 @@ public class PayrollServiceImpl implements PayrollService {
         return payrollPeriodRepository.findById(periodId).orElseThrow();
     }
 
+    /**
+     * [Chức năng]: Trình duyệt kỳ bảng lương, chuyển trạng thái từ DRAFT sang SUBMITTED.
+     * [Mục đích]: Khóa kỳ lương, kiểm tra quyền FINANCE_PAYROLL và chi nhánh, đảm bảo bảng lương có nhân sự và đối soát khớp 100% chi tiết hoa hồng đã gắn (reconcileBoundCommissionsForPeriod) trước khi lưu người trình duyệt.
+     */
     @Override
     public PayrollPeriod submitPeriod(Long periodId, Long currentUserId) {
         requirePayrollPermission(currentUserId);
@@ -610,6 +658,10 @@ public class PayrollServiceImpl implements PayrollService {
         return payrollPeriodRepository.save(period);
     }
 
+    /**
+     * [Chức năng]: Phê duyệt kỳ bảng lương đang chờ duyệt, chuyển trạng thái từ SUBMITTED sang APPROVED.
+     * [Mục đích]: Kiểm tra quyền Admin/FINANCE_PAYROLL, khóa kỳ lương (findByIdForUpdate), xác nhận trạng thái SUBMITTED và ghi nhận người phê duyệt cùng thời điểm duyệt.
+     */
     @Override
     public PayrollPeriod approvePeriod(Long periodId, Long currentUserId) {
         if (currentUserId == null || (!userRepository.hasActiveAdminRole(currentUserId)
@@ -635,6 +687,10 @@ public class PayrollServiceImpl implements PayrollService {
         return payrollPeriodRepository.save(period);
     }
 
+    /**
+     * [Chức năng]: Từ chối hoặc trả về chỉnh sửa kỳ bảng lương từ SUBMITTED/APPROVED về lại trạng thái DRAFT kèm lý do.
+     * [Mục đích]: Kiểm tra quyền Admin/FINANCE_PAYROLL, khóa kỳ lương, chặn trả về nếu đã PAID, xóa thông tin duyệt cũ và tự động hủy phiếu chi liên kết (nếu có) trước khi lưu.
+     */
     @Override
     public PayrollPeriod rejectPeriod(Long periodId, String reason, Long currentUserId) {
         if (currentUserId == null || (!userRepository.hasActiveAdminRole(currentUserId)
@@ -672,6 +728,10 @@ public class PayrollServiceImpl implements PayrollService {
         return payrollPeriodRepository.save(period);
     }
 
+    /**
+     * [Chức năng]: Xác nhận chi trả kỳ bảng lương đã phê duyệt (APPROVED -> PAID), tất toán tạm ứng, đánh dấu hoa hồng PAID và tự động tạo phiếu chi vận hành.
+     * [Mục đích]: Khóa kỳ lương, đối soát toàn bộ bất biến số liệu (hoa hồng, Gross/Net/tạm ứng/thực trả của từng dòng và tổng kỳ), khóa bi quan các phiếu tạm ứng theo thứ tự ID tăng dần chống deadlock để trừ số dư/chuyển SETTLED, cập nhật PayrollItem/PayrollPeriod sang PAID và sinh OperatingExpense nguồn PAYROLL nếu tổng thực chi > 0.
+     */
     @Override
     public PayrollPeriod payPeriod(Long periodId, RefundMethod paymentMethod, String paymentReference, Long currentUserId) {
         if (currentUserId == null) {
@@ -870,6 +930,10 @@ public class PayrollServiceImpl implements PayrollService {
         return savedPeriod;
     }
 
+    /**
+     * [Chức năng]: Xóa vĩnh viễn một kỳ bảng lương đang ở trạng thái Nháp (DRAFT) và giải phóng toàn bộ dữ liệu liên kết.
+     * [Mục đích]: Khóa kỳ lương, kiểm tra quyền FINANCE_PAYROLL/chi nhánh và trạng thái DRAFT, hủy phiếu chi liên kết (nếu có), gỡ gắn hoa hồng, xóa phân bổ tạm ứng, xóa các dòng lương và xóa bản ghi PayrollPeriod.
+     */
     @Override
     public void deleteDraftPeriod(Long periodId, Long currentUserId) {
         requirePayrollPermission(currentUserId);
@@ -903,6 +967,10 @@ public class PayrollServiceImpl implements PayrollService {
         payrollPeriodRepository.findByIdForUpdate(periodId).ifPresent(payrollPeriodRepository::delete);
     }
 
+    /**
+     * [Chức năng]: Tìm danh sách hoa hồng PENDING phát sinh muộn trong tháng của các nhân sự thuộc kỳ lương nhưng chưa được gắn vào kỳ lương này.
+     * [Mục đích]: Hiển thị cảnh báo trên màn hình chi tiết kỳ lương đã trình duyệt/duyệt/chi trả để kế toán biết có hoa hồng phát sinh bổ sung sau khi chốt số liệu.
+     */
     @Override
     @Transactional(readOnly = true)
     public List<ServiceCommission> getLateUnboundCommissionsForPeriod(Long periodId, Long currentUserId) {
@@ -933,6 +1001,9 @@ public class PayrollServiceImpl implements PayrollService {
         return late != null ? late : Collections.emptyList();
     }
 
+    /**
+     * [Hàm hỗ trợ]: Đối soát toàn bộ bản ghi hoa hồng đã gắn với các dòng lương của kỳ (đều phải PENDING, dịch vụ COMPLETED và tổng tiền khớp chính xác với từng PayrollItem và PayrollPeriod).
+     */
     private void reconcileBoundCommissionsForPeriod(PayrollPeriod period, List<PayrollItem> items) {
         if (serviceCommissionRepository == null || period == null || items == null) {
             return;
@@ -977,6 +1048,9 @@ public class PayrollServiceImpl implements PayrollService {
         }
     }
 
+    /**
+     * [Hàm hỗ trợ]: Kiểm tra người dùng có vai trò Admin hoặc quyền FINANCE_PAYROLL đang hoạt động trước khi thực hiện thao tác thay đổi bảng lương.
+     */
     private void requirePayrollPermission(Long currentUserId) {
         if (currentUserId == null || (!userRepository.hasActiveAdminRole(currentUserId)
                 && !userRepository.hasActivePermission(currentUserId, "FINANCE_PAYROLL"))) {
@@ -984,6 +1058,9 @@ public class PayrollServiceImpl implements PayrollService {
         }
     }
 
+    /**
+     * [Hàm hỗ trợ]: Kiểm tra người dùng có quyền truy cập chi nhánh mục tiêu thông qua vai trò Admin, phân công ACTIVE hoặc chi nhánh mặc định.
+     */
     private void validateBranchAccess(Long branchId, Long currentUserId) {
         if (currentUserId == null) {
             throw new AccessDeniedException("Người dùng chưa đăng nhập");
@@ -1002,6 +1079,9 @@ public class PayrollServiceImpl implements PayrollService {
         }
     }
 
+    /**
+     * [Hàm hỗ trợ]: Đếm số ngày công làm việc thực tế của nhân viên trong khoảng thời gian kỳ lương dựa trên dữ liệu chấm công (có check-in hoặc trạng thái ON_TIME/LATE/EARLY_LEAVE).
+     */
     private BigDecimal resolveActualWorkDays(Long staffId, LocalDate periodStartDate, LocalDate periodEndDate) {
         if (attendanceRecordRepository == null || staffId == null || periodStartDate == null || periodEndDate == null) {
             return BigDecimal.ZERO;
@@ -1023,6 +1103,9 @@ public class PayrollServiceImpl implements PayrollService {
         return BigDecimal.valueOf(workedDays);
     }
 
+    /**
+     * [Hàm hỗ trợ]: Đặt toàn bộ các trường khấu trừ bảo hiểm và thuế TNCN cũ về 0/null theo chính sách tính lương đơn giản hiện hành.
+     */
     private void resetLegacyDeductionsToZero(PayrollItem item) {
         item.setInsuranceEmployeeDeduction(BigDecimal.ZERO);
         item.setInsuranceEmployerAmount(BigDecimal.ZERO);

@@ -2,6 +2,7 @@ package com.cvdcms.repository;
 
 import com.cvdcms.entity.CustomerCareTask;
 import com.cvdcms.entity.Prescription;
+import com.cvdcms.entity.TreatmentPlanInstallment;
 import com.cvdcms.entity.Visit;
 import com.cvdcms.entity.enums.CustomerCareTaskStatus;
 import com.cvdcms.entity.enums.CustomerCareTaskType;
@@ -62,6 +63,9 @@ public interface CustomerCareTaskRepository extends JpaRepository<CustomerCareTa
         """)
     Optional<CustomerCareTask> findByIdWithDetails(@Param("taskId") Long taskId);
 
+    /**
+     * Lấy danh sách công việc CSKH gắn với một lịch hẹn cụ thể.
+     */
     List<CustomerCareTask> findByAppointment_AppointmentId(Long appointmentId);
     /**
      * Lấy toàn bộ công việc CSKH của một chi nhánh (hoặc tất cả chi nhánh nếu branchId = null) kèm thông tin liên kết.
@@ -85,6 +89,9 @@ public interface CustomerCareTaskRepository extends JpaRepository<CustomerCareTa
         """)
     List<CustomerCareTask> findAllByBranchWithDetails(@Param("branchId") Long branchId);
 
+    /**
+     * Lấy danh sách công việc CSKH gắn với một lượt khám cụ thể.
+     */
     List<CustomerCareTask> findByVisit_VisitId(Long visitId);
     /**
      * Lấy danh sách công việc CSKH của một bệnh nhân cụ thể (phục vụ SCR-44.6).
@@ -108,6 +115,9 @@ public interface CustomerCareTaskRepository extends JpaRepository<CustomerCareTa
         """)
     List<CustomerCareTask> findByPatientProfileIdWithDetails(@Param("profileId") Long profileId);
 
+    /**
+     * Tìm các công việc CSKH theo đúng ngày đến hạn và trạng thái (dùng cho scheduler nhắc việc).
+     */
     List<CustomerCareTask> findByDueDateAndStatus(LocalDate dueDate, CustomerCareTaskStatus status);
     /**
      * Truy vấn các ca khám COMPLETED hợp lệ tại cơ sở (có thật hồ sơ bệnh nhân trong bảng patient_profiles
@@ -126,6 +136,9 @@ public interface CustomerCareTaskRepository extends JpaRepository<CustomerCareTa
         """)
     List<Visit> findCompletedVisitsByBranchForCare(@Param("branchId") Long branchId);
 
+    /**
+     * Tìm các công việc CSKH theo loại công việc và trạng thái.
+     */
     List<CustomerCareTask> findByTaskTypeAndStatus(CustomerCareTaskType taskType, CustomerCareTaskStatus status);
     /**
      * Truy vấn danh sách ca khám hợp lệ tại cơ sở để hiển thị trong dropdown Lập lịch CSKH.
@@ -142,6 +155,9 @@ public interface CustomerCareTaskRepository extends JpaRepository<CustomerCareTa
         """)
     List<Visit> findValidVisitsByBranchForLookup(@Param("branchId") Long branchId);
 
+    /**
+     * Lấy công việc CSKH đầu tiên gắn với một lịch hẹn (nếu có).
+     */
     Optional<CustomerCareTask> findFirstByAppointment_AppointmentId(Long appointmentId);
     /**
      * Truy vấn danh sách đơn thuốc hợp lệ tại cơ sở (bắt buộc tồn tại patientProfile, branch, visit và doctor)
@@ -286,4 +302,86 @@ public interface CustomerCareTaskRepository extends JpaRepository<CustomerCareTa
             @Param("activeStatuses") List<CustomerCareTaskStatus> activeStatuses,
             @Param("today") LocalDate today
     );
+
+    /**
+     * Kiểm tra đã tồn tại công việc CSKH dời lịch do bác sĩ nghỉ phép cho đơn nghỉ phép và lịch hẹn này chưa (chống trùng).
+     */
+    boolean existsByLeaveRequestIdAndAppointment_AppointmentIdAndTaskType(
+            Long leaveRequestId,
+            Long appointmentId,
+            CustomerCareTaskType taskType
+    );
+
+    /**
+     * Tìm công việc CSKH nhắc thanh toán đầu tiên ứng với một đợt thanh toán (installment) và loại công việc.
+     */
+    Optional<CustomerCareTask> findFirstByInstallmentIdAndTaskType(
+            Long installmentId,
+            CustomerCareTaskType taskType
+    );
+
+    /**
+     * Lấy danh sách công việc CSKH theo loại công việc và tập trạng thái cho trước.
+     */
+    List<CustomerCareTask> findByTaskTypeAndStatusIn(
+            CustomerCareTaskType taskType,
+            List<CustomerCareTaskStatus> statuses
+    );
+
+    /**
+     * Lấy danh sách công việc CSKH theo danh sách ID đợt thanh toán và loại công việc.
+     */
+    List<CustomerCareTask> findByInstallmentIdInAndTaskType(
+            List<Long> installmentIds,
+            CustomerCareTaskType taskType
+    );
+
+    /**
+     * Truy vấn các đợt thanh toán kế hoạch điều trị chưa thanh toán xong (chưa PAID, kế hoạch chưa CANCELLED)
+     * có ngày dự kiến {@code expectedDate <= cutoffDate} để tự động sinh task nhắc đóng tiền.
+     */
+    @Query("""
+        SELECT i FROM TreatmentPlanInstallment i
+        JOIN FETCH i.plan p
+        JOIN FETCH p.patientProfile pat
+        JOIN FETCH p.branch b
+        WHERE p.status <> com.cvdcms.entity.enums.TreatmentPlanStatus.CANCELLED
+          AND i.status <> com.cvdcms.entity.enums.TreatmentPlanInstallmentStatus.PAID
+          AND i.expectedDate IS NOT NULL
+          AND i.expectedDate <= :cutoffDate
+        ORDER BY i.expectedDate ASC, i.installmentOrder ASC
+        """)
+    List<TreatmentPlanInstallment> findDueInstallmentsForCareReminder(@Param("cutoffDate") LocalDate cutoffDate);
+
+    /**
+     * Lấy danh sách {@code user_id} của các Lễ tân đang hoạt động tại một chi nhánh
+     * (theo {@code users.branch_id} hoặc phân công hiệu lực trong {@code staff_branch_assignments})
+     * để gửi thông báo CSKH tự động.
+     */
+    @Query(value = """
+        SELECT DISTINCT u.user_id
+        FROM users u
+        JOIN user_roles ur ON ur.user_id = u.user_id
+        JOIN roles r ON r.role_id = ur.role_id
+        LEFT JOIN staff_profiles sp ON sp.user_id = u.user_id
+        WHERE u.is_active = 1
+          AND UPPER(u.status) = 'ACTIVE'
+          AND UPPER(r.role_name) IN ('LE_TAN', 'RECEPTIONIST')
+          AND (
+              u.branch_id = :branchId
+              OR EXISTS (
+                  SELECT 1
+                  FROM staff_branch_assignments sba
+                  JOIN roles sr ON sr.role_id = sba.role_id
+                  WHERE sp.staff_id IS NOT NULL
+                    AND sba.staff_id = sp.staff_id
+                    AND sba.branch_id = :branchId
+                    AND sba.status = 'ACTIVE'
+                    AND sba.start_date <= CURDATE()
+                    AND (sba.end_date IS NULL OR sba.end_date >= CURDATE())
+                    AND UPPER(sr.role_name) IN ('LE_TAN', 'RECEPTIONIST')
+              )
+          )
+        """, nativeQuery = true)
+    List<Long> findActiveReceptionistUserIdsByBranch(@Param("branchId") Long branchId);
 }

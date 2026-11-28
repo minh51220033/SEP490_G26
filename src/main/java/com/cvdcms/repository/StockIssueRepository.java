@@ -11,10 +11,19 @@ import org.springframework.data.repository.query.Param;
 import java.time.LocalDate;
 import java.util.Optional;
 
+/**
+ * Repository truy vấn Phiếu xuất kho và Phiếu điều chuyển kho liên chi nhánh ({@link StockIssue}).
+ * <p>Được gọi từ {@link com.cvdcms.service.impl.StockIssueServiceImpl} và luồng cấp phát đơn thuốc.</p>
+ */
 public interface StockIssueRepository extends JpaRepository<StockIssue, Long> {
 
+    /** Kiểm tra mã phiếu xuất / điều chuyển đã tồn tại hay chưa để đảm bảo sinh mã duy nhất. */
     boolean existsByIssueCode(String issueCode);
 
+    /**
+     * Tìm kiếm phân trang lịch sử phiếu xuất kho của chi nhánh theo loại xuất, tùy chọn loại trừ {@code TRANSFER},
+     * từ khóa (mã phiếu, lý do, ghi chú, mã đơn thuốc, người lập) và khoảng ngày lập phiếu.
+     */
     @Query(
             value = """
                 SELECT si
@@ -29,6 +38,7 @@ public interface StockIssueRepository extends JpaRepository<StockIssue, Long> {
                        OR LOWER(si.issueCode) LIKE LOWER(CONCAT('%', :keyword, '%'))
                        OR LOWER(COALESCE(si.issueReason, '')) LIKE LOWER(CONCAT('%', :keyword, '%'))
                        OR LOWER(COALESCE(si.notes, '')) LIKE LOWER(CONCAT('%', :keyword, '%'))
+                       OR LOWER(COALESCE(si.prescriptionCode, '')) LIKE LOWER(CONCAT('%', :keyword, '%'))
                        OR LOWER(iss.fullName) LIKE LOWER(CONCAT('%', :keyword, '%')))
                   AND (:fromDate IS NULL OR si.issueDate >= :fromDate)
                   AND (:toDate IS NULL OR si.issueDate <= :toDate)
@@ -45,6 +55,7 @@ public interface StockIssueRepository extends JpaRepository<StockIssue, Long> {
                        OR LOWER(si.issueCode) LIKE LOWER(CONCAT('%', :keyword, '%'))
                        OR LOWER(COALESCE(si.issueReason, '')) LIKE LOWER(CONCAT('%', :keyword, '%'))
                        OR LOWER(COALESCE(si.notes, '')) LIKE LOWER(CONCAT('%', :keyword, '%'))
+                       OR LOWER(COALESCE(si.prescriptionCode, '')) LIKE LOWER(CONCAT('%', :keyword, '%'))
                        OR LOWER(iss.fullName) LIKE LOWER(CONCAT('%', :keyword, '%')))
                   AND (:fromDate IS NULL OR si.issueDate >= :fromDate)
                   AND (:toDate IS NULL OR si.issueDate <= :toDate)
@@ -60,6 +71,10 @@ public interface StockIssueRepository extends JpaRepository<StockIssue, Long> {
             Pageable pageable
     );
 
+    /**
+     * Tìm kiếm phân trang lịch sử điều chuyển kho ({@code issueType = TRANSFER}) liên quan đến {@code branchId}
+     * (bao gồm cả chiều chi nhánh là nguồn xuất và chiều chi nhánh là nơi nhận).
+     */
     @Query(
             value = """
                 SELECT si
@@ -104,6 +119,7 @@ public interface StockIssueRepository extends JpaRepository<StockIssue, Long> {
             Pageable pageable
     );
 
+    /** Tải chi tiết đầy đủ một phiếu xuất / điều chuyển kèm chi nhánh nguồn, chi nhánh đích, người lập và các dòng lô vật tư. */
     @Query("""
         SELECT DISTINCT si
         FROM StockIssue si
@@ -116,4 +132,16 @@ public interface StockIssueRepository extends JpaRepository<StockIssue, Long> {
         WHERE si.issueId = :issueId
         """)
     Optional<StockIssue> findByIdWithDetails(@Param("issueId") Long issueId);
+
+    /** Lấy danh sách các phiếu xuất kho gắn với một đơn thuốc ({@code prescriptionId}) kèm chi tiết vật tư/lô, sắp theo ID tăng dần. */
+    @Query("""
+        SELECT DISTINCT si
+        FROM StockIssue si
+        LEFT JOIN FETCH si.items i
+        LEFT JOIN FETCH i.material m
+        LEFT JOIN FETCH i.batch mb
+        WHERE si.prescription.prescriptionId = :prescriptionId
+        ORDER BY si.issueId ASC
+        """)
+    java.util.List<StockIssue> findByPrescriptionIdWithItemsOrderByIssueIdAsc(@Param("prescriptionId") Long prescriptionId);
 }

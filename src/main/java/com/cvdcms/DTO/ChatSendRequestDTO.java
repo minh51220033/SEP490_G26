@@ -6,9 +6,11 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * DTO nhận yêu cầu gửi tin nhắn từ client (qua STOMP /app/chat.send hoặc REST POST /api/chat/messages).
- * Lưu ý bảo mật: Backend luôn xác định người gửi từ phiên đăng nhập thực tế (HttpSession / Principal).
- * Trường recipientUserId chỉ được phép sử dụng khi người gửi KHÔNG phải là Bệnh nhân.
+ * DTO nhận yêu cầu gửi tin nhắn từ client (luồng chính từ Frontend JS qua REST {@code POST /api/chat/messages},
+ * đồng thời hỗ trợ gửi trực tiếp qua STOMP {@code /app/chat.send}).
+ * <p>
+ * Lưu ý bảo mật: Backend luôn xác định người gửi từ phiên đăng nhập thực tế ({@code HttpSession} / {@code Principal}).
+ * Trường {@code recipientUserId} chỉ được phép sử dụng khi người gửi KHÔNG phải là Bệnh nhân.
  */
 @Data
 @Builder

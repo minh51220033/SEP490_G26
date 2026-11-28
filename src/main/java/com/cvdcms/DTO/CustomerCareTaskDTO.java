@@ -11,8 +11,13 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * DTO trả về thông tin công việc chăm sóc khách hàng (SCR-44.1, SCR-44.2, SCR-44.4, SCR-44.5)
- * kèm thông tin liên kết Hồ sơ khám lâm sàng, Chẩn đoán, Lời dặn điều trị (#tab-instructions) và Đơn thuốc.
+ * DTO trả về đầy đủ thông tin một công việc Chăm sóc khách hàng (CSKH - SCR-44.1, 44.2, 44.4, 44.5).
+ *
+ * <p><b>Chức năng:</b> Gom toàn bộ dữ liệu hiển thị cho bảng danh sách, lịch biểu, modal chi tiết và drawer:
+ * thông tin bệnh nhân, chi nhánh, nhóm chăm sóc, liên kết hồ sơ khám lâm sàng / chẩn đoán / lời dặn bác sĩ /
+ * đơn thuốc / lịch hẹn, nhân viên phụ trách, thông tin chuyển bác sĩ & phản hồi chuyên môn, trạng thái quá hạn,
+ * lần tương tác gần nhất, thông tin bác sĩ nghỉ phép (FT01) và thông tin nhắc đóng tiền theo đợt (FT02).</p>
+ * <p><b>Được dùng bởi:</b> {@link com.cvdcms.controller.CustomerCareRestController} và {@code customer-care.js}.</p>
  */
 @Getter
 @Setter
@@ -106,6 +111,32 @@ public class CustomerCareTaskDTO {
     private String lastInteractionNotes;
     private LocalDateTime lastContactAt;
     private LocalDateTime nextRetryAt;
+
+    // FT01 — Bác sĩ nghỉ phép
+    private Long leaveRequestId;
+    private String leaveDoctorName;
+    private LocalDate leaveStartDate;
+    private LocalDate leaveEndDate;
+    private String leaveShiftName;
+    private String appointmentExpectedTime;
+    private String appointmentStatus;
+
+    // FT02 — Nhắc thanh toán từng đợt (8 chỉ số)
+    private Long treatmentPlanId;
+    private String treatmentPlanCode;
+    private String treatmentPlanName;
+    private java.math.BigDecimal planTotalCost;
+    private java.math.BigDecimal planPaidAmount;
+    private java.math.BigDecimal planRemainingAmount;
+    private Long installmentId;
+    private Integer installmentOrder;
+    private String installmentPhaseName;
+    private LocalDate installmentExpectedDate;
+    private java.math.BigDecimal installmentExpectedAmount;
+    private java.math.BigDecimal installmentPaidAmount;
+    private java.math.BigDecimal installmentRemainingAmount;
+    private String reminderStage;
+    private LocalDateTime lastRemindedAt;
 
     // Danh sách lịch sử tương tác chi tiết của công việc này
     private List<CustomerCareInteractionDTO> interactions = new ArrayList<>();

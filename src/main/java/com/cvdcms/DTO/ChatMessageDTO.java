@@ -9,6 +9,11 @@ import java.time.LocalDateTime;
 
 /**
  * DTO biểu diễn một tin nhắn trong cuộc hội thoại (dùng cho cả REST API và sự kiện WebSocket STOMP).
+ * <p>
+ * Bao gồm thông tin định tuyến ({@code initiatorUsername}, {@code recipientUsername}, {@code branchId},
+ * {@code directConversation}), trạng thái chỉnh sửa/thu hồi trong cửa sổ 10 phút ({@code isEdited},
+ * {@code isRecalled}, {@code canEditOrRecall}, {@code eventType}: {@code NEW} / {@code EDIT} / {@code RECALL})
+ * và mã {@code clientMessageId} để chống nhân đôi tin nhắn trên giao diện.
  */
 @Data
 @Builder

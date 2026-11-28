@@ -419,6 +419,10 @@ public class ChatServiceImpl implements ChatService {
     // 1B. HELPER KIỂM TRA TRẠNG THÁI ĐỌC / XÓA THEO TỪNG TÀI KHOẢN & 10 PHÚT SỬA/THU HỒI
     // =========================================================================
 
+    /**
+     * Kiểm tra tin nhắn còn nằm trong cửa sổ thời gian cho phép chỉnh sửa / thu hồi ({@value #EDIT_RECALL_WINDOW_MINUTES} phút)
+     * kể từ {@code sentAt} và chưa bị thu hồi trước đó.
+     */
     private boolean isWithinEditRecallWindow(ChatMessage message) {
         if (message == null || message.getSentAt() == null) {
             return false;
@@ -430,6 +434,11 @@ public class ChatServiceImpl implements ChatService {
         return !LocalDateTime.now().isAfter(deadline);
     }
 
+    /**
+     * Kiểm tra một tin nhắn có bị ẩn/xóa ở phía tài khoản hiện tại hay không:
+     * trả về {@code true} nếu bản ghi {@link ChatMessageUserState} có {@code isDeleted = true}
+     * hoặc {@code sentAt <= convState.clearedAt} (người dùng đã xóa toàn bộ hội thoại ở phía mình).
+     */
     private boolean isMessageDeletedForUser(
             ChatMessage m,
             ChatConversationUserState convState,
@@ -523,6 +532,11 @@ public class ChatServiceImpl implements ChatService {
     // 2. TÌM KIẾM TÀI KHOẢN TRONG CÙNG CƠ SỞ & KHỞI TẠO HỘI THOẠI VỚI NGƯỜI NHẬN
     // =========================================================================
 
+    /**
+     * Tìm kiếm tài khoản người nhận hợp lệ trong cùng cơ sở cho nhân viên / Admin.
+     * Tự động ẩn Bệnh nhân nếu người gọi là {@code QUAN_LY_KHO} hoặc {@code KE_TOAN}, đồng thời gom tóm tắt
+     * nhiều hồ sơ bệnh nhân ({@link PatientProfile}) trên cùng một tài khoản {@link User}.
+     */
     @Override
     @Transactional(readOnly = true)
     public List<ChatUserSearchItemDTO> searchRecipientUsers(
@@ -884,6 +898,10 @@ public class ChatServiceImpl implements ChatService {
     // 3. NGỮ CẢNH CHAT, TỔNG TIN CHƯA ĐỌC & KHUNG CHAT NỔI (FLOATING WIDGET)
     // =========================================================================
 
+    /**
+     * Đếm tổng số tin nhắn chưa đọc độc lập theo từng tài khoản (sử dụng {@link ChatConversationUserState}
+     * và {@link ChatMessageUserState}, không phụ thuộc hay sửa đổi {@code ChatMessage.isRead}).
+     */
     @Override
     @Transactional(readOnly = true)
     public long getTotalUnreadCount(Long currentUserId) {
@@ -1148,6 +1166,11 @@ public class ChatServiceImpl implements ChatService {
     // 4. TÌM KIẾM, LỌC THEO VAI TRÒ & CƠ SỞ TRONG HỘP THƯ (/chat)
     // =========================================================================
 
+    /**
+     * Tìm kiếm, lọc theo cơ sở / vai trò / từ khóa / trạng thái chưa đọc và phân trang danh sách hội thoại
+     * cho trang Hộp thư ({@code /chat}), tự động ẩn các hội thoại mà người dùng đã xóa ở phía mình
+     * nếu chưa phát sinh tin nhắn mới sau mốc {@code clearedAt}.
+     */
     @Override
     @Transactional(readOnly = true)
     public Page<ChatConversationDTO> searchInboxConversations(
@@ -1444,6 +1467,12 @@ public class ChatServiceImpl implements ChatService {
     // 5. XEM CHI TIẾT TIN NHẮN, GỬI, ĐỌC, SỬA, THU HỒI & XÓA Ở PHÍA TÔI
     // =========================================================================
 
+    /**
+     * Xác thực quyền truy cập cuộc hội thoại của tài khoản hiện tại theo đúng cơ sở và vai trò:
+     * ADMIN được xem tất cả; Bệnh nhân chỉ xem hội thoại chung do chính mình khởi tạo;
+     * nhân viên chỉ xem hội thoại thuộc cơ sở được phân công (hội thoại 1-1 yêu cầu là một trong hai bên tham gia,
+     * hội thoại bệnh nhân chỉ cho phép {@code LE_TAN} và {@code BAC_SI}).
+     */
     private ChatConversation requireConversationAccess(Long currentUserId, Long conversationId) {
         User currentUser = requireActiveUser(currentUserId);
         ChatConversation conversation = conversationRepository.findByIdWithDetails(conversationId)
@@ -1569,6 +1598,11 @@ public class ChatServiceImpl implements ChatService {
         return response;
     }
 
+    /**
+     * Lưu tin nhắn mới vào MySQL (chống trùng theo {@code clientMessageId} trong {@code recentClientMessages}),
+     * ghi nhận trạng thái đã đọc cho chính người gửi vào {@link ChatMessageUserState} và trả về
+     * {@link ChatMessageDTO} với {@code eventType = "NEW"} để phát realtime qua STOMP.
+     */
     @Override
     @Transactional
     public ChatMessageDTO sendMessage(Long currentUserId, ChatSendRequestDTO request) {
@@ -1725,6 +1759,11 @@ public class ChatServiceImpl implements ChatService {
         return dto;
     }
 
+    /**
+     * Đánh dấu cuộc hội thoại là đã đọc chỉ riêng cho tài khoản {@code currentUserId} bằng cách cập nhật
+     * {@link ChatMessageUserState} và mốc {@code lastReadAt} trong {@link ChatConversationUserState}
+     * (không thay đổi {@code ChatMessage.isRead} để không ảnh hưởng tới trạng thái chưa đọc của nhân viên khác).
+     */
     @Override
     @Transactional
     public Map<String, Object> markConversationAsRead(Long currentUserId, Long conversationId) {
@@ -1788,6 +1827,10 @@ public class ChatServiceImpl implements ChatService {
         return res;
     }
 
+    /**
+     * Chỉnh sửa nội dung tin nhắn chính chủ trong cửa sổ 10 phút kể từ lúc gửi; trả về DTO mang {@code eventType = "EDIT"}
+     * để controller phát cập nhật realtime tới các bên liên quan.
+     */
     @Override
     @Transactional
     public ChatMessageDTO editMessage(Long currentUserId, Long messageId, String newMessageText) {
@@ -1833,6 +1876,10 @@ public class ChatServiceImpl implements ChatService {
         return dto;
     }
 
+    /**
+     * Thu hồi tin nhắn chính chủ trong cửa sổ 10 phút (đặt {@code isRecalled = true}, {@code recalledAt = now});
+     * trả về DTO mang {@code eventType = "RECALL"} và nội dung thay thế {@link #RECALLED_MESSAGE_PLACEHOLDER}.
+     */
     @Override
     @Transactional
     public ChatMessageDTO recallMessage(Long currentUserId, Long messageId) {
@@ -1867,6 +1914,10 @@ public class ChatServiceImpl implements ChatService {
         return dto;
     }
 
+    /**
+     * Xóa (ẩn) một tin nhắn chỉ ở phía tài khoản {@code currentUserId} bằng cách đặt {@code isDeleted = true}
+     * trong {@link ChatMessageUserState}, không ảnh hưởng tới dữ liệu hiển thị của các tài khoản khác.
+     */
     @Override
     @Transactional
     public Map<String, Object> deleteMessageForUser(Long currentUserId, Long messageId) {
@@ -1907,6 +1958,10 @@ public class ChatServiceImpl implements ChatService {
         return res;
     }
 
+    /**
+     * Xóa (ẩn) toàn bộ cuộc hội thoại đến thời điểm hiện tại chỉ ở phía tài khoản {@code currentUserId}
+     * bằng cách cập nhật mốc {@code clearedAt} và {@code lastReadAt} trong {@link ChatConversationUserState}.
+     */
     @Override
     @Transactional
     public Map<String, Object> deleteConversationForUser(Long currentUserId, Long conversationId) {

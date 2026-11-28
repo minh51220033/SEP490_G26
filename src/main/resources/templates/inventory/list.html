@@ -1,4 +1,12 @@
 <!DOCTYPE html>
+<!--
+  Giao diện chính Quản lý kho vật tư (inventory/list.html).
+  Controller: InventoryPageController.inventoryPage (GET /inventory).
+  Script điều khiển: /js/inventory.js (tương tác REST API /api/inventory, /api/materials, /api/suppliers).
+  Cấu trúc gồm: Tiêu đề + Bộ chọn chi nhánh, 4 KPI Cards, Thanh tìm kiếm chung, 8 Tabs nghiệp vụ kho
+  (Tồn kho, Lô & HSD, Nhập kho, Xuất kho, Điều chuyển, Danh mục vật tư, Nhóm vật tư, NCC & Công nợ),
+  Drawer tùy chỉnh cột và 6 Modal thao tác (Vật tư, Thanh toán NCC, Thêm nhanh NCC, Chi tiết phiếu, Lightbox hóa đơn, Chọn nhiều vật tư).
+-->
 <html lang="vi" xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{fragments/head :: head('Quản lý kho vật tư')}"></head>
 
@@ -154,6 +162,7 @@
                 <button class="tab" type="button" data-tab="supplier-payments"
                         th:if="${isAdmin or (permissionCodes != null and #lists.contains(permissionCodes, 'SUPPLIER_MANAGE'))}">NCC &amp; Công nợ</button>
             </nav>
+            <!-- Script đảm bảo tự động kích hoạt tab đầu tiên được cấp quyền nếu tab mặc định bị ẩn theo phân quyền -->
             <script>
                 document.addEventListener('DOMContentLoaded', function () {
                     setTimeout(function () {
@@ -336,6 +345,7 @@
                             </div>
                         </div>
                         <div class="df-foldable-content" id="content-receipt-create" style="display: block;">
+                            <!-- Biểu mẫu lập mới phiếu nhập kho (POST /api/inventory/receipts) -->
                             <div class="df-foldable-body">
                                 <form id="receiptForm">
                             <div class="form-grid">
@@ -426,15 +436,6 @@
                                 </div>
                             </div>
 
-                            <!-- Ký điện tử khi lập phiếu nhập -->
-                            <div class="signature-inline-bar mb-3">
-                                <input type="hidden" id="receiptSignatureData">
-                                <button type="button" id="openReceiptSignBtn" class="btn-secondary-custom">Ký điện tử người lập phiếu nhập</button>
-                                <span id="receiptSignStatus" style="font-size:12.5px; color:#64748b;">Chưa ký (Có thể ký ngay hoặc ký sau trong lịch sử phiếu)</span>
-                                <img id="receiptSignPreview" class="signature-preview-thumb" alt="Chữ ký phiếu nhập" hidden>
-                                <button type="button" id="clearReceiptSignBtn" class="button-danger-outline button-sm" hidden>Xóa chữ ký nháp</button>
-                            </div>
-
                             <div class="receipt-footer">
                                 <div class="receipt-summary-bar">
                                     <div class="receipt-summary-pill">Tổng tiền nhập: <strong id="receiptTotal">0 ₫</strong></div>
@@ -457,7 +458,7 @@
                             <div class="d-flex align-items-center flex-grow-1">
                                 <i class="bi bi-chevron-down df-foldable-chevron text-primary" id="chevron-receipt-history"></i>
                                 <span class="df-foldable-title">2. Lịch sử phiếu nhập kho</span>
-                                <span class="df-foldable-subtitle d-none d-md-inline ms-2 text-muted">(Danh sách các phiếu đã nhập tại chi nhánh hiện tại, hỗ trợ in A4 trực tiếp, xem chi tiết và ký điện tử.)</span>
+                                <span class="df-foldable-subtitle d-none d-md-inline ms-2 text-muted">(Danh sách các phiếu đã nhập tại chi nhánh hiện tại, hỗ trợ in A4 trực tiếp và xem chi tiết.)</span>
                             </div>
                             <div class="d-flex align-items-center gap-2">
                                 <span class="badge bg-light text-primary border small">Lịch sử phiếu</span>
@@ -495,12 +496,11 @@
                                     <th style="width:140px;">Tổng tiền <span class="col-resizer"></span></th>
                                     <th style="width:130px;">Đã trả <span class="col-resizer"></span></th>
                                     <th style="width:130px;">Còn nợ <span class="col-resizer"></span></th>
-                                    <th style="width:130px;">Chữ ký <span class="col-resizer"></span></th>
                                     <th style="width:220px;">Thao tác <span class="col-resizer"></span></th>
                                 </tr>
                                 </thead>
                                 <tbody id="receiptHistoryTable">
-                                <tr><td colspan="9" class="empty">Chưa tải dữ liệu phiếu nhập.</td></tr>
+                                <tr><td colspan="8" class="empty">Chưa tải dữ liệu phiếu nhập.</td></tr>
                                 </tbody>
                             </table>
                         </div>
@@ -561,6 +561,7 @@
                             </div>
                         </div>
                         <div class="df-foldable-content" id="content-issue-create" style="display: block;">
+                            <!-- Biểu mẫu lập mới phiếu xuất kho nội bộ / hủy hết hạn / mục đích khác (POST /api/inventory/issues) -->
                             <div class="df-foldable-body">
                                 <form id="issueForm">
                             <div class="form-grid">
@@ -615,14 +616,6 @@
                                 </table>
                             </div>
 
-                            <div class="signature-inline-bar mb-3">
-                                <input type="hidden" id="issueSignatureData">
-                                <button type="button" id="openIssueSignBtn" class="btn-secondary-custom">Ký điện tử người lập phiếu xuất</button>
-                                <span id="issueSignStatus" style="font-size:12.5px; color:#64748b;">Chưa ký (Có thể ký ngay hoặc ký sau trong lịch sử phiếu)</span>
-                                <img id="issueSignPreview" class="signature-preview-thumb" alt="Chữ ký phiếu xuất" hidden>
-                                <button type="button" id="clearIssueSignBtn" class="button-danger-outline button-sm" hidden>Xóa chữ ký nháp</button>
-                            </div>
-
                             <div class="receipt-footer">
                                 <div class="form-hint">Để trống ô chọn lô để hệ thống tự động trừ từ lô có hạn sử dụng gần nhất trước (FEFO).</div>
                                 <div class="form-action-group">
@@ -655,6 +648,8 @@
                                             <select id="issueFilterType" class="form-select form-select-sm">
                                                 <option value="">Tất cả loại xuất</option>
                                                 <option value="INTERNAL_USE">Xuất nội bộ</option>
+                                                <option value="PRESCRIPTION_OUT">Xuất theo đơn thuốc</option>
+                                                <option value="PRESCRIPTION_RETURN">Hoàn kho đơn thuốc</option>
                                                 <option value="DISCARD_EXPIRED">Xuất hủy hết hạn</option>
                                             </select>
                                         </div>
@@ -679,13 +674,12 @@
                                     <th style="width:160px;">Người lập phiếu <span class="col-resizer"></span></th>
                                     <th style="width:110px;">Tổng SL <span class="col-resizer"></span></th>
                                     <th style="width:130px;">Giá trị vốn <span class="col-resizer"></span></th>
-                                    <th style="width:120px;">Chữ ký <span class="col-resizer"></span></th>
                                     <th style="width:180px;">Ghi chú <span class="col-resizer"></span></th>
                                     <th style="width:220px;">Thao tác <span class="col-resizer"></span></th>
                                 </tr>
                                 </thead>
                                 <tbody id="issueHistoryTable">
-                                <tr><td colspan="9" class="empty">Chưa có dữ liệu phiếu xuất.</td></tr>
+                                <tr><td colspan="8" class="empty">Chưa có dữ liệu phiếu xuất.</td></tr>
                                 </tbody>
                             </table>
                         </div>
@@ -746,6 +740,7 @@
                             </div>
                         </div>
                         <div class="df-foldable-content" id="content-transfer-create" style="display: block;">
+                            <!-- Biểu mẫu lập phiếu điều chuyển vật tư liên chi nhánh (POST /api/inventory/transfers) -->
                             <div class="df-foldable-body">
                                 <form id="transferForm">
                             <div class="form-grid">
@@ -791,14 +786,6 @@
                                     </thead>
                                     <tbody id="transferItems"></tbody>
                                 </table>
-                            </div>
-
-                            <div class="signature-inline-bar mb-3">
-                                <input type="hidden" id="transferSignatureData">
-                                <button type="button" id="openTransferSignBtn" class="btn-secondary-custom">Ký điện tử người lập phiếu điều chuyển</button>
-                                <span id="transferSignStatus" style="font-size:12.5px; color:#64748b;">Chưa ký</span>
-                                <img id="transferSignPreview" class="signature-preview-thumb" alt="Chữ ký điều chuyển" hidden>
-                                <button type="button" id="clearTransferSignBtn" class="button-danger-outline button-sm" hidden>Xóa chữ ký nháp</button>
                             </div>
 
                             <div class="receipt-footer">
@@ -1351,34 +1338,7 @@
 </div>
 
 <!-- ==========================================
-     MODAL 5: BẢNG KÝ ĐIỆN TỬ (HTML5 CANVAS)
-     ========================================== -->
-<div id="signatureModal" class="modal-backdrop" hidden>
-    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="signatureModalTitle">
-        <div class="modal-header">
-            <h3 id="signatureModalTitle">Ký điện tử xác nhận phiếu kho</h3>
-            <button type="button" class="close-btn" id="closeSignatureModalBtn">×</button>
-        </div>
-        <div>
-            <p id="signatureModalDesc" style="font-size:12.5px; color:#475569; margin-bottom:8px;">
-                Vui lòng vẽ chữ ký bằng chuột, màn hình cảm ứng hoặc bút cảm ứng vào khung bên dưới. Họ tên người ký được ghi nhận tự động theo tài khoản đang đăng nhập.
-            </p>
-            <div class="signature-pad-container">
-                <canvas id="signatureCanvas" width="520" height="200"></canvas>
-            </div>
-        </div>
-        <div class="modal-actions" style="justify-content:space-between;">
-            <button type="button" class="btn-secondary-custom" id="clearSignatureCanvasBtn">Xóa ký lại</button>
-            <div style="display:flex; gap:8px;">
-                <button type="button" class="btn-secondary-custom" id="cancelSignatureModalBtn">Hủy</button>
-                <button type="button" class="btn-primary-custom" id="confirmSignatureBtn">Xác nhận chữ ký</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- ==========================================
-     MODAL 6: XEM ẢNH LỚN / PHÓNG TO HÓA ĐƠN
+     MODAL 5: XEM ẢNH LỚN / PHÓNG TO HÓA ĐƠN
      ========================================== -->
 <div id="imageLightboxModal" class="modal-backdrop" hidden>
     <div class="modal-card lightbox-modal-card" role="dialog" aria-modal="true" aria-labelledby="lightboxTitle">

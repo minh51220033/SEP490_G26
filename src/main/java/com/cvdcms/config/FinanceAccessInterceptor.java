@@ -16,6 +16,10 @@ import org.springframework.web.servlet.HandlerInterceptor;
 import java.io.IOException;
 import java.util.List;
 
+/**
+ * [Phân hệ]: Tài chính & Kế toán - Phân quyền truy cập
+ * [Vai trò]: Bộ chặn (HandlerInterceptor) kiểm soát đăng nhập, quyền hạn tài chính và phạm vi chi nhánh cho toàn bộ trang và API tài chính.
+ */
 @Component
 public class FinanceAccessInterceptor implements HandlerInterceptor {
 
@@ -23,6 +27,9 @@ public class FinanceAccessInterceptor implements HandlerInterceptor {
     private final StaffBranchAssignmentRepository staffBranchAssignmentRepository;
     private BranchRepository branchRepository;
 
+    /**
+     * [Hàm hỗ trợ]: Khởi tạo interceptor với repository người dùng và phân công chi nhánh nhân sự.
+     */
     public FinanceAccessInterceptor(
             UserRepository userRepository,
             StaffBranchAssignmentRepository staffBranchAssignmentRepository
@@ -31,11 +38,18 @@ public class FinanceAccessInterceptor implements HandlerInterceptor {
         this.staffBranchAssignmentRepository = staffBranchAssignmentRepository;
     }
 
+    /**
+     * [Hàm hỗ trợ]: Tiêm phụ thuộc BranchRepository (tùy chọn) phục vụ mở rộng kiểm tra chi nhánh.
+     */
     @Autowired(required = false)
     public void setBranchRepository(BranchRepository branchRepository) {
         this.branchRepository = branchRepository;
     }
 
+    /**
+     * [Chức năng]: Kiểm tra xác thực đăng nhập, trạng thái tài khoản, quyền tài chính và phạm vi chi nhánh trước khi cho phép vào controller tài chính.
+     * [Mục đích]: Chặn truy cập trái phép vào các trang và API tài chính; Admin được toàn quyền mọi chi nhánh (`isFinanceAdmin = true`), trong khi Thu ngân/Kế toán bắt buộc có vai trò/quyền tài chính hợp lệ, chỉ thao tác trong các chi nhánh đang được phân công (`ACTIVE` hoặc chi nhánh gốc) trên cả query param `branchId` lẫn path `/branches/{branchId}`, và bị chặn cấu hình hoa hồng hoặc duyệt tạm ứng nếu thiếu quyền tương ứng.
+     */
     @Override
     public boolean preHandle(
             HttpServletRequest request,

@@ -48,6 +48,8 @@ public class PortalAppointmentService {
     private com.cvdcms.service.ResourceBookingTransactionService resourceBookingTransactionService;
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private com.cvdcms.service.ResourceAvailabilityService resourceAvailabilityService;
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.cvdcms.service.AppointmentOverlapService overlapService;
     @PersistenceContext
     private EntityManager entityManager;
 
@@ -66,17 +68,26 @@ public class PortalAppointmentService {
     public record BookingRequest(@NotNull Long profileId, @NotNull Long branchId,
                                  @NotNull LocalDate date, @NotNull PreferredSession session,
                                  Long doctorId, Long serviceId, @Size(max = 500) String symptoms,
-                                 @NotBlank String requestKey, LocalTime expectedTime) {
+                                 @NotBlank String requestKey, LocalTime expectedTime,
+                                 Boolean confirmOverlap) {
         public BookingRequest(Long profileId, Long branchId, LocalDate date, PreferredSession session,
                 Long doctorId, Long serviceId, String symptoms, String requestKey) {
-            this(profileId, branchId, date, session, doctorId, serviceId, symptoms, requestKey, null);
+            this(profileId, branchId, date, session, doctorId, serviceId, symptoms, requestKey, null, false);
+        }
+        public BookingRequest(Long profileId, Long branchId, LocalDate date, PreferredSession session,
+                Long doctorId, Long serviceId, String symptoms, String requestKey, LocalTime expectedTime) {
+            this(profileId, branchId, date, session, doctorId, serviceId, symptoms, requestKey, expectedTime, false);
         }
     }
     public record SlotOption(LocalTime time, int remaining) {}
     public record RescheduleRequest(@NotNull LocalDate date, @NotNull PreferredSession session,
-                                    Long doctorId, @Size(max = 255) String reason, LocalTime expectedTime) {
+                                    Long doctorId, @Size(max = 255) String reason, LocalTime expectedTime,
+                                    Boolean confirmOverlap) {
         public RescheduleRequest(LocalDate date, PreferredSession session, Long doctorId, String reason) {
-            this(date, session, doctorId, reason, null);
+            this(date, session, doctorId, reason, null, false);
+        }
+        public RescheduleRequest(LocalDate date, PreferredSession session, Long doctorId, String reason, LocalTime expectedTime) {
+            this(date, session, doctorId, reason, expectedTime, false);
         }
     }
     public record CancelRequest(@NotBlank @Size(max = 255) String reason) {}
@@ -154,6 +165,12 @@ public class PortalAppointmentService {
     @Transactional(readOnly = true)
     public List<SlotOption> slots(HttpSession httpSession, Long branchId, LocalDate date,
             PreferredSession period, Long doctorId, Long serviceId, Long excludeId) {
+        return slots(httpSession, branchId, date, period, doctorId, serviceId, excludeId, false);
+    }
+
+    @Transactional(readOnly = true)
+    public List<SlotOption> slots(HttpSession httpSession, Long branchId, LocalDate date,
+            PreferredSession period, Long doctorId, Long serviceId, Long excludeId, boolean includeOverlap) {
         User user = access.requireUser(httpSession);
         if (excludeId != null && !owned(user, excludeId).getBranch().getBranchId().equals(branchId))
             throw bad("Không thể đổi chi nhánh từ biểu mẫu này.");
@@ -170,6 +187,32 @@ public class PortalAppointmentService {
         }
         List<AppointmentSlotService.Slot> candidateSlots = slots.available(branch, date, period, doctorId, duration, excludeId,
                         AppointmentActorType.PATIENT);
+        if (includeOverlap && period != null && overlapService != null) {
+            AppointmentPolicyService.SessionRange range = policy.sessionRange(branch, period);
+            if (range != null && range.active()) {
+                java.util.Map<LocalTime, Integer> freeRemaining = new java.util.HashMap<>();
+                candidateSlots.forEach(s -> freeRemaining.put(s.time(), s.remaining()));
+                List<SlotOption> allValid = new java.util.ArrayList<>();
+                LocalDateTime nowDt = LocalDateTime.now(CLINIC_ZONE);
+                LocalTime cursor = range.start();
+                while (!cursor.plusMinutes(duration).isAfter(range.end())) {
+                    if (!date.equals(nowDt.toLocalDate()) || cursor.isAfter(nowDt.toLocalTime())) {
+                        var chk = overlapService.checkOverlap(branchId, date, period, cursor, doctorId,
+                                service != null ? service.getServiceId() : null, excludeId);
+                        if (chk.validOperatingWindow()) {
+                            int rem = freeRemaining.getOrDefault(cursor, 0);
+                            allValid.add(new SlotOption(cursor, rem));
+                        }
+                    }
+                    LocalTime next = cursor.plusMinutes(15);
+                    if (!next.isAfter(cursor)) break;
+                    cursor = next;
+                }
+                if (!allValid.isEmpty()) {
+                    return allValid;
+                }
+            }
+        }
         final Long effectiveServiceId = service != null ? service.getServiceId() : null;
         boolean useEngine = Boolean.TRUE.equals(branch.getResourceEngineEnabled())
                 && effectiveServiceId != null && resourceAvailabilityService != null;
@@ -180,6 +223,27 @@ public class PortalAppointmentService {
                         .available())
                 .map(s -> new SlotOption(s.time(), s.remaining()))
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public AppointmentOverlapService.OverlapCheckResult overlapCheck(
+            HttpSession httpSession, Long branchId, LocalDate date, PreferredSession sessionPeriod,
+            LocalTime expectedTime, Long doctorId, Long serviceId, Long excludeId) {
+        User user = access.requireUser(httpSession);
+        if (excludeId != null && !owned(user, excludeId).getBranch().getBranchId().equals(branchId)) {
+            throw bad("Không thể đổi chi nhánh từ biểu mẫu này.");
+        }
+        if (overlapService == null) {
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Overlap service unavailable");
+        }
+        Long effectiveServiceId = serviceId;
+        if (excludeId != null) {
+            Appointment existing = owned(user, excludeId);
+            if (existing.getService() != null) {
+                effectiveServiceId = existing.getService().getServiceId();
+            }
+        }
+        return overlapService.checkOverlap(branchId, date, sessionPeriod, expectedTime, doctorId, effectiveServiceId, excludeId);
     }
 
     @Transactional(readOnly = true)
@@ -227,8 +291,9 @@ public class PortalAppointmentService {
                 throw conflict("Mã yêu cầu đã được dùng cho lịch khác.");
             return view(a);
         }
+        boolean allowOverlap = Boolean.TRUE.equals(request.confirmOverlap());
         policy.ensureBookable(branch, profile, request.date(), request.session(), request.doctorId(),
-                null, AppointmentActorType.PATIENT);
+                null, AppointmentActorType.PATIENT, allowOverlap);
         com.cvdcms.entity.Service service = requestedService(request.serviceId());
         if (Boolean.TRUE.equals(branch.getResourceEngineEnabled())) {
             if (service == null) {
@@ -273,19 +338,25 @@ public class PortalAppointmentService {
         int durationMinutes = AppointmentSlotService.duration(service);
         StaffProfile assignedDoctor = doctor(request.doctorId());
         LocalTime resolvedTime = slots.resolveFlexibly(branch, request.date(), request.session(), request.doctorId(),
-                durationMinutes, null, request.expectedTime(), AppointmentActorType.PATIENT);
-        if (assignedDoctor != null && resolvedTime == null) {
+                durationMinutes, null, request.expectedTime(), AppointmentActorType.PATIENT, allowOverlap);
+        if (assignedDoctor != null && resolvedTime == null && !allowOverlap) {
             slots.lockAndValidateDoctorSession(branch.getBranchId(), assignedDoctor.getStaffId(),
                     request.date(), request.session(), null);
         }
         if (assignedDoctor == null && resolvedTime != null) {
-            StaffProfile autoAssigned = slots.autoAssignDoctorForSlot(
-                    branch, request.date(), request.session(), resolvedTime, durationMinutes, null);
-            if (autoAssigned != null) {
-                assignedDoctor = autoAssigned;
+            if (allowOverlap) {
+                assignedDoctor = slots.tryAutoAssignDoctorForSlot(
+                        branch, request.date(), request.session(), resolvedTime, durationMinutes, null)
+                        .orElse(null);
+            } else {
+                StaffProfile autoAssigned = slots.autoAssignDoctorForSlot(
+                        branch, request.date(), request.session(), resolvedTime, durationMinutes, null);
+                if (autoAssigned != null) {
+                    assignedDoctor = autoAssigned;
+                }
             }
         }
-        if (resolvedTime != null) {
+        if (resolvedTime != null && !allowOverlap) {
             slots.validateBranchResourceCapacity(branch, service, request.date(),
                     resolvedTime, resolvedTime.plusMinutes(durationMinutes), null);
         }
@@ -295,6 +366,16 @@ public class PortalAppointmentService {
         appointment.setBranch(branch);
         appointment.setDoctor(assignedDoctor);
         appointment.setIsDoctorRequested(request.doctorId() != null);
+        if (allowOverlap && resolvedTime != null && overlapService != null) {
+            var chk = overlapService.checkOverlap(branch.getBranchId(), request.date(), request.session(),
+                    resolvedTime, request.doctorId(), service != null ? service.getServiceId() : null, null);
+            if (chk.hasAnyWarning()) {
+                appointment.setOverlapWarningAcknowledged(true);
+                String note = (chk.clinicOverlap() ? "[Clinic] " + chk.clinicOverlapCount() + "/" + chk.branchCapacity() + " " : "")
+                        + (chk.doctorOverlap() ? "[Doctor] " + chk.doctorOverlapCount() + " overlap" : "");
+                appointment.setOverlapWarningNote(note.trim());
+            }
+        }
         appointment.setService(service);
         appointment.setAppointmentDate(request.date());
         appointment.setPreferredSession(request.session());
@@ -384,8 +465,9 @@ public class PortalAppointmentService {
                 && Objects.equals(id(a.getDoctor()), request.doctorId())
                 && (request.expectedTime() == null || Objects.equals(a.getExpectedTime(), request.expectedTime())))
             throw bad("Vui lòng chọn lịch hoặc bác sĩ khác.");
+        boolean allowOverlap = Boolean.TRUE.equals(request.confirmOverlap());
         policy.ensureBookable(branch, a.getPatientProfile(), request.date(), request.session(),
-                request.doctorId(), appointmentId, AppointmentActorType.PATIENT);
+                request.doctorId(), appointmentId, AppointmentActorType.PATIENT, allowOverlap);
         String oldValue = snapshot(a);
         LocalTime requestedTime = request.expectedTime() != null ? request.expectedTime()
                 : Objects.equals(a.getAppointmentDate(), request.date()) && a.getPreferredSession() == request.session()
@@ -423,19 +505,25 @@ public class PortalAppointmentService {
         int durationMinutes = AppointmentSlotService.duration(a.getService());
         StaffProfile assignedDoctor = doctor(request.doctorId());
         LocalTime resolvedTime = slots.resolveFlexibly(branch, request.date(), request.session(), request.doctorId(),
-                durationMinutes, appointmentId, requestedTime, AppointmentActorType.PATIENT);
-        if (assignedDoctor != null && resolvedTime == null) {
+                durationMinutes, appointmentId, requestedTime, AppointmentActorType.PATIENT, allowOverlap);
+        if (assignedDoctor != null && resolvedTime == null && !allowOverlap) {
             slots.lockAndValidateDoctorSession(branch.getBranchId(), assignedDoctor.getStaffId(),
                     request.date(), request.session(), appointmentId);
         }
         if (assignedDoctor == null && resolvedTime != null) {
-            StaffProfile autoAssigned = slots.autoAssignDoctorForSlot(
-                    branch, request.date(), request.session(), resolvedTime, durationMinutes, appointmentId);
-            if (autoAssigned != null) {
-                assignedDoctor = autoAssigned;
+            if (allowOverlap) {
+                assignedDoctor = slots.tryAutoAssignDoctorForSlot(
+                        branch, request.date(), request.session(), resolvedTime, durationMinutes, appointmentId)
+                        .orElse(null);
+            } else {
+                StaffProfile autoAssigned = slots.autoAssignDoctorForSlot(
+                        branch, request.date(), request.session(), resolvedTime, durationMinutes, appointmentId);
+                if (autoAssigned != null) {
+                    assignedDoctor = autoAssigned;
+                }
             }
         }
-        if (resolvedTime != null) {
+        if (resolvedTime != null && !allowOverlap) {
             slots.validateBranchResourceCapacity(branch, a.getService(), request.date(),
                     resolvedTime, resolvedTime.plusMinutes(durationMinutes), appointmentId);
         }
@@ -446,6 +534,13 @@ public class PortalAppointmentService {
         a.setDurationMinutes(durationMinutes);
         a.setExpectedTime(resolvedTime);
         a.syncExpectedEndTime();
+        if (allowOverlap) {
+            a.setOverlapWarningAcknowledged(true);
+            a.setOverlapWarningNote("Bệnh nhân xác nhận tiếp tục đổi lịch vào khung giờ có cảnh báo đông/trùng.");
+        } else {
+            a.setOverlapWarningAcknowledged(false);
+            a.setOverlapWarningNote(null);
+        }
         lifecycle.transition(a, AppointmentStatus.PENDING, AppointmentLifecycleAction.RESCHEDULE);
         a.setRescheduleCount(a.getRescheduleCount() + 1);
         appointments.saveAndFlush(a);

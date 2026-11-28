@@ -14,6 +14,20 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Locale;
 
+/**
+ * Triển khai nghiệp vụ quản lý Nhà cung cấp ({@link SupplierService}).
+ *
+ * <p><b>Trách nhiệm chính:</b>
+ * <ul>
+ *   <li>Tìm kiếm, lọc trạng thái và phân trang danh mục nhà cung cấp.</li>
+ *   <li>Chuẩn hóa dữ liệu (mã NCC viết hoa, tên gọn khoảng trắng, trường tùy chọn rỗng chuyển về {@code null}).</li>
+ *   <li>Đảm bảo tính duy nhất không phân biệt hoa/thường cho {@code supplierCode} và {@code taxCode} khi tạo/sửa.</li>
+ *   <li>Hỗ trợ ngừng hoạt động / kích hoạt lại (soft status) thay vì xóa cứng để bảo toàn lịch sử nhập kho và công nợ.</li>
+ * </ul>
+ * </p>
+ *
+ * <p><b>Được gọi từ:</b> {@link com.cvdcms.controller.SupplierController}.</p>
+ */
 @Service
 public class SupplierServiceImpl implements SupplierService {
 
@@ -24,7 +38,17 @@ public class SupplierServiceImpl implements SupplierService {
         this.supplierRepository = supplierRepository;
     }
 
-    // Danh sách nhà cung cấp có tìm kiếm, lọc và phân trang.
+    /**
+     * Tìm kiếm danh sách nhà cung cấp có lọc trạng thái và phân trang.
+     *
+     * <p><b>Xử lý:</b> Chuẩn hóa {@code keyword} rỗng/khoảng trắng về {@code null} rồi gọi
+     * {@link SupplierRepository#searchSuppliers}.</p>
+     *
+     * @param keyword  từ khóa tìm kiếm
+     * @param active   trạng thái hoạt động (có thể {@code null})
+     * @param pageable thông tin phân trang và sắp xếp
+     * @return trang kết quả {@link Page}&lt;{@link Supplier}&gt;
+     */
     @Override
     @Transactional(readOnly = true)
     public Page<Supplier> search(
@@ -44,7 +68,15 @@ public class SupplierServiceImpl implements SupplierService {
         );
     }
 
-    // Xem chi tiết nhà cung cấp.
+    /**
+     * Lấy chi tiết nhà cung cấp theo ID.
+     *
+     * <p><b>Xử lý:</b> Kiểm tra {@code id > 0}, truy vấn {@link SupplierRepository#findById};
+     * ném {@link IllegalArgumentException} nếu ID không hợp lệ hoặc không tìm thấy bản ghi.</p>
+     *
+     * @param id ID nhà cung cấp
+     * @return bản ghi {@link Supplier}
+     */
     @Override
     @Transactional(readOnly = true)
     public Supplier getById(Long id) {
@@ -59,7 +91,20 @@ public class SupplierServiceImpl implements SupplierService {
                                 "Không tìm thấy nhà cung cấp."));
     }
 
-    // Thêm nhà cung cấp mới.
+    /**
+     * Tạo mới một nhà cung cấp.
+     *
+     * <p><b>Xử lý từng bước:</b>
+     * <ol>
+     *   <li>Kiểm tra {@code dto != null} và chuẩn hóa {@code supplierCode} sang chữ hoa.</li>
+     *   <li>Kiểm tra trùng lặp {@code supplierCode} và {@code taxCode} (nếu có) không phân biệt hoa/thường.</li>
+     *   <li>Chuẩn hóa {@code supplierName}, {@code phoneNumber}, {@code address}, gán {@code isActive = true} và lưu DB.</li>
+     * </ol>
+     * </p>
+     *
+     * @param dto dữ liệu tạo mới nhà cung cấp
+     * @return bản ghi {@link Supplier} sau khi lưu
+     */
     @Override
     @Transactional
     public Supplier create(SupplierCreateDTO dto) {
@@ -98,7 +143,21 @@ public class SupplierServiceImpl implements SupplierService {
         return supplierRepository.save(supplier);
     }
 
-    // Cập nhật thông tin nhà cung cấp.
+    /**
+     * Cập nhật thông tin nhà cung cấp hiện có.
+     *
+     * <p><b>Xử lý từng bước:</b>
+     * <ol>
+     *   <li>Nạp bản ghi hiện tại qua {@link #getById(Long)}.</li>
+     *   <li>Chuẩn hóa {@code supplierCode} và {@code taxCode}, kiểm tra không trùng với bất kỳ nhà cung cấp nào khác ({@code supplierId != id}).</li>
+     *   <li>Cập nhật các trường thông tin; giữ nguyên trạng thái {@code isActive} hiện có.</li>
+     * </ol>
+     * </p>
+     *
+     * @param id  ID nhà cung cấp cần cập nhật
+     * @param dto dữ liệu cập nhật
+     * @return bản ghi {@link Supplier} sau khi lưu
+     */
     @Override
     @Transactional
     public Supplier update(Long id, SupplierUpdateDTO dto) {
@@ -140,7 +199,13 @@ public class SupplierServiceImpl implements SupplierService {
         return supplierRepository.save(supplier);
     }
 
-    // Ngừng hoạt động, giữ lịch sử liên quan đến phiếu nhập kho.
+    /**
+     * Ngừng hoạt động nhà cung cấp ({@code isActive = false}), giữ nguyên lịch sử phiếu nhập kho và thanh toán.
+     * Ném {@link IllegalArgumentException} nếu nhà cung cấp đã ở trạng thái ngừng hoạt động.
+     *
+     * @param id ID nhà cung cấp
+     * @return bản ghi {@link Supplier} sau khi cập nhật
+     */
     @Override
     @Transactional
     public Supplier deactivate(Long id) {
@@ -155,7 +220,13 @@ public class SupplierServiceImpl implements SupplierService {
         return supplierRepository.save(supplier);
     }
 
-    // Kích hoạt lại nhà cung cấp.
+    /**
+     * Kích hoạt lại nhà cung cấp ({@code isActive = true}).
+     * Ném {@link IllegalArgumentException} nếu nhà cung cấp đang ở trạng thái hoạt động.
+     *
+     * @param id ID nhà cung cấp
+     * @return bản ghi {@link Supplier} sau khi cập nhật
+     */
     @Override
     @Transactional
     public Supplier activate(Long id) {
@@ -170,7 +241,13 @@ public class SupplierServiceImpl implements SupplierService {
         return supplierRepository.save(supplier);
     }
 
-    // Chuẩn hóa dữ liệu bắt buộc.
+    /**
+     * Chuẩn hóa chuỗi bắt buộc: kiểm tra không rỗng, cắt khoảng trắng đầu/cuối và gộp nhiều khoảng trắng liên tiếp thành 1 dấu cách.
+     *
+     * @param value     giá trị đầu vào
+     * @param fieldName tên trường dùng trong thông báo lỗi
+     * @return chuỗi đã chuẩn hóa
+     */
     private String normalizeRequired(
             String value,
             String fieldName) {
@@ -183,7 +260,12 @@ public class SupplierServiceImpl implements SupplierService {
         return value.trim().replaceAll("\\s+", " ");
     }
 
-    // Chuẩn hóa mã nhà cung cấp.
+    /**
+     * Chuẩn hóa mã nhà cung cấp: kiểm tra không rỗng, cắt khoảng trắng và chuyển sang chữ IN HOA theo {@link Locale#ROOT}.
+     *
+     * @param code mã nhà cung cấp thô
+     * @return mã nhà cung cấp đã chuẩn hóa chữ hoa
+     */
     private String normalizeCode(String code) {
         if (code == null || code.isBlank()) {
             throw new IllegalArgumentException(
@@ -193,7 +275,12 @@ public class SupplierServiceImpl implements SupplierService {
         return code.trim().toUpperCase(Locale.ROOT);
     }
 
-    // Chuỗi tùy chọn để trống sẽ được lưu thành null.
+    /**
+     * Chuẩn hóa chuỗi tùy chọn: trả về {@code null} nếu rỗng/chỉ chứa khoảng trắng, ngược lại trả về chuỗi đã {@code trim()}.
+     *
+     * @param value giá trị đầu vào
+     * @return chuỗi đã cắt khoảng trắng hoặc {@code null}
+     */
     private String normalizeOptional(String value) {
         if (value == null || value.isBlank()) {
             return null;

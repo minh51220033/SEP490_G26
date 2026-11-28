@@ -68,6 +68,38 @@ public interface VisitRepository extends JpaRepository<Visit, Long> {
         LEFT JOIN FETCH v.patientProfile pp
         LEFT JOIN FETCH v.branch b
         LEFT JOIN FETCH v.primaryDoctor d
+        WHERE v.status IN :statuses
+          AND v.checkInAt IS NOT NULL
+          AND v.checkInAt < :cutoff
+        ORDER BY v.checkInAt ASC, v.visitId ASC
+    """)
+    List<Visit> findOverdueActiveVisits(
+            @Param("statuses") Collection<VisitStatus> statuses,
+            @Param("cutoff") java.time.LocalDateTime cutoff
+    );
+
+    @Query("""
+        SELECT v FROM Visit v
+        LEFT JOIN FETCH v.patientProfile pp
+        LEFT JOIN FETCH v.branch b
+        LEFT JOIN FETCH v.primaryDoctor d
+        WHERE v.patientProfile.profileId = :profileId
+          AND v.status IN :statuses
+          AND v.checkInAt IS NOT NULL
+          AND v.checkInAt < :cutoff
+        ORDER BY v.checkInAt ASC, v.visitId ASC
+    """)
+    List<Visit> findOverdueActiveVisitsForPatient(
+            @Param("profileId") Long profileId,
+            @Param("statuses") Collection<VisitStatus> statuses,
+            @Param("cutoff") java.time.LocalDateTime cutoff
+    );
+
+    @Query("""
+        SELECT v FROM Visit v
+        LEFT JOIN FETCH v.patientProfile pp
+        LEFT JOIN FETCH v.branch b
+        LEFT JOIN FETCH v.primaryDoctor d
         WHERE (:start IS NULL OR v.checkInAt >= :start)
           AND (:end IS NULL OR v.checkInAt <= :end)
           AND ((:status IS NOT NULL AND v.status = :status) OR (:status IS NULL AND v.status != com.cvdcms.entity.enums.VisitStatus.CANCELLED))

@@ -29,7 +29,7 @@ class SupplierManagementInterceptorTest {
     }
 
     @Test
-    @DisplayName("preHandle - Trả về 401 JSON khi không có session hoặc chưa đăng nhập")
+    @DisplayName("preHandle - Return 401 JSON when session or loggedInUser is missing")
     void preHandle_noSessionOrUnauthenticated_returns401() throws Exception {
         MockHttpServletRequest req = new MockHttpServletRequest("GET", "/api/suppliers");
         MockHttpServletResponse resp = new MockHttpServletResponse();
@@ -43,7 +43,7 @@ class SupplierManagementInterceptorTest {
     }
 
     @Test
-    @DisplayName("preHandle - Trả về 403 JSON khi session User không có userId")
+    @DisplayName("preHandle - Return 403 JSON when session User has null userId")
     void preHandle_nullUserId_returns403() throws Exception {
         MockHttpServletRequest req = new MockHttpServletRequest("GET", "/api/suppliers");
         MockHttpSession session = new MockHttpSession();
@@ -60,7 +60,7 @@ class SupplierManagementInterceptorTest {
     }
 
     @Test
-    @DisplayName("preHandle - Chặn 403 khi tài khoản không có vai trò hay quyền quản lý nhà cung cấp")
+    @DisplayName("preHandle - Reject 403 when user lacks supplier management role or permission")
     void preHandle_missingPermissions_returns403() throws Exception {
         User user = new User();
         user.setUserId(25L);
@@ -82,7 +82,7 @@ class SupplierManagementInterceptorTest {
     }
 
     @Test
-    @DisplayName("preHandle - Cho phép đi tiếp khi có role quản lý NCC hoặc quyền SUPPLIER_MANAGE / LABO_SUPPLIERS")
+    @DisplayName("preHandle - Allow request with supplier management role or SUPPLIER_MANAGE / LABO_SUPPLIERS permission")
     void preHandle_withSupplierRoleOrPermission_returnsTrue() throws Exception {
         User user = new User();
         user.setUserId(5L);

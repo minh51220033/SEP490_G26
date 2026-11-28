@@ -14,6 +14,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
+/**
+ * [Phân hệ]: Tài chính - Cấu hình chính sách hoa hồng
+ * [Vai trò]: Triển khai nghiệp vụ quản lý chính sách tính hoa hồng theo dịch vụ, vai trò và nhân sự.
+ */
 @Service
 @Transactional
 public class CommissionPolicyServiceImpl implements CommissionPolicyService {
@@ -38,12 +42,20 @@ public class CommissionPolicyServiceImpl implements CommissionPolicyService {
         this.userRepository = userRepository;
     }
 
+    /**
+     * [Chức năng]: Lấy toàn bộ danh sách chính sách hoa hồng kèm chi tiết dịch vụ, vai trò và nhân sự.
+     * [Mục đích]: Cung cấp dữ liệu hiển thị tại màn hình cấu hình hoa hồng (/payroll/commission-config) với truy vấn tối ưu tải sẵn quan hệ.
+     */
     @Override
     @Transactional(readOnly = true)
     public List<CommissionPolicy> getAllPolicies() {
         return commissionPolicyRepository.findAllWithDetails();
     }
 
+    /**
+     * [Chức năng]: Lấy chi tiết một chính sách hoa hồng theo ID.
+     * [Mục đích]: Tra cứu bản ghi CommissionPolicy trong cơ sở dữ liệu và báo lỗi nếu không tồn tại.
+     */
     @Override
     @Transactional(readOnly = true)
     public CommissionPolicy getPolicyById(Long policyId) {
@@ -51,11 +63,18 @@ public class CommissionPolicyServiceImpl implements CommissionPolicyService {
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy chính sách hoa hồng: " + policyId));
     }
 
+    /**
+     * [Chức năng]: Lưu chính sách hoa hồng (hàm quá tải không truyền ID người thao tác).
+     * [Mục đích]: Ủy quyền sang savePolicy(dto, null) để dùng chung quy trình kiểm tra quyền và xác thực dữ liệu.
+     */
     @Override
     public CommissionPolicy savePolicy(CommissionPolicyDTO dto) {
         return savePolicy(dto, null);
     }
 
+    /**
+     * [Hàm hỗ trợ]: Kiểm tra người dùng có vai trò Admin hoặc quyền FINANCE_COMMISSION_CONFIG đang hoạt động hay không trước khi thay đổi chính sách hoa hồng.
+     */
     private void requireCommissionPermission(Long currentUserId, String actionMessage) {
         if (currentUserId == null || (!userRepository.hasActiveAdminRole(currentUserId)
                 && !userRepository.hasActivePermission(currentUserId, "FINANCE_COMMISSION_CONFIG"))) {
@@ -63,6 +82,10 @@ public class CommissionPolicyServiceImpl implements CommissionPolicyService {
         }
     }
 
+    /**
+     * [Chức năng]: Tạo mới hoặc cập nhật một chính sách hoa hồng kèm kiểm tra phân quyền và ràng buộc giá trị.
+     * [Mục đích]: Kiểm tra quyền FINANCE_COMMISSION_CONFIG, xác thực tên, loại hoa hồng, mức hoa hồng không âm và không vượt quá 100% nếu tính theo phần trăm, liên kết dịch vụ/vai trò/nhân sự tương ứng và lưu vào bảng commission_policies.
+     */
     @Override
     public CommissionPolicy savePolicy(CommissionPolicyDTO dto, Long currentUserId) {
         requireCommissionPermission(currentUserId, "Bạn không có quyền tạo hoặc chỉnh sửa chính sách hoa hồng");
@@ -123,11 +146,19 @@ public class CommissionPolicyServiceImpl implements CommissionPolicyService {
         return commissionPolicyRepository.save(policy);
     }
 
+    /**
+     * [Chức năng]: Bật hoặc tắt trạng thái áp dụng của chính sách hoa hồng (hàm quá tải không truyền ID người thao tác).
+     * [Mục đích]: Ủy quyền sang togglePolicyStatus(policyId, isActive, null) để kiểm tra quyền thống nhất.
+     */
     @Override
     public void togglePolicyStatus(Long policyId, boolean isActive) {
         togglePolicyStatus(policyId, isActive, null);
     }
 
+    /**
+     * [Chức năng]: Bật hoặc tắt trạng thái hoạt động (isActive) của một chính sách hoa hồng theo ID.
+     * [Mục đích]: Kiểm tra quyền FINANCE_COMMISSION_CONFIG, tải chính sách và cập nhật cờ kích hoạt trong bảng commission_policies.
+     */
     @Override
     public void togglePolicyStatus(Long policyId, boolean isActive, Long currentUserId) {
         requireCommissionPermission(currentUserId, "Bạn không có quyền thay đổi trạng thái chính sách hoa hồng");
@@ -136,11 +167,19 @@ public class CommissionPolicyServiceImpl implements CommissionPolicyService {
         commissionPolicyRepository.save(policy);
     }
 
+    /**
+     * [Chức năng]: Xóa chính sách hoa hồng theo ID (hàm quá tải không truyền ID người thao tác).
+     * [Mục đích]: Ủy quyền sang deletePolicy(policyId, null) để kiểm tra quyền thống nhất.
+     */
     @Override
     public void deletePolicy(Long policyId) {
         deletePolicy(policyId, null);
     }
 
+    /**
+     * [Chức năng]: Xóa vĩnh viễn một chính sách hoa hồng khỏi cơ sở dữ liệu theo ID.
+     * [Mục đích]: Kiểm tra quyền FINANCE_COMMISSION_CONFIG trước khi gọi commissionPolicyRepository.deleteById.
+     */
     @Override
     public void deletePolicy(Long policyId, Long currentUserId) {
         requireCommissionPermission(currentUserId, "Bạn không có quyền xóa chính sách hoa hồng");

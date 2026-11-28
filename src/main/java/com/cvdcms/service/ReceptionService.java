@@ -77,10 +77,41 @@ public class ReceptionService {
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private StaffProfileRepository staffProfiles;
 
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private OverdueVisitCleanupService overdueVisitCleanupService;
+
     @PersistenceContext
     private EntityManager entityManager;
 
     private Clock clock = Clock.system(CLINIC_ZONE);
+
+    @org.springframework.beans.factory.annotation.Value("${reception.early-checkin-buffer-minutes:30}")
+    private int earlyCheckInBufferMinutes = 30;
+
+    public void setEarlyCheckInBufferMinutes(int minutes) {
+        this.earlyCheckInBufferMinutes = Math.max(0, minutes);
+    }
+
+    private void ensureWithinOperatingHours(Branch branch, LocalTime nowTime, boolean emergency, String closedMessage) {
+        if (emergency || branch == null || nowTime == null) {
+            return;
+        }
+        if (branch.getOpeningTime() != null) {
+            int buffer = Math.max(0, earlyCheckInBufferMinutes);
+            LocalTime earliest = branch.getOpeningTime().toSecondOfDay() >= buffer * 60L
+                    ? branch.getOpeningTime().minusMinutes(buffer)
+                    : LocalTime.MIN;
+            if (nowTime.isBefore(earliest)) {
+                throw error(HttpStatus.CONFLICT,
+                        "Chưa đến giờ tiếp nhận khám (tiếp nhận từ " + earliest
+                                + ", giờ mở cửa " + branch.getOpeningTime()
+                                + "). Chỉ ca Cấp cứu mới được tiếp nhận ngoài khung giờ này.");
+            }
+        }
+        if (branch.getClosingTime() != null && !nowTime.isBefore(branch.getClosingTime())) {
+            throw error(HttpStatus.CONFLICT, closedMessage);
+        }
+    }
 
     public void setClock(Clock clock) {
         if (clock != null) {
@@ -159,9 +190,8 @@ public class ReceptionService {
 
         LocalDateTime nowDateTime = LocalDateTime.now(clock);
         LocalTime nowTime = nowDateTime.toLocalTime();
-        if (branch.getClosingTime() != null && !nowTime.isBefore(branch.getClosingTime())) {
-            throw error(HttpStatus.CONFLICT, "Phòng khám đã đóng cửa trong ngày hôm nay, không thể tiếp nhận khám.");
-        }
+        ensureWithinOperatingHours(branch, nowTime, false,
+                "Phòng khám đã đóng cửa trong ngày hôm nay, không thể tiếp nhận khám.");
         if (policyService != null && policyService.sessionEnded(branch, appointment.getAppointmentDate(),
                 appointment.getPreferredSession(), nowDateTime)) {
             throw error(HttpStatus.CONFLICT, "Ca khám đã kết thúc trong ngày hôm nay, không thể tiếp nhận khám.");
@@ -259,9 +289,8 @@ public class ReceptionService {
 
         LocalDateTime nowDateTime = LocalDateTime.now(clock);
         LocalTime nowTime = nowDateTime.toLocalTime();
-        if (branch.getClosingTime() != null && !nowTime.isBefore(branch.getClosingTime())) {
-            throw error(HttpStatus.CONFLICT, "Phòng khám đã đóng cửa trong ngày hôm nay, không thể tiếp nhận khám.");
-        }
+        ensureWithinOperatingHours(branch, nowTime, false,
+                "Phòng khám đã đóng cửa trong ngày hôm nay, không thể tiếp nhận khám.");
         if (policyService != null && policyService.sessionEnded(branch, appointment.getAppointmentDate(),
                 appointment.getPreferredSession(), nowDateTime)) {
             throw error(HttpStatus.CONFLICT, "Ca khám đã kết thúc trong ngày hôm nay, không thể tiếp nhận khám.");
@@ -273,12 +302,14 @@ public class ReceptionService {
         String initialStatus = appointment.getStatus().name();
 
         if (appointment.getStatus() == AppointmentStatus.PENDING) {
-            // Revalidate via policy service
+            // Revalidate via policy service (allowCapacityOverlap=true since appointment already exists at desk)
             if (policyService != null) {
-                Long doctorId = appointment.getDoctor() != null ? appointment.getDoctor().getStaffId() : null;
+                Long doctorId = Boolean.TRUE.equals(appointment.getIsDoctorRequested()) && appointment.getDoctor() != null
+                        ? appointment.getDoctor().getStaffId()
+                        : null;
                 policyService.ensureBookable(branch, patient, appointment.getAppointmentDate(),
                         appointment.getPreferredSession(), doctorId, appointment.getAppointmentId(),
-                        AppointmentActorType.RECEPTIONIST);
+                        AppointmentActorType.RECEPTIONIST, true);
             }
 
             String pendingSnapshot = snapshot(appointment);
@@ -455,6 +486,8 @@ public class ReceptionService {
 
         // Walk-in / Emergency does NOT create or mutate any Appointment
         LocalDateTime nowDateTime = LocalDateTime.now(clock);
+        ensureWithinOperatingHours(branch, nowDateTime.toLocalTime(), emergency,
+                "Phòng khám đã hết giờ tiếp nhận khách vãng lai hôm nay.");
         Visit visit = newVisit(patient, branch, emergency ? VisitType.EMERGENCY : VisitType.WALK_IN,
                 null, initialSymptoms, nowDateTime, emergency, false);
         if (priority || emergency) {
@@ -767,6 +800,13 @@ public class ReceptionService {
             throw error(HttpStatus.CONFLICT, "Lịch hẹn đã thay đổi trong lúc xử lý. Vui lòng tải lại trang.");
         }
         Appointment appt = ctx.appointment();
+        if (!Boolean.TRUE.equals(appt.getIsDoctorRequested())) {
+            return;
+        }
+        if (appt.getResourceStatus() == com.cvdcms.entity.enums.AppointmentResourceStatus.NEEDS_REASSIGNMENT) {
+            throw error(HttpStatus.CONFLICT,
+                    "Lịch hẹn yêu cầu bác sĩ riêng đang cần phân bổ lại (NEEDS_REASSIGNMENT). Vui lòng đổi bác sĩ hoặc cập nhật lịch hẹn trước khi check-in.");
+        }
         if (appt.getDoctor() != null && ctx.lockedDoctor() != null
                 && ctx.lockedDoctor().getStatus() != StaffStatus.ACTIVE) {
             throw error(HttpStatus.CONFLICT,
@@ -858,6 +898,9 @@ public class ReceptionService {
         LocalDate today = today();
         LocalDateTime startOfToday = today.atStartOfDay();
         LocalDateTime endOfToday = today.plusDays(1).atStartOfDay();
+        if (overdueVisitCleanupService != null && patient != null && patient.getProfileId() != null) {
+            overdueVisitCleanupService.closeOverdueVisitsForPatient(patient.getProfileId(), LocalDateTime.now(clock));
+        }
         var allActive = visits.activeForProfile(patient.getProfileId(), ReceptionTransitionPolicy.activeVisits());
         var activeToday = allActive.stream()
                 .filter(v -> v.getCheckInAt() == null || (!v.getCheckInAt().isBefore(startOfToday) && v.getCheckInAt().isBefore(endOfToday)))
@@ -866,7 +909,10 @@ public class ReceptionService {
             throw error(HttpStatus.CONFLICT, "Bệnh nhân đã có lượt khám đang hoạt động: " + activeToday.get(0).getVisitCode());
         }
         for (Visit past : allActive) {
-            if (past.getCheckInAt() != null && past.getCheckInAt().isBefore(startOfToday) && past.getStatus() == VisitStatus.WAITING) {
+            if (past.getCheckInAt() != null && past.getCheckInAt().isBefore(startOfToday)
+                    && past.getStatus() != VisitStatus.WAITING_PAYMENT
+                    && past.getStatus() != VisitStatus.COMPLETED
+                    && past.getStatus() != VisitStatus.CANCELLED) {
                 past.setStatus(VisitStatus.CANCELLED);
                 past.setNotes((past.getNotes() != null ? past.getNotes() + " | " : "") + "Tự động đóng lượt khám chưa hoàn tất từ ngày trước (" + past.getCheckInAt().toLocalDate() + ")");
                 visits.save(past);
@@ -1148,6 +1194,7 @@ public class ReceptionService {
                 }
             }
         }
+        boolean canRevert = v.getAppointmentId() != null && canRevertVisit(v);
         return new VisitRow(v.getVisitId(), v.getVisitCode(), patientRow(v.getPatientProfile()),
                 v.getVisitType(), v.getStatus(), v.getCheckInAt(), v.getInitialSymptoms(),
                 t != null ? t.getTicketId() : null,
@@ -1156,7 +1203,9 @@ public class ReceptionService {
                 isPriority,
                 isEmergency,
                 isBookedOnTime,
-                isEarlyWaiting);
+                isEarlyWaiting,
+                v.getAppointmentId(),
+                canRevert);
     }
 
     private VisitRow visitRow(Visit v) {
@@ -1188,7 +1237,15 @@ public class ReceptionService {
                            VisitStatus status, LocalDateTime checkedInAt, String symptoms,
                            Long ticketId, String ticketDisplayNumber, String doctorName,
                            boolean priority, boolean emergency, boolean bookedAndOnTime,
-                           boolean earlyWaiting) {
+                           boolean earlyWaiting, Long appointmentId, boolean canRevert) {
+        public VisitRow(Long id, String code, PatientRow patient, VisitType type,
+                        VisitStatus status, LocalDateTime checkedInAt, String symptoms,
+                        Long ticketId, String ticketDisplayNumber, String doctorName,
+                        boolean priority, boolean emergency, boolean bookedAndOnTime,
+                        boolean earlyWaiting) {
+            this(id, code, patient, type, status, checkedInAt, symptoms, ticketId, ticketDisplayNumber,
+                    doctorName, priority, emergency, bookedAndOnTime, earlyWaiting, null, false);
+        }
         public VisitRow(Long id, String code, PatientRow patient, VisitType type,
                         VisitStatus status, LocalDateTime checkedInAt, String symptoms,
                         Long ticketId, String ticketDisplayNumber, String doctorName,

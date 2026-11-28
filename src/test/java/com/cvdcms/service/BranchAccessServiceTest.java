@@ -30,7 +30,7 @@ class BranchAccessServiceTest {
     }
 
     @Test
-    @DisplayName("canAccessBranch - Trả về false khi userId hoặc branchId null hoặc <= 0")
+    @DisplayName("canAccessBranch - Return false when userId or branchId is null or <= 0")
     void canAccessBranch_invalidIds_returnsFalse() {
         assertFalse(accessService.canAccessBranch(null, 1L));
         assertFalse(accessService.canAccessBranch(0L, 1L));
@@ -42,7 +42,7 @@ class BranchAccessServiceTest {
     }
 
     @Test
-    @DisplayName("canAccessBranch - ADMIN đang hoạt động được truy cập mọi chi nhánh hợp lệ")
+    @DisplayName("canAccessBranch - Active ADMIN can access any valid branch")
     void canAccessBranch_activeAdmin_returnsTrue() {
         when(userRepository.hasActiveAdminRole(1L)).thenReturn(true);
 
@@ -51,7 +51,7 @@ class BranchAccessServiceTest {
     }
 
     @Test
-    @DisplayName("canAccessBranch - Nhân viên có phân công kho ACTIVE tại chi nhánh được phép truy cập")
+    @DisplayName("canAccessBranch - Staff with ACTIVE warehouse assignment in branch can access")
     void canAccessBranch_activeWarehouseAssignment_returnsTrue() {
         when(userRepository.hasActiveAdminRole(10L)).thenReturn(false);
         when(userRepository.countActiveWarehouseAssignments(10L, 2L)).thenReturn(1L);
@@ -61,7 +61,7 @@ class BranchAccessServiceTest {
     }
 
     @Test
-    @DisplayName("canAccessBranch - Nhân viên có quyền INVENTORY tại chi nhánh được phép truy cập")
+    @DisplayName("canAccessBranch - Staff with active INVENTORY permission in branch can access")
     void canAccessBranch_activeInventoryPermission_returnsTrue() {
         when(userRepository.hasActiveAdminRole(11L)).thenReturn(false);
         when(userRepository.countActiveWarehouseAssignments(11L, 2L)).thenReturn(0L);
@@ -72,7 +72,7 @@ class BranchAccessServiceTest {
     }
 
     @Test
-    @DisplayName("canAccessBranch - Cho phép qua fallback SupplierManagementRole khi branchService cho phép")
+    @DisplayName("canAccessBranch - Allow via SupplierManagementRole fallback when branchService permits")
     void canAccessBranch_supplierManagementFallbackAllowed_returnsTrue() {
         when(userRepository.hasActiveAdminRole(12L)).thenReturn(false);
         when(userRepository.countActiveWarehouseAssignments(12L, 3L)).thenReturn(null);
@@ -84,7 +84,7 @@ class BranchAccessServiceTest {
     }
 
     @Test
-    @DisplayName("canAccessBranch - Từ chối khi không có phân công, không có quyền kho và không qua được fallback")
+    @DisplayName("canAccessBranch - Deny access when missing assignments, permissions, and fallback")
     void canAccessBranch_noPermissions_returnsFalse() {
         when(userRepository.hasActiveAdminRole(13L)).thenReturn(false);
         when(userRepository.countActiveWarehouseAssignments(13L, 3L)).thenReturn(0L);
@@ -96,7 +96,7 @@ class BranchAccessServiceTest {
     }
 
     @Test
-    @DisplayName("canAccessBranch - Trả về false an toàn khi branchService chưa được inject")
+    @DisplayName("canAccessBranch - Safely return false when branchService is not injected")
     void canAccessBranch_nullBranchService_returnsFalse() {
         BranchAccessServiceImpl serviceWithoutBranch = new BranchAccessServiceImpl(userRepository);
         when(userRepository.hasActiveAdminRole(14L)).thenReturn(false);
@@ -107,7 +107,7 @@ class BranchAccessServiceTest {
     }
 
     @Test
-    @DisplayName("isAdmin - Kiểm tra id null/<=0 trả false và ủy quyền cho UserRepository")
+    @DisplayName("isAdmin - Return false for null/<=0 ID and delegate valid IDs to UserRepository")
     void isAdmin_validAndInvalidUsers() {
         assertFalse(accessService.isAdmin(null));
         assertFalse(accessService.isAdmin(0L));

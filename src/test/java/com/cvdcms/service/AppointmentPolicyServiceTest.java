@@ -185,15 +185,17 @@ class AppointmentPolicyServiceTest {
                 policy.ensureBookable(branch2, patient, date, PreferredSession.MORNING, null, null, AppointmentActorType.PATIENT));
         assertTrue(crossEx.getReason().contains("đã có lịch"));
 
-        // 2. Nhưng đặt buổi chiều (AFTERNOON) ở CN1 vẫn được phép
+        // 2. Đặt buổi chiều (AFTERNOON) cùng ngày ở CN1 khi lịch sáng chưa hoàn thành -> PHẢI bị chặn (quy tắc cả ngày)
         WorkShift pmShift = new WorkShift(); pmShift.setShiftId(31L); pmShift.setIsActive(true);
         pmShift.setStartTime(LocalTime.of(13, 30)); pmShift.setEndTime(LocalTime.of(17, 30));
         StaffSchedule pmSch = new StaffSchedule(); pmSch.setStaff(doctor); pmSch.setBranch(branch);
         pmSch.setShift(pmShift); pmSch.setWorkDate(date); pmSch.setStatus(ScheduleStatus.SCHEDULED);
         when(schedules.findForBooking(1L, date, ScheduleStatus.SCHEDULED)).thenReturn(List.of(pmSch));
-        assertDoesNotThrow(() -> policy.ensureBookable(branch, patient, date, PreferredSession.AFTERNOON, null, null, AppointmentActorType.PATIENT));
+        assertThrows(ResponseStatusException.class, () ->
+                policy.ensureBookable(branch, patient, date, PreferredSession.AFTERNOON, null, null, AppointmentActorType.PATIENT));
 
-        // 3. Nếu lịch MORNING đang CHECKED_IN và Visit đang IN_EXAM -> CHẶN; nếu Visit đã WAITING_PAYMENT -> CHO PHÉP
+        // 3. Nếu lịch MORNING đang CHECKED_IN và Visit đang IN_EXAM hoặc WAITING_PAYMENT -> CHẶN;
+        //    chỉ khi Visit thực sự COMPLETED -> CHO PHÉP đặt lịch tiếp trong cùng ngày
         existingMorning.setStatus(AppointmentStatus.CHECKED_IN);
         Visit inExam = new Visit(); inExam.setVisitId(900L); inExam.setAppointmentId(500L); inExam.setStatus(VisitStatus.IN_EXAM);
         when(visits.findByAppointmentIdIn(List.of(500L))).thenReturn(List.of(inExam));
@@ -202,6 +204,10 @@ class AppointmentPolicyServiceTest {
 
         inExam.setStatus(VisitStatus.WAITING_PAYMENT);
         inExam.setActualEndTime(date.atTime(9, 15));
+        assertThrows(ResponseStatusException.class, () ->
+                policy.ensureBookable(branch2, patient, date, PreferredSession.MORNING, null, null, AppointmentActorType.PATIENT));
+
+        inExam.setStatus(VisitStatus.COMPLETED);
         when(schedules.findForBooking(2L, date, ScheduleStatus.SCHEDULED)).thenReturn(List.of(sch2));
         assertDoesNotThrow(() ->
                 policy.ensureBookable(branch2, patient, date, PreferredSession.MORNING, null, null, AppointmentActorType.PATIENT));

@@ -26,12 +26,14 @@
             box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
             margin-bottom: 16px;
           }
+
           .dv-search-box {
             position: relative;
             flex: 1;
             max-width: 440px;
             min-width: 250px;
           }
+
           .dv-search-box input {
             width: 100%;
             height: 38px;
@@ -44,12 +46,14 @@
             background: #f8fafc;
             transition: all 0.2s;
           }
+
           .dv-search-box input:focus {
             background: #ffffff;
             border-color: #0284c7;
             box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.14);
             outline: none;
           }
+
           .dv-search-box .search-lead-icon {
             position: absolute;
             left: 12px;
@@ -59,6 +63,7 @@
             font-size: 15px;
             pointer-events: none;
           }
+
           .dv-search-box .search-clear-btn {
             position: absolute;
             right: 8px;
@@ -76,10 +81,12 @@
             cursor: pointer;
             font-size: 10px;
           }
+
           .dv-search-box .search-clear-btn:hover {
             background: #cbd5e1;
             color: #0f172a;
           }
+
           .dv-quick-segment {
             display: inline-flex;
             background: #f1f5f9;
@@ -89,6 +96,7 @@
             gap: 2px;
             align-items: center;
           }
+
           .dv-seg-btn {
             border: none !important;
             background: transparent !important;
@@ -106,10 +114,12 @@
             text-decoration: none;
             box-shadow: none !important;
           }
+
           .dv-seg-btn:hover {
             color: #0f172a !important;
             background: rgba(255, 255, 255, 0.6) !important;
           }
+
           .dv-seg-btn.active,
           .dv-seg-btn.is-active,
           .dv-seg-btn.active.btn-primary {
@@ -118,6 +128,7 @@
             box-shadow: 0 1px 4px rgba(15, 23, 42, 0.08) !important;
             font-weight: 700 !important;
           }
+
           .dv-seg-count {
             font-size: 11px;
             font-weight: 800;
@@ -126,11 +137,13 @@
             background: #e2e8f0;
             color: #334155;
           }
+
           .dv-seg-btn.active .dv-seg-count,
           .dv-seg-btn.is-active .dv-seg-count {
             background: #e0f2fe;
             color: #0369a1;
           }
+
           .dv-adv-filter-btn {
             height: 38px;
             padding: 0 12px;
@@ -148,6 +161,7 @@
             position: relative;
             white-space: nowrap;
           }
+
           .dv-adv-filter-btn:hover,
           .dv-adv-filter-btn.active,
           .dv-adv-filter-btn.is-open {
@@ -155,6 +169,7 @@
             color: #0284c7;
             background: #f0f9ff;
           }
+
           .dv-adv-control {
             height: 38px;
             border-radius: 10px;
@@ -166,6 +181,7 @@
             background: #f8fafc;
             transition: all 0.2s;
           }
+
           .dentalsoft-hidden-date {
             position: absolute;
             opacity: 0;
@@ -175,7 +191,10 @@
             height: 100%;
             cursor: pointer;
           }
-          .cursor-pointer { cursor: pointer; }
+
+          .cursor-pointer {
+            cursor: pointer;
+          }
         </style>
 
         <!-- TIÊU ĐỀ TRANG ĐỒNG BỘ CHUẨN HỆ THỐNG -->
@@ -238,8 +257,8 @@
             </div>
             <div>
               <div class="d-flex align-items-center gap-2 mb-0.5">
-                <span class="badge bg-success text-white fw-bold rounded-pill px-3 py-1"
-                  style="font-size: 11px;">ĐỒNG BỘ HÀNG CHỜ KHÁM</span>
+                <span class="badge bg-success text-white fw-bold rounded-pill px-3 py-1" style="font-size: 11px;">ĐỒNG
+                  BỘ HÀNG CHỜ KHÁM</span>
                 <span th:if="${issuedTicketNumber != null}"
                   class="badge bg-dark text-white font-monospace fw-bold px-3 py-1"
                   th:text="|Số phiếu: ${issuedTicketNumber}|">Số phiếu: 01</span>
@@ -248,11 +267,9 @@
             </div>
           </div>
           <div class="d-flex flex-wrap align-items-center gap-2">
-            <button th:if="${issuedTicketId != null}"
-              type="button"
+            <button th:if="${issuedTicketId != null}" type="button"
               class="btn btn-sm btn-primary fw-bold d-inline-flex align-items-center gap-2 shadow-sm"
-              th:attr="data-ticket-id=${issuedTicketId}"
-              th:onclick="|printTicketDirect(${issuedTicketId})|">
+              th:attr="data-ticket-id=${issuedTicketId}" th:onclick="|printTicketDirect(${issuedTicketId})|">
               <i class="bi bi-printer-fill"></i><span>In phiếu A6 ngay</span>
             </button>
           </div>
@@ -260,7 +277,7 @@
         <div class="alert alert-danger shadow-sm rounded-4 p-3 mb-3 border-0" role="alert" th:if="${error}"
           th:text="${error}"></div>
 
-                <!-- =========================================================================
+        <!-- =========================================================================
      3. TOOLBAR ĐIỀU PHỐI GHẾ NHA CHUẨN ẢNH 2 & BỘ LỌC ĐỒNG BỘ
      ========================================================================= -->
         <div class="dv-toolbar-card mb-3">
@@ -271,8 +288,8 @@
             <div class="dv-search-box" style="flex: 1; max-width: 440px; min-width: 250px;">
               <i class="bi bi-search search-lead-icon"></i>
               <input id="visitSearch" type="search"
-                placeholder="Tìm nhanh theo STT, Họ tên BN, Mã BN, SĐT, Mã ca khám..."
-                th:value="${keyword}" autocomplete="off">
+                placeholder="Tìm nhanh theo STT, Họ tên BN, Mã BN, SĐT, Mã ca khám..." th:value="${keyword}"
+                autocomplete="off">
               <button type="button" class="search-clear-btn" id="btnClearSearch"
                 th:classappend="${keyword != null and !#strings.isEmpty(keyword)} ? '' : 'd-none'" title="Xóa từ khóa">
                 <i class="bi bi-x-lg"></i>
@@ -326,38 +343,35 @@
           <!-- HÀNG 2: PHÂN LOẠI TRẠNG THÁI (TRÁI) & SELECT BÁC SĨ + LỌC NÂNG CAO + IN (PHẢI) -->
           <div class="d-flex align-items-center justify-content-between gap-2 flex-nowrap">
             <!-- Phân loại trạng thái nhanh -->
-            <div class="dv-quick-segment flex-nowrap overflow-x-auto py-1" aria-label="Phân loại trạng thái" style="scrollbar-width: thin;">
+            <div class="dv-quick-segment flex-nowrap overflow-x-auto py-1" aria-label="Phân loại trạng thái"
+              style="scrollbar-width: thin;">
               <button type="button" class="dv-seg-btn"
-                th:classappend="${selectedStatus == null or selectedStatus == 'ALL'} ? 'active' : ''"
-                data-status="ALL" title="Tất cả lượt khám">
+                th:classappend="${selectedStatus == null or selectedStatus == 'ALL'} ? 'active' : ''" data-status="ALL"
+                title="Tất cả lượt khám">
                 Tất cả <span class="dv-seg-count" th:text="${totalItems}">0</span>
               </button>
               <button type="button" class="dv-seg-btn"
-                th:classappend="${selectedStatus == 'UNASSIGNED'} ? 'active' : ''"
-                data-status="UNASSIGNED" title="Chưa phân công bác sĩ">
+                th:classappend="${selectedStatus == 'UNASSIGNED'} ? 'active' : ''" data-status="UNASSIGNED"
+                title="Chưa phân công bác sĩ">
                 <span class="rounded-circle d-inline-block" style="width:7px;height:7px;background:#f59e0b;"></span>
                 Chưa phân bổ
               </button>
-              <button type="button" class="dv-seg-btn"
-                th:classappend="${selectedStatus == 'WAITING'} ? 'active' : ''"
+              <button type="button" class="dv-seg-btn" th:classappend="${selectedStatus == 'WAITING'} ? 'active' : ''"
                 data-status="WAITING" title="Chờ vào khám">
                 <span class="rounded-circle d-inline-block" style="width:7px;height:7px;background:#0284c7;"></span>
                 Chờ khám
               </button>
-              <button type="button" class="dv-seg-btn"
-                th:classappend="${selectedStatus == 'IN_EXAM'} ? 'active' : ''"
+              <button type="button" class="dv-seg-btn" th:classappend="${selectedStatus == 'IN_EXAM'} ? 'active' : ''"
                 data-status="IN_EXAM" title="Đang khám / điều trị">
                 <span class="rounded-circle d-inline-block" style="width:7px;height:7px;background:#6366f1;"></span>
                 Đang khám
               </button>
-              <button type="button" class="dv-seg-btn"
-                th:classappend="${selectedStatus == 'PRIORITY'} ? 'active' : ''"
+              <button type="button" class="dv-seg-btn" th:classappend="${selectedStatus == 'PRIORITY'} ? 'active' : ''"
                 data-status="PRIORITY" title="Ưu tiên / Cấp cứu">
                 <span class="rounded-circle d-inline-block" style="width:7px;height:7px;background:#ef4444;"></span>
                 Ưu tiên
               </button>
-              <button type="button" class="dv-seg-btn"
-                th:classappend="${selectedStatus == 'COMPLETED'} ? 'active' : ''"
+              <button type="button" class="dv-seg-btn" th:classappend="${selectedStatus == 'COMPLETED'} ? 'active' : ''"
                 data-status="COMPLETED" title="Đã hoàn thành">
                 <span class="rounded-circle d-inline-block" style="width:7px;height:7px;background:#10b981;"></span>
                 Hoàn thành
@@ -413,10 +427,12 @@
                 </select>
               </div>
               <div class="col-12 col-md-4 d-flex align-items-end gap-2">
-                <button type="button" class="btn btn-primary btn-sm fw-bold px-3 w-100" style="height: 44px; border-radius: 12px;" id="btnApplyAdvFilter">
+                <button type="button" class="btn btn-primary btn-sm fw-bold px-3 w-100"
+                  style="height: 44px; border-radius: 12px;" id="btnApplyAdvFilter">
                   <i class="bi bi-check2-circle me-1"></i>Áp dụng
                 </button>
-                <button type="button" class="btn btn-outline-secondary btn-sm fw-semibold px-3" style="height: 44px; border-radius: 12px;" id="btnResetAdvFilter">
+                <button type="button" class="btn btn-outline-secondary btn-sm fw-semibold px-3"
+                  style="height: 44px; border-radius: 12px;" id="btnResetAdvFilter">
                   Đặt lại
                 </button>
               </div>
@@ -427,7 +443,8 @@
      4. BẢNG GỘP ĐIỀU PHỐI GHẾ NHA DUY NHẤT (UNIFIED MATRIX TABLE)
      ========================================================================= -->
         <section class="dispatch-card-container mb-3" id="unifiedDispatchCard">
-          <div class="dispatch-card-header bg-light-subtle d-flex align-items-center justify-content-between flex-wrap gap-2 py-2 px-3">
+          <div
+            class="dispatch-card-header bg-light-subtle d-flex align-items-center justify-content-between flex-wrap gap-2 py-2 px-3">
             <div class="d-flex align-items-center gap-2">
               <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center"
                 style="width: 28px; height: 28px; font-size: 13px;">
@@ -442,8 +459,7 @@
           </div>
 
           <div class="dispatch-card-body pt-2 pb-3">
-            <div th:if="${totalItems == 0}"
-              class="card border-0 rounded-4 p-5 text-center text-muted mb-2 bg-white">
+            <div th:if="${totalItems == 0}" class="card border-0 rounded-4 p-5 text-center text-muted mb-2 bg-white">
               <i class="bi bi-inbox fs-1 text-secondary opacity-50 d-block mb-2"></i>
               <span class="fw-semibold">Không tìm thấy lượt điều phối nào phù hợp với bộ lọc hiện tại.</span>
             </div>
@@ -489,8 +505,7 @@
                   </tr>
                 </thead>
                 <tbody>
-                  <tr th:each="v, vStat : ${items}" class="dv-data-row dispatch-table-row"
-                    th:attr="data-visit-id=${v.visitId},
+                  <tr th:each="v, vStat : ${items}" class="dv-data-row dispatch-table-row" th:attr="data-visit-id=${v.visitId},
                              data-visit-code=${v.visitCode},
                              data-patient-name=${v.patientProfile != null ? v.patientProfile.fullName : ''},
                              data-patient-code=${v.patientProfile != null ? v.patientProfile.patientCode : ''},
@@ -510,15 +525,18 @@
                         <span th:if="${v.visitType.name() == 'EMERGENCY'}"
                           class="badge bg-danger text-white font-monospace fw-bold px-2 py-1" style="font-size: 13px;"
                           th:text="${board.issued[v.visitId]}">P-01</span>
-                        <span th:if="${v.visitType.name() != 'EMERGENCY' and (board.issued[v.visitId].startsWith('P-') or v.status.name() == 'WAITING_RESULT')}"
+                        <span
+                          th:if="${v.visitType.name() != 'EMERGENCY' and (board.issued[v.visitId].startsWith('P-') or v.status.name() == 'WAITING_RESULT')}"
                           class="badge bg-warning text-dark font-monospace fw-bold px-2 py-1" style="font-size: 13px;"
                           th:text="${board.issued[v.visitId]}">P-01</span>
-                        <span th:if="${v.visitType.name() != 'EMERGENCY' and v.status.name() != 'WAITING_RESULT' and !board.issued[v.visitId].startsWith('P-')}"
+                        <span
+                          th:if="${v.visitType.name() != 'EMERGENCY' and v.status.name() != 'WAITING_RESULT' and !board.issued[v.visitId].startsWith('P-')}"
                           class="badge bg-primary text-white font-monospace fw-bold px-2 py-1" style="font-size: 13px;"
                           th:text="${board.issued[v.visitId]}">01</span>
                       </div>
                       <div th:if="${board.issued[v.visitId] == null}">
-                        <span class="badge bg-light text-muted border font-monospace" style="font-size: 11px;">Chưa cấp số</span>
+                        <span class="badge bg-light text-muted border font-monospace" style="font-size: 11px;">Chưa cấp
+                          số</span>
                       </div>
                     </td>
 
@@ -550,11 +568,14 @@
                     <!-- 6. Bác sĩ phụ trách -->
                     <td data-col="doctor" class="text-center">
                       <div th:if="${v.primaryDoctor != null}">
-                        <strong class="text-primary d-block small" th:text="${v.primaryDoctor.fullName}">BS. Lê Hoàng Nam</strong>
-                        <span class="badge rounded-pill bg-light text-secondary border fw-normal" style="font-size: 10px;">Chính thức</span>
+                        <strong class="text-primary d-block small" th:text="${v.primaryDoctor.fullName}">BS. Lê Hoàng
+                          Nam</strong>
+                        <span class="badge rounded-pill bg-light text-secondary border fw-normal"
+                          style="font-size: 10px;">Chính thức</span>
                       </div>
                       <div th:if="${v.primaryDoctor == null}">
-                        <span class="badge rounded-pill bg-warning-subtle text-warning-emphasis border border-warning-subtle fw-semibold"
+                        <span
+                          class="badge rounded-pill bg-warning-subtle text-warning-emphasis border border-warning-subtle fw-semibold"
                           style="font-size: 11px;">
                           <i class="bi bi-clock me-1"></i>Chưa phân công
                         </span>
@@ -563,8 +584,8 @@
 
                     <!-- 7. Phân loại -->
                     <td data-col="type" class="text-center">
-                      <span class="badge rounded-pill bg-danger text-white"
-                        th:if="${v.visitType.name() == 'EMERGENCY'}" style="font-size: 11.5px; padding: 4px 10px;">
+                      <span class="badge rounded-pill bg-danger text-white" th:if="${v.visitType.name() == 'EMERGENCY'}"
+                        style="font-size: 11.5px; padding: 4px 10px;">
                         Cấp cứu
                       </span>
                       <span class="badge rounded-pill text-white"
@@ -588,7 +609,8 @@
                       <div class="small fw-semibold text-dark text-truncate"
                         th:title="${board.roomNames[v.visitId] != null ? board.roomNames[v.visitId] : 'Chưa xếp phòng'}">
                         <i class="bi bi-door-open text-primary me-1"></i><span
-                          th:text="${board.roomNames[v.visitId] != null ? board.roomNames[v.visitId] : 'Chưa xếp phòng'}">Phòng 101</span>
+                          th:text="${board.roomNames[v.visitId] != null ? board.roomNames[v.visitId] : 'Chưa xếp phòng'}">Phòng
+                          101</span>
                       </div>
                       <div class="text-muted text-truncate" style="font-size: 11.5px;"
                         th:title="${board.chairNames[v.visitId] != null ? board.chairNames[v.visitId] : 'Chưa gán ghế'}"
@@ -622,7 +644,8 @@
                         Chờ khám
                       </span>
                       <span th:if="${v.status.name() == 'WAITING' and v.primaryDoctor == null}"
-                        class="badge rounded-pill bg-secondary text-white" style="font-size: 11.5px; padding: 4px 10px;">
+                        class="badge rounded-pill bg-secondary text-white"
+                        style="font-size: 11.5px; padding: 4px 10px;">
                         Chưa phân bổ
                       </span>
                     </td>
@@ -632,8 +655,7 @@
                       <div class="dv-actions-cell-always d-flex align-items-center justify-content-center gap-1">
                         <!-- Nút Phân công / Điều phối tự động nếu chưa có Bác sĩ -->
                         <button th:if="${v.primaryDoctor == null}" type="button"
-                          class="dv-equal-btn-primary btn-open-assign"
-                          th:attr="data-visit-id=${v.visitId},
+                          class="dv-equal-btn-primary btn-open-assign" th:attr="data-visit-id=${v.visitId},
                                    data-visit-code=${v.visitCode},
                                    data-patient-name=${v.patientProfile != null ? v.patientProfile.fullName : ''},
                                    data-patient-code=${v.patientProfile != null ? v.patientProfile.patientCode : ''},
@@ -649,8 +671,7 @@
 
                         <!-- Nút Đổi Bác sĩ nếu đã có Bác sĩ (chỉ dành cho Admin/quyền phân bổ lâm sàng) -->
                         <button th:if="${canManualDoctorAssign and v.primaryDoctor != null}" type="button"
-                          class="dv-equal-btn-secondary btn-open-transfer"
-                          th:attr="data-visit-id=${v.visitId},
+                          class="dv-equal-btn-secondary btn-open-transfer" th:attr="data-visit-id=${v.visitId},
                                    data-visit-code=${v.visitCode},
                                    data-patient-name=${v.patientProfile != null ? v.patientProfile.fullName : ''},
                                    data-patient-code=${v.patientProfile != null ? v.patientProfile.patientCode : ''},
@@ -664,8 +685,7 @@
 
                         <!-- Nút In phiếu A6 trực tiếp 1-chạm -->
                         <button th:if="${board.ticketIds[v.visitId] != null or board.issued[v.visitId] != null}"
-                          type="button"
-                          class="dv-equal-btn-primary"
+                          type="button" class="dv-equal-btn-primary"
                           th:onclick="|printTicketDirect(${board.ticketIds[v.visitId] != null ? board.ticketIds[v.visitId] : v.visitId})|"
                           title="In phiếu khám A6 tại chỗ">
                           <i class="bi bi-printer-fill"></i>
@@ -694,17 +714,16 @@
                     <td class="dv-floating-actions-track">
                       <div class="dv-floating-actions-bar">
                         <button th:if="${v.primaryDoctor == null}" type="button"
-                          class="dv-equal-btn-primary btn-open-assign"
-                          th:attr="data-visit-id=${v.visitId},
+                          class="dv-equal-btn-primary btn-open-assign" th:attr="data-visit-id=${v.visitId},
                                    data-visit-code=${v.visitCode},
                                    data-patient-name=${v.patientProfile != null ? v.patientProfile.fullName : ''},
                                    data-patient-code=${v.patientProfile != null ? v.patientProfile.patientCode : ''},
                                    data-symptoms=${v.initialSymptoms}">
-                          <i class="bi bi-person-plus-fill"></i><span th:text="${canManualDoctorAssign ? 'Phân BS' : 'Điều phối'}">Phân BS</span>
+                          <i class="bi bi-person-plus-fill"></i><span
+                            th:text="${canManualDoctorAssign ? 'Phân BS' : 'Điều phối'}">Phân BS</span>
                         </button>
                         <button th:if="${canManualDoctorAssign and v.primaryDoctor != null}" type="button"
-                          class="dv-equal-btn-secondary btn-open-transfer"
-                          th:attr="data-visit-id=${v.visitId},
+                          class="dv-equal-btn-secondary btn-open-transfer" th:attr="data-visit-id=${v.visitId},
                                    data-visit-code=${v.visitCode},
                                    data-patient-name=${v.patientProfile != null ? v.patientProfile.fullName : ''},
                                    data-patient-code=${v.patientProfile != null ? v.patientProfile.patientCode : ''},
@@ -715,8 +734,7 @@
                           <i class="bi bi-arrow-left-right text-primary"></i><span>Đổi BS</span>
                         </button>
                         <button th:if="${board.ticketIds[v.visitId] != null or board.issued[v.visitId] != null}"
-                          type="button"
-                          class="dv-equal-btn-primary"
+                          type="button" class="dv-equal-btn-primary"
                           th:onclick="|printTicketDirect(${board.ticketIds[v.visitId] != null ? board.ticketIds[v.visitId] : v.visitId})|"
                           title="In phiếu khám A6 tại chỗ">
                           <i class="bi bi-printer-fill"></i><span>In phiếu</span>
@@ -742,7 +760,8 @@
             </div>
 
             <!-- PHÂN TRANG CHUẨN MISA AMIS -->
-            <div class="misa-pagination-container mt-3 px-3 py-2 bg-white rounded-3 border d-flex flex-wrap align-items-center justify-content-between gap-3"
+            <div
+              class="misa-pagination-container mt-3 px-3 py-2 bg-white rounded-3 border d-flex flex-wrap align-items-center justify-content-between gap-3"
               th:if="${totalItems > 0}">
               <!-- Tổng số bản ghi bên trái -->
               <div class="misa-total-count text-muted small">
@@ -753,7 +772,8 @@
               <div class="misa-pagination-right d-flex align-items-center gap-3">
                 <div class="misa-page-size-picker d-flex align-items-center gap-2 small text-muted">
                   <span>Số bản ghi/trang</span>
-                  <select id="pageSizeSelect" class="form-select form-select-sm misa-page-size-select" style="width: 75px;">
+                  <select id="pageSizeSelect" class="form-select form-select-sm misa-page-size-select"
+                    style="width: 75px;">
                     <option value="10" th:selected="${pageSize == 10}">10</option>
                     <option value="25" th:selected="${pageSize == 25}">25</option>
                     <option value="50" th:selected="${pageSize == 50}">50</option>
@@ -761,8 +781,7 @@
                   </select>
                 </div>
 
-                <div class="misa-record-range text-dark small fw-medium"
-                  th:text="|${fromItem} - ${toItem} bản ghi|">
+                <div class="misa-record-range text-dark small fw-medium" th:text="|${fromItem} - ${toItem} bản ghi|">
                   1 - 10 bản ghi
                 </div>
 
@@ -804,14 +823,15 @@
           <input type="hidden" id="filterDoctorIdInput" name="doctorId" th:value="${selectedDoctorId}">
           <input type="hidden" id="filterStatusInput" name="status" th:value="${selectedStatus}">
           <input type="hidden" id="filterDatePresetInput" name="datePreset" th:value="${selectedDatePreset}">
-          <input type="hidden" id="filterDayInput" name="day" th:value="${selectedDay != null ? #temporals.format(selectedDay, 'yyyy-MM-dd') : ''}">
+          <input type="hidden" id="filterDayInput" name="day"
+            th:value="${selectedDay != null ? #temporals.format(selectedDay, 'yyyy-MM-dd') : ''}">
           <input type="hidden" id="filterRoomIdInput" name="roomId" th:value="${selectedRoomId}">
           <input type="hidden" id="filterChairIdInput" name="chairId" th:value="${selectedChairId}">
           <input type="hidden" id="pageSizeInput" name="size" th:value="${pageSize}">
           <input type="hidden" id="pageIndexInput" name="page" th:value="${currentPage}">
         </form>
 
-<!-- =========================================================================
+        <!-- =========================================================================
      MODAL 1: PHÂN CÔNG BÁC SĨ & TỰ ĐỘNG CẤP SỐ THỨ TỰ
      ========================================================================= -->
         <div class="modal fade" id="dispatchAssignModal" tabindex="-1" aria-labelledby="assignModalLabel"
@@ -827,10 +847,13 @@
                   <div>
                     <h5 class="modal-title fw-bold text-dark mb-0" id="assignModalLabel">
                       <i class="bi bi-person-plus-fill text-primary me-1"></i>
-                      <span th:text="${canManualDoctorAssign ? 'Phân công Bác sĩ &amp; Cấp số tự động' : 'Điều phối &amp; Cấp số tự động'}">Phân công Bác sĩ &amp; Cấp số tự động</span>
+                      <span
+                        th:text="${canManualDoctorAssign ? 'Phân công Bác sĩ &amp; Cấp số tự động' : 'Điều phối &amp; Cấp số tự động'}">Phân
+                        công Bác sĩ &amp; Cấp số tự động</span>
                     </h5>
                     <small class="text-muted"
-                      th:text="${canManualDoctorAssign ? 'Hệ thống tự động gợi ý hoặc cho phép chọn bác sĩ, đồng bộ hàng chờ và cấp phiếu số thứ tự.' : 'Hệ thống tự động phân bổ bác sĩ phù hợp nhất, đồng bộ hàng chờ và cấp phiếu số thứ tự.'}">Hệ thống tự động gán bác sĩ, đồng bộ hàng chờ và cấp phiếu số thứ tự.</small>
+                      th:text="${canManualDoctorAssign ? 'Hệ thống tự động gợi ý hoặc cho phép chọn bác sĩ, đồng bộ hàng chờ và cấp phiếu số thứ tự.' : 'Hệ thống tự động phân bổ bác sĩ phù hợp nhất, đồng bộ hàng chờ và cấp phiếu số thứ tự.'}">Hệ
+                      thống tự động gán bác sĩ, đồng bộ hàng chờ và cấp phiếu số thứ tự.</small>
                   </div>
                   <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
@@ -861,14 +884,16 @@
                     </select>
                   </div>
 
-                  <div id="modalAutoAssignNotice" class="alert alert-info border border-info-subtle rounded-3 p-3 mb-3 small"
-                    role="status" th:if="${!canManualDoctorAssign}">
+                  <div id="modalAutoAssignNotice"
+                    class="alert alert-info border border-info-subtle rounded-3 p-3 mb-3 small" role="status"
+                    th:if="${!canManualDoctorAssign}">
                     <div class="d-flex align-items-start gap-2">
                       <i class="bi bi-cpu-fill text-info fs-5 mt-1 flex-shrink-0"></i>
                       <div>
                         <div class="fw-bold text-dark mb-1">Hệ thống tự động phân bổ bác sĩ</div>
                         <div class="text-secondary">
-                          Lễ tân không tự chọn hoặc đổi bác sĩ thủ công. Khi xác nhận điều phối, hệ thống sẽ tự động phân bổ bác sĩ phù hợp nhất theo quy tắc hàng chờ và cấp phiếu số thứ tự.
+                          Lễ tân không tự chọn hoặc đổi bác sĩ thủ công. Khi xác nhận điều phối, hệ thống sẽ tự động
+                          phân bổ bác sĩ phù hợp nhất theo quy tắc hàng chờ và cấp phiếu số thứ tự.
                         </div>
                       </div>
                     </div>
@@ -996,7 +1021,7 @@
               <div class="modal-body p-3 bg-secondary-subtle d-flex justify-content-center">
                 <!-- KHỐI BẢN IN K80 CHUẨN MÁY IN NHIỆT 80MM -->
                 <div id="k80PrintableArea" class="bg-white p-3 rounded-3 shadow-sm border text-center w-100"
-                  style="max-width: 310px; font-family: 'Be Vietnam Pro', 'Inter', sans-serif; color: #0f172a;">
+                  style="max-width: 310px; font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; color: #0f172a;">
                   <div class="fw-bold text-uppercase" style="font-size: 13px; letter-spacing: 0.4px;">PHÒNG KHÁM NHA
                     KHOA CƯỜNG VIỆT</div>
                   <div class="text-muted mb-2 pb-2" style="font-size: 11px; border-bottom: 1.5px dashed #94a3b8;">
@@ -1210,7 +1235,7 @@
           } else if (dispatchFilterDate) {
             dispatchFilterDate.focus();
           }
-        } catch (_) {}
+        } catch (_) { }
       }
       if (dateLabel) dateLabel.addEventListener('click', openDispatchDatePicker);
       if (dispatchFilterDate) dispatchFilterDate.addEventListener('click', openDispatchDatePicker);

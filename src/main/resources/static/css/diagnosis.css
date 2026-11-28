@@ -3,7 +3,10 @@
    FT14: Chẩn đoán bệnh lý theo ICD-10 (SCR-14.1)
 ===================================================================== */
 
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&display=block&subset=vietnamese');
+
 :root {
+    --df-font-sans: 'Roboto', -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
     --df-primary: #0284c7;
     --df-primary-dark: #0369a1;
     --df-primary-soft: #e0f2fe;
@@ -27,6 +30,22 @@
 }
 
 /* Shared Design System Utilities (synced with treatment-plan-create.html) */
+html,
+.app-main {
+    scrollbar-gutter: stable;
+}
+
+.app-content,
+.df-unified-header,
+.df-tab-content-container,
+.df-main-card,
+.df-subnav,
+.df-subnav-item,
+#fdiToothPopover,
+#dfToastContainer {
+    font-family: var(--df-font-sans);
+}
+
 .df-exam-bound {
     max-width: 1400px;
     margin: 0 auto;
@@ -305,7 +324,6 @@
 }
 
 .df-subnav-container.has-overflow-right .df-subnav {
-    padding-right: 28px;
     -webkit-mask-image: linear-gradient(to right, #000000 0%, #000000 calc(100% - 28px), transparent 100%);
     mask-image: linear-gradient(to right, #000000 0%, #000000 calc(100% - 28px), transparent 100%);
 }
@@ -314,21 +332,20 @@
     display: flex;
     flex-wrap: nowrap;
     gap: 6px;
-    padding: 2px 0 4px;
+    padding: 2px 24px 6px 0;
     background: #ffffff;
     overflow-x: auto !important;
     overflow-y: hidden !important;
-    scroll-behavior: smooth;
-    scrollbar-width: thin;
-    scrollbar-color: #cbd5e1 transparent;
+    scroll-behavior: auto;
 }
 
 .df-subnav::-webkit-scrollbar {
-    height: 4px;
+    height: 6px;
 }
 
 .df-subnav::-webkit-scrollbar-track {
-    background: transparent;
+    background: #f1f5f9;
+    border-radius: 999px;
 }
 
 .df-subnav::-webkit-scrollbar-thumb {
@@ -366,7 +383,7 @@
 .df-subnav-item.active {
     color: #0369a1;
     background: #e0f2fe;
-    font-weight: 700;
+    font-weight: 600;
 }
 
 .df-subnav-item .df-tab-count {
@@ -405,13 +422,13 @@
 
 .df-tab-pane.active {
     display: block;
-    animation: dfTabFadeIn 0.15s ease-in-out;
 }
 
 @keyframes dfTabFadeIn {
     from {
         opacity: 0;
     }
+
     to {
         opacity: 1;
     }
@@ -530,6 +547,7 @@
         opacity: 0;
         transform: translateY(-4px);
     }
+
     to {
         opacity: 1;
         transform: translateY(0);
@@ -896,7 +914,7 @@
     max-height: 250px;
     overflow-y: auto;
     z-index: 1050;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
     display: none;
     margin-top: 4px;
 }
@@ -956,14 +974,22 @@
     transition: all 0.2s ease;
 }
 
-.type-radio-label input[type="radio"]:checked + .type-radio-box {
+.type-radio-label input[type="radio"]:checked+.type-radio-box {
     border-color: var(--df-purple);
     background: #faf5ff;
 }
 
-.type-radio-box.main-card .indicator { background: #ef4444; }
-.type-radio-box.sec-card .indicator { background: #f59e0b; }
-.type-radio-box.diff-card .indicator { background: #0ea5e9; }
+.type-radio-box.main-card .indicator {
+    background: #ef4444;
+}
+
+.type-radio-box.sec-card .indicator {
+    background: #f59e0b;
+}
+
+.type-radio-box.diff-card .indicator {
+    background: #0ea5e9;
+}
 
 .indicator {
     width: 12px;
@@ -1368,7 +1394,8 @@
     border-bottom: 1px solid #f1f5f9;
 }
 
-.df-drug-table input, .df-drug-table select {
+.df-drug-table input,
+.df-drug-table select {
     font-size: 13px;
 }
 
@@ -1442,6 +1469,7 @@
 }
 
 @media print {
+
     html,
     body {
         width: auto !important;
@@ -1457,7 +1485,7 @@
         padding-right: 0 !important;
     }
 
-    body > *:not(:has(#printPrescriptionModal)),
+    body>*:not(:has(#printPrescriptionModal)),
     .modal-backdrop,
     .modal:not(#printPrescriptionModal) {
         display: none !important;
@@ -1555,8 +1583,13 @@ html {
 }
 
 @keyframes dfPulseHighlight {
-    0% { box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.45); }
-    100% { box-shadow: none; }
+    0% {
+        box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.45);
+    }
+
+    100% {
+        box-shadow: none;
+    }
 }
 
 /* =====================================================================
@@ -1691,6 +1724,7 @@ html {
     position: relative;
     padding-left: 28px;
 }
+
 .df-stage-timeline::before {
     content: '';
     position: absolute;
@@ -1700,10 +1734,12 @@ html {
     width: 2px;
     background: #cbd5e1;
 }
+
 .df-stage-node {
     position: relative;
     margin-bottom: 20px;
 }
+
 .df-stage-node::before {
     content: '';
     position: absolute;
@@ -1716,6 +1752,7 @@ html {
     border: 3px solid #ffffff;
     box-shadow: 0 0 0 2px #2563eb;
 }
+
 .df-stage-node.is-completed::before {
     background: #10b981;
     box-shadow: 0 0 0 2px #10b981;
@@ -1847,8 +1884,15 @@ html {
 }
 
 @keyframes df-pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.6; }
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.6;
+    }
 }
 
 .df-detail-stage-box {
@@ -1857,7 +1901,7 @@ html {
     border-radius: 8px;
     padding: 14px 18px;
     margin-bottom: 14px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
 }
 
 .df-detail-stage-box.is-completed {
@@ -2732,7 +2776,7 @@ html {
     user-select: none;
     border-radius: 6px;
     overflow: hidden;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
     background: #ffffff;
 }
 
@@ -2819,9 +2863,11 @@ html {
 .df-diag-interactive-row {
     transition: background-color 0.15s ease;
 }
+
 .df-diag-interactive-row:hover {
     background-color: #f8fafc !important;
 }
+
 .df-diag-interactive-row.is-inspecting {
     background-color: #eff6ff !important;
     outline: 2px solid #38bdf8 !important;
@@ -2975,10 +3021,12 @@ html {
 #doctorCareModal {
     z-index: 2050 !important;
 }
+
 #doctorInstructionModal .modal-dialog,
 #doctorCareModal .modal-dialog {
     z-index: 2051 !important;
 }
+
 #doctorInstructionModal .modal-content,
 #doctorCareModal .modal-content {
     z-index: 2052 !important;
@@ -2991,12 +3039,14 @@ html {
     z-index: 2050 !important;
     pointer-events: auto !important;
 }
+
 .modal.fade .modal-dialog,
 .modal .modal-dialog {
     z-index: 2051 !important;
     position: relative !important;
     pointer-events: auto !important;
 }
+
 .modal.fade .modal-content,
 .modal .modal-content {
     z-index: 2052 !important;
@@ -3004,6 +3054,7 @@ html {
     background-color: #ffffff !important;
     pointer-events: auto !important;
 }
+
 .modal-backdrop,
 body.modal-open .modal-backdrop {
     z-index: 2040 !important;
@@ -3016,6 +3067,7 @@ body.modal-open .modal-backdrop {
     border-collapse: separate;
     border-spacing: 0;
 }
+
 .custom-care-table thead th {
     background-color: #f8fafc !important;
     border-bottom: 2px solid #e2e8f0 !important;
@@ -3026,26 +3078,32 @@ body.modal-open .modal-backdrop {
     letter-spacing: 0.03em;
     padding: 13px 14px;
 }
+
 .custom-care-table tbody td {
     padding: 14px;
     border-bottom: 1px solid #f1f5f9;
     vertical-align: middle;
 }
+
 .custom-care-table tbody tr:hover td {
     background-color: #f8fafc;
 }
+
 .custom-care-table tbody tr:last-child td {
     border-bottom: none;
 }
+
 .care-task-card {
     transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
     border: 1px solid #e2e8f0;
 }
+
 .care-task-card:hover {
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08) !important;
     border-color: #cbd5e1;
 }
+
 .care-speech-bubble {
     background-color: #f8fafc;
     border: 1px solid #e2e8f0;
@@ -3062,6 +3120,7 @@ body.modal-open .modal-backdrop {
     font-weight: 600;
     transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
+
 .df-btn-tonal-primary:hover,
 .df-btn-tonal-primary:focus-visible {
     background: #dbeafe !important;
@@ -3076,6 +3135,7 @@ body.modal-open .modal-backdrop {
     padding: 0;
     transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
 }
+
 .df-neutral-del-btn:hover,
 .df-neutral-del-btn:focus-visible {
     color: #ef4444 !important;
@@ -3098,9 +3158,11 @@ body.modal-open .modal-backdrop {
     gap: 10px;
     box-sizing: border-box;
 }
+
 .df-tab-actionbar.is-right-only {
     justify-content: flex-end;
 }
+
 .df-tab-actions {
     display: inline-flex;
     align-items: center;
@@ -3109,6 +3171,7 @@ body.modal-open .modal-backdrop {
     gap: 8px;
     margin-left: auto;
 }
+
 .df-tab-count-pill {
     display: inline-flex;
     align-items: center;
@@ -3124,6 +3187,7 @@ body.modal-open .modal-backdrop {
     white-space: nowrap;
     font-variant-numeric: tabular-nums;
 }
+
 .df-tab-btn {
     display: inline-flex !important;
     align-items: center !important;
@@ -3141,20 +3205,24 @@ body.modal-open .modal-backdrop {
     transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
     box-shadow: none !important;
 }
+
 .df-tab-btn i {
     font-size: 14px;
     line-height: 1;
 }
+
 .df-tab-btn.d-none,
 .df-tab-btn[hidden],
 .df-tab-actionbar .d-none {
     display: none !important;
 }
+
 .df-confirm-modal .modal-content {
     border: 1px solid #e2e8f0;
     border-radius: 16px;
     box-shadow: 0 20px 45px rgba(15, 23, 42, 0.16);
 }
+
 .df-confirm-icon {
     width: 40px;
     height: 40px;
@@ -3165,38 +3233,57 @@ body.modal-open .modal-backdrop {
     font-size: 18px;
     flex-shrink: 0;
 }
-.df-confirm-icon.is-primary { background: #e0f2fe; color: #0284c7; }
-.df-confirm-icon.is-warning { background: #fef3c7; color: #d97706; }
-.df-confirm-icon.is-danger { background: #fee2e2; color: #dc2626; }
+
+.df-confirm-icon.is-primary {
+    background: #e0f2fe;
+    color: #0284c7;
+}
+
+.df-confirm-icon.is-warning {
+    background: #fef3c7;
+    color: #d97706;
+}
+
+.df-confirm-icon.is-danger {
+    background: #fee2e2;
+    color: #dc2626;
+}
+
 .df-confirm-msg {
     font-size: 14px;
     line-height: 1.55;
     color: #334155;
     white-space: pre-line;
 }
+
 .df-tab-btn-primary {
     background: #0284c7 !important;
     border: 1px solid #0284c7 !important;
     color: #ffffff !important;
 }
+
 .df-tab-btn-primary:hover:not(:disabled) {
     background: #0369a1 !important;
     border-color: #0369a1 !important;
     color: #ffffff !important;
 }
+
 .df-tab-btn-secondary {
     background: #ffffff !important;
     border: 1px solid #cbd5e1 !important;
     color: #334155 !important;
 }
+
 .df-tab-btn-secondary:hover:not(:disabled) {
     background: #f1f5f9 !important;
     border-color: #94a3b8 !important;
     color: #0f172a !important;
 }
+
 .df-tab-btn-secondary i {
     color: #0284c7;
 }
+
 .df-tab-btn .df-btn-badge {
     display: inline-flex;
     align-items: center;

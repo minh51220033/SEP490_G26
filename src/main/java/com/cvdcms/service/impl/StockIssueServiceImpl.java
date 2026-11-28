@@ -9,7 +9,6 @@ import com.cvdcms.entity.enums.StockIssueType;
 import com.cvdcms.repository.*;
 import com.cvdcms.service.BranchAccessService;
 import com.cvdcms.service.StockIssueService;
-import com.cvdcms.util.InventoryFileStorageUtil;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -20,7 +19,6 @@ import org.springframework.web.server.ResponseStatusException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -31,11 +29,11 @@ import java.util.concurrent.atomic.AtomicLong;
  * - Chặn xuất sử dụng, mục đích khác hoặc điều chuyển đối với lô đã hết hạn (chỉ cho phép xuất hủy DISCARD_EXPIRED).
  * - Sử dụng bộ nhớ đệm (cache) trong cùng transaction để cộng/trừ tồn kho chính xác khi phiếu có nhiều dòng trùng vật tư.
  * - Tự động trừ kho nguồn và cộng kho đích (kèm tạo/cập nhật lô tương ứng tại chi nhánh đích) khi điều chuyển.
- * - Hỗ trợ ký điện tử bất biến (chống ký đè / chống giả mạo người ký).
  */
 @Service
 public class StockIssueServiceImpl implements StockIssueService {
 
+    /** Bộ sinh số tuần tự an toàn đa luồng cho mã phiếu xuất ({@code PX...}) và phiếu điều chuyển ({@code DC...}). */
     private static final AtomicLong CODE_SEQ = new AtomicLong(System.currentTimeMillis());
 
     private final BranchRepository branchRepository;
@@ -47,6 +45,9 @@ public class StockIssueServiceImpl implements StockIssueService {
     private final UserRepository userRepository;
     private final BranchAccessService accessService;
 
+    /**
+     * Khởi tạo service với các repository chi nhánh, vật tư, lô, tồn kho, phiếu xuất, nhân sự và phân quyền cơ sở.
+     */
     public StockIssueServiceImpl(
             BranchRepository branchRepository,
             MaterialRepository materialRepository,
@@ -66,6 +67,21 @@ public class StockIssueServiceImpl implements StockIssueService {
         this.accessService = accessService;
     }
 
+    /**
+     * Tạo mới phiếu xuất kho hoặc phiếu điều chuyển kho trong một transaction nguyên tử ({@code @Transactional}).
+     * <p>Quy trình xử lý:</p>
+     * <ol>
+     *   <li>Kiểm tra quyền chi nhánh nguồn, danh sách dòng vật tư, loại phiếu ({@link StockIssueType}), ngày lập không ở tương lai,
+     *       lý do bắt buộc khi {@code type == OTHER} và chi nhánh đích hợp lệ (khác chi nhánh nguồn) khi {@code type == TRANSFER}.</li>
+     *   <li>Duyệt từng dòng vật tư: kiểm tra chống trùng lặp vật tư/lô trong cùng phiếu, khóa bi quan {@link BranchInventory} nguồn
+     *       và xác minh tồn kho đủ.</li>
+     *   <li>Nếu chỉ định {@code batchId}: khóa lô, chặn xuất lô hết hạn trừ {@code DISCARD_EXPIRED}, trừ tồn lô qua {@link #deductFromBatch}.</li>
+     *   <li>Nếu không chỉ định {@code batchId}: tự động phân bổ theo danh sách lô hết hạn (khi {@code DISCARD_EXPIRED}) hoặc FEFO còn hạn.</li>
+     *   <li>Nếu là điều chuyển ({@code TRANSFER}): tự động cộng lô và tồn kho sang chi nhánh đích qua {@link #creditDestinationBranch}.</li>
+     *   <li>Trừ tồn kho tổng hợp chi nhánh nguồn, lưu {@link StockIssue} và trả về {@link StockIssueResponseDTO} chi tiết.</li>
+     * </ol>
+     * <p>Được gọi từ: {@link com.cvdcms.controller.StockIssueController#createIssue} và {@code createTransfer}.</p>
+     */
     @Override
     @Transactional
     public StockIssueResponseDTO create(StockIssueCreateDTO dto, Long userId) {
@@ -309,56 +325,12 @@ public class StockIssueServiceImpl implements StockIssueService {
             sourceInventoryCache.put(material.getMaterialId(), sourceInv);
         }
 
-        // Xử lý chữ ký điện tử nếu người lập ký ngay khi tạo phiếu xuất (A4)
-        String rawSignature = trimToNull(dto.getSignatureData());
-        if (rawSignature != null) {
-            String sigUrl = InventoryFileStorageUtil.saveSignatureDataUrl(rawSignature, "issue");
-            issue.setSignatureUrl(sigUrl);
-            issue.setSignedByUserId(userId);
-            issue.setSignedByName(issuer.getFullName());
-            issue.setSignedAt(LocalDateTime.now());
-        }
-
         issue.setItems(issueItems);
         StockIssue saved = issueRepository.save(issue);
         return toDetailDTO(saved != null ? saved : issue);
     }
 
-    @Override
-    @Transactional
-    public StockIssueResponseDTO signIssue(Long issueId, String signatureData, Long userId) {
-        if (issueId == null || issueId <= 0) {
-            bad("Mã phiếu xuất không hợp lệ.");
-        }
-        StockIssue issue = issueRepository.findByIdWithDetails(issueId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy phiếu xuất/điều chuyển."));
-
-        boolean canAccessSource = accessService.canAccessBranch(userId, issue.getBranch().getBranchId());
-        boolean canAccessDest = issue.getDestinationBranch() != null
-                && accessService.canAccessBranch(userId, issue.getDestinationBranch().getBranchId());
-
-        if (!canAccessSource && !canAccessDest) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Bạn không có quyền ký phiếu xuất này.");
-        }
-
-        if (issue.getSignatureUrl() != null && !issue.getSignatureUrl().isBlank()) {
-            bad("Phiếu xuất " + issue.getIssueCode()
-                    + " đã được ký điện tử bởi " + (issue.getSignedByName() != null ? issue.getSignedByName() : "nhân viên")
-                    + " và không thể ký đè hoặc chỉnh sửa chữ ký.");
-        }
-
-        StaffProfile signer = resolveOrCreateStaffProfile(userId);
-        String sigUrl = InventoryFileStorageUtil.saveSignatureDataUrl(signatureData, "issue_" + issueId);
-
-        issue.setSignatureUrl(sigUrl);
-        issue.setSignedByUserId(userId);
-        issue.setSignedByName(signer.getFullName());
-        issue.setSignedAt(LocalDateTime.now());
-
-        StockIssue saved = issueRepository.save(issue);
-        return toDetailDTO(saved != null ? saved : issue);
-    }
-
+    /** Sinh mã phiếu xuất ({@code PX...}) hoặc phiếu điều chuyển ({@code DC...}) duy nhất trong CSDL. */
     private String generateUniqueIssueCode(String prefix) {
         String code;
         do {
@@ -368,6 +340,10 @@ public class StockIssueServiceImpl implements StockIssueService {
         return code;
     }
 
+    /**
+     * Khấu trừ số lượng {@code qty} khỏi {@link MaterialBatch}, đồng thời cập nhật lại trạng thái lô
+     * ({@code OUT_OF_STOCK}, {@code EXPIRED}, hoặc {@code ACTIVE}) và lưu xuống CSDL.
+     */
     private MaterialBatch deductFromBatch(MaterialBatch batch, BigDecimal qty, LocalDate today) {
         BigDecimal nextQty = batch.getQuantityRemaining().subtract(qty);
         if (nextQty.compareTo(BigDecimal.ZERO) < 0) {
@@ -385,6 +361,11 @@ public class StockIssueServiceImpl implements StockIssueService {
         return savedBatch != null ? savedBatch : batch;
     }
 
+    /**
+     * Cộng vật tư vào chi nhánh đích khi thực hiện điều chuyển ({@code TRANSFER}):
+     * tạo mới hoặc cộng dồn {@link MaterialBatch} cùng số lô/hạn sử dụng/giá nhập/NCC từ lô nguồn,
+     * đồng thời khóa bi quan và cộng dồn {@link BranchInventory} tại chi nhánh đích (có dùng cache trong transaction).
+     */
     private void creditDestinationBranch(
             Branch destinationBranch,
             Material material,
@@ -459,6 +440,10 @@ public class StockIssueServiceImpl implements StockIssueService {
         destInventoryCache.put(material.getMaterialId(), destInv);
     }
 
+    /**
+     * Tìm kiếm và phân trang lịch sử phiếu xuất kho của chi nhánh (kiểm tra quyền chi nhánh và khoảng ngày hợp lệ).
+     * <p>Được gọi từ: {@link com.cvdcms.controller.StockIssueController#listIssues}.</p>
+     */
     @Override
     @Transactional(readOnly = true)
     public Page<StockIssueResponseDTO> searchIssues(
@@ -492,6 +477,10 @@ public class StockIssueServiceImpl implements StockIssueService {
         return page.map(this::toSummaryDTO);
     }
 
+    /**
+     * Tìm kiếm và phân trang lịch sử phiếu điều chuyển kho liên chi nhánh (cả chiều xuất và chiều nhận).
+     * <p>Được gọi từ: {@link com.cvdcms.controller.StockIssueController#listTransfers}.</p>
+     */
     @Override
     @Transactional(readOnly = true)
     public Page<StockIssueResponseDTO> searchTransfers(
@@ -519,6 +508,12 @@ public class StockIssueServiceImpl implements StockIssueService {
         return page.map(this::toSummaryDTO);
     }
 
+    /**
+     * Truy vấn chi tiết phiếu xuất kho hoặc phiếu điều chuyển theo {@code issueId}.
+     * Cho phép xem nếu người dùng có quyền ở chi nhánh nguồn HOẶC chi nhánh đích.
+     * <p>Được gọi từ: {@link com.cvdcms.controller.StockIssueController#detail}, {@code exportPdf}
+     * và {@link com.cvdcms.controller.InventoryPageController}.</p>
+     */
     @Override
     @Transactional(readOnly = true)
     public StockIssueResponseDTO getById(Long issueId, Long userId) {
@@ -539,6 +534,7 @@ public class StockIssueServiceImpl implements StockIssueService {
         return toDetailDTO(issue);
     }
 
+    /** Lấy hồ sơ nhân viên của người lập phiếu; tự động khởi tạo hồ sơ mặc định nếu là Quản trị viên chưa liên kết {@link StaffProfile}. */
     private StaffProfile resolveOrCreateStaffProfile(Long userId) {
         return staffRepository.findByUser_UserId(userId).orElseGet(() -> {
             if (!accessService.isAdmin(userId)) {
@@ -560,6 +556,7 @@ public class StockIssueServiceImpl implements StockIssueService {
         });
     }
 
+    /** Chuyển chuỗi loại phiếu xuất sang enum {@link StockIssueType} (mặc định {@code INTERNAL_USE} nếu rỗng). */
     private StockIssueType parseIssueType(String value) {
         if (value == null || value.isBlank()) {
             return StockIssueType.INTERNAL_USE;
@@ -572,6 +569,7 @@ public class StockIssueServiceImpl implements StockIssueService {
         }
     }
 
+    /** Ánh xạ {@link StockIssue} sang DTO tóm tắt kèm tổng số dòng, tổng số lượng và tổng giá trị ước tính theo giá nhập của lô. */
     private StockIssueResponseDTO toSummaryDTO(StockIssue si) {
         StockIssueResponseDTO dto = new StockIssueResponseDTO();
         dto.setIssueId(si.getIssueId());
@@ -587,10 +585,10 @@ public class StockIssueServiceImpl implements StockIssueService {
         }
         dto.setIssuerName(si.getIssuer() != null ? si.getIssuer().getFullName() : null);
         dto.setNotes(si.getNotes());
-        dto.setSignatureUrl(si.getSignatureUrl());
-        dto.setSignedByUserId(si.getSignedByUserId());
-        dto.setSignedByName(si.getSignedByName());
-        dto.setSignedAt(si.getSignedAt());
+        dto.setPrescriptionId(si.getPrescription() != null ? si.getPrescription().getPrescriptionId() : null);
+        dto.setPrescriptionCode(si.getPrescriptionCode() != null
+                ? si.getPrescriptionCode()
+                : (si.getPrescription() != null ? si.getPrescription().getPrescriptionCode() : null));
 
         BigDecimal totalQty = BigDecimal.ZERO;
         BigDecimal totalVal = BigDecimal.ZERO;
@@ -612,6 +610,7 @@ public class StockIssueServiceImpl implements StockIssueService {
         return dto;
     }
 
+    /** Ánh xạ {@link StockIssue} sang DTO chi tiết đầy đủ bao gồm danh sách {@link StockIssueResponseDTO.ItemDetail} theo từng lô. */
     private StockIssueResponseDTO toDetailDTO(StockIssue si) {
         StockIssueResponseDTO dto = toSummaryDTO(si);
         List<StockIssueResponseDTO.ItemDetail> details = new ArrayList<>();
@@ -646,10 +645,12 @@ public class StockIssueServiceImpl implements StockIssueService {
         return dto;
     }
 
+    /** Cắt khoảng trắng đầu cuối chuỗi; trả về {@code null} nếu rỗng. */
     private static String trimToNull(String s) {
         return s == null || s.isBlank() ? null : s.trim();
     }
 
+    /** Ném ngoại lệ HTTP 400 Bad Request kèm thông báo nghiệp vụ tiếng Việt. */
     private static void bad(String message) {
         throw new ResponseStatusException(HttpStatus.BAD_REQUEST, message);
     }

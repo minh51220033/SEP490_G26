@@ -37,6 +37,10 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.regex.Pattern;
 
+/**
+ * [Phân hệ]: Xác thực người dùng, Cổng khách hàng & Dashboard quản trị (/home)
+ * [Vai trò]: Controller xử lý đăng nhập, đăng ký, quên mật khẩu bằng OTP, đăng xuất, điều hướng trang chủ cổng khách hàng và tích hợp màn hình Dashboard báo cáo thực thu trừ hoàn/vận hành cho Quản trị viên tại /home.
+ */
 @Controller
 public class UserController {
 
@@ -73,6 +77,9 @@ public class UserController {
     @Autowired(required = false)
     private com.cvdcms.service.ServiceCatalogService serviceCatalogService;
 
+    /**
+     * [Hàm hỗ trợ]: Xác định chi nhánh đang hoạt động áp dụng trên cổng khách hàng (ưu tiên chi nhánh gắn trên tài khoản, chi nhánh ưa thích trong hồ sơ bệnh nhân mặc định hoặc chi nhánh đã chọn trong session).
+     */
     private Branch resolveUserPortalBranch(HttpSession session, List<Branch> activeBranches) {
         if (session == null) {
             return null;
@@ -102,10 +109,17 @@ public class UserController {
         return null;
     }
 
+    /**
+     * [Hàm hỗ trợ]: Nạp dữ liệu trang chủ cổng khách hàng không cần phiên đăng nhập (gọi lại bản đầy đủ với session = null).
+     */
     private String populateCustomerPortalHome(Model model) {
         return populateCustomerPortalHome(model, null);
     }
 
+    /**
+     * [Chức năng]: Nạp đầy đủ dữ liệu hiển thị cho trang chủ Cổng khách hàng (portal/home).
+     * [Mục đích]: Tải danh sách chi nhánh đang hoạt động, hotline liên hệ theo cơ sở, danh mục và dịch vụ nổi bật, khuyến mãi đang chạy, bác sĩ tiêu biểu và tin tức mới nhất từ CustomerPortalService và ServiceCatalogService.
+     */
     private String populateCustomerPortalHome(Model model, HttpSession session) {
         model.addAttribute("activeNav", "home");
         if (customerPortalService != null) {
@@ -152,6 +166,9 @@ public class UserController {
         return "portal/home";
     }
 
+    /**
+     * [Hàm hỗ trợ]: Kiểm tra danh sách vai trò của người dùng có chứa ít nhất một vai trò nhân sự nội bộ (khác vai trò bệnh nhân BENH_NHAN/PATIENT) hay không.
+     */
     private boolean hasStaffRole(List<String> roleNames) {
         if (roleNames == null) {
             return false;
@@ -194,6 +211,10 @@ public class UserController {
     // QUẢN LÝ VÒNG ĐỜI REFRESH TOKEN (TokenType.REFRESH)
     // =====================================================
 
+    /**
+     * [Chức năng]: Thu hồi các Refresh Token cũ và cấp phát Refresh Token mới có thời hạn 24 giờ cho phiên đăng nhập.
+     * [Mục đích]: Đảm bảo bảo mật vòng đời phiên đăng nhập bằng cách đánh dấu đã sử dụng toàn bộ TokenType.REFRESH cũ của user, lưu token mới vào bảng tokens và ghi vào HttpSession.
+     */
     private Token issueNewRefreshToken(User user, HttpSession session) {
         if (user == null || user.getUserId() == null) {
             return null;
@@ -225,6 +246,9 @@ public class UserController {
         return savedToken;
     }
 
+    /**
+     * [Hàm hỗ trợ]: Thu hồi toàn bộ Refresh Token chưa sử dụng của tài khoản (đánh dấu isUsed = true) khi đăng xuất hoặc đổi mật khẩu.
+     */
     private void revokeAllRefreshTokens(User user) {
         if (user == null || user.getUserId() == null) {
             return;
@@ -244,6 +268,9 @@ public class UserController {
     // CHE EMAIL
     // =====================================================
 
+    /**
+     * [Hàm hỗ trợ]: Che bớt phần tên trước ký tự @ của địa chỉ email để hiển thị an toàn trên màn hình xác thực OTP quên mật khẩu.
+     */
     private String maskEmail(String email) {
 
         if (email == null || !email.contains("@")) {
@@ -266,6 +293,10 @@ public class UserController {
 
 
 
+    /**
+     * [Chức năng]: Hiển thị trang đích Cổng khách hàng (GET / hoặc GET /portal).
+     * [Mục đích]: Nếu đã đăng nhập, đồng bộ lại thông tin tài khoản, vai trò và hồ sơ bệnh nhân mặc định từ CSDL vào session/model rồi nạp dữ liệu trang chủ portal/home.
+     */
     @GetMapping({"/", "/portal"})
     public String customerPortalLanding(HttpSession session, Model model) {
         Object loggedInUser = session != null ? session.getAttribute("loggedInUser") : null;
@@ -291,6 +322,10 @@ public class UserController {
     }
 
 
+    /**
+     * [Chức năng]: Điều hướng trang chủ chính sau đăng nhập và hiển thị Dashboard quản trị tích hợp cho Admin (GET /home).
+     * [Mục đích]: Kiểm tra phiên đăng nhập, trạng thái hoạt động của tài khoản và vai trò, đồng bộ danh sách vai trò/mã quyền/tên hiển thị/cơ sở vào session; điều hướng về portal/home nếu là bệnh nhân hoặc xem chế độ portal, ngược lại hiển thị user/home và gọi populateAdminDashboard nếu là Admin để tải báo cáo tổng quan, báo cáo tài chính thực thu trừ hoàn và vận hành theo bộ lọc chi nhánh/ngày.
+     */
     @GetMapping("/home")
     public String home(
             @RequestParam(value = "view", required = false) String view,
@@ -424,6 +459,10 @@ public class UserController {
         return "user/home";
     }
 
+    /**
+     * [Chức năng]: Nạp toàn bộ dữ liệu Dashboard quản trị, báo cáo tài chính thực thu trừ hoàn và báo cáo vận hành cho trang /home của Admin.
+     * [Mục đích]: Xác định chi nhánh lọc (ưu tiên tham số branchId, fallback currentBranchId trong session, null là toàn hệ thống), chuẩn hóa mốc ngày mặc định từ đầu tháng đến hiện tại, gọi ReportService tổng hợp ReportDashboardDTO, FinancialReportDTO (thực thu thuần = thu thực tế - hoàn tiền), OperationalReportDTO cùng số lịch hẹn hôm nay và số bệnh nhân đang chờ khám.
+     */
     private void populateAdminDashboard(
             Model model,
             HttpSession session,
@@ -487,6 +526,9 @@ public class UserController {
         model.addAttribute("waitingPatients", waitingPatients);
     }
 
+    /**
+     * [Hàm hỗ trợ]: Lấy tên chi nhánh hiển thị tương ứng với branchId đang lọc trên Dashboard quản trị (mặc định "Toàn bộ hệ thống").
+     */
     private String resolveBranchDisplayName(Long branchId, List<Branch> allowedBranches) {
         if (branchId != null && branchId > 0 && allowedBranches != null) {
             return allowedBranches.stream()
@@ -502,6 +544,10 @@ public class UserController {
     // LOGIN - GET
     // =====================================================
 
+    /**
+     * [Chức năng]: Hiển thị trang đăng nhập hệ thống (GET /login).
+     * [Mục đích]: Chuyển thông báo tạm (notification) từ HttpSession sang Model nếu có (ví dụ sau khi đổi mật khẩu thành công) và trả về view user/login.
+     */
     @GetMapping("/login")
     public String showLoginForm(
             HttpSession session,
@@ -528,6 +574,10 @@ public class UserController {
     // LOGIN - POST
     // =====================================================
 
+    /**
+     * [Chức năng]: Xử lý xác thực đăng nhập tài khoản người dùng (POST /login).
+     * [Mục đích]: Kiểm tra tên đăng nhập, trạng thái khóa tài khoản, vai trò còn hoạt động, đối chiếu mật khẩu BCrypt; cập nhật lastLoginAt, cấp Refresh Token, nạp thông tin tài khoản/vai trò/quyền vào session và tự động gắn hồ sơ bệnh nhân mặc định hoặc điều hướng hoàn thiện hồ sơ (/profile/complete) đối với tài khoản bệnh nhân.
+     */
     @PostMapping("/login")
     public String processLogin(
             @RequestParam("username") String username,
@@ -733,6 +783,10 @@ public class UserController {
     // REGISTER - GET
     // =====================================================
 
+    /**
+     * [Chức năng]: Hiển thị biểu mẫu đăng ký tài khoản bệnh nhân mới (GET /register).
+     * [Mục đích]: Khởi tạo đối tượng UserRegisterDTO rỗng trong Model và trả về trang user/register.
+     */
     @GetMapping("/register")
     public String showRegisterForm(Model model) {
 
@@ -749,6 +803,10 @@ public class UserController {
     // REGISTER - POST
     // =====================================================
 
+    /**
+     * [Chức năng]: Xử lý đăng ký tài khoản bệnh nhân mới và tự động đăng nhập (POST /register).
+     * [Mục đích]: Kiểm tra hợp lệ định dạng và trùng lặp username, mật khẩu, email, số điện thoại; gán vai trò BENH_NHAN, mã hóa mật khẩu BCrypt, tự động liên kết hồ sơ bệnh nhân đã tạo tại quầy theo số điện thoại nếu có, cấp Refresh Token vào session và chuyển về /home hoặc /profile/complete.
+     */
     @PostMapping("/register")
     public String processRegister(
             @ModelAttribute("registerDTO")
@@ -989,6 +1047,10 @@ public class UserController {
     // FORGOT PASSWORD - GET
     // =====================================================
 
+    /**
+     * [Chức năng]: Hiển thị trang yêu cầu đặt lại mật khẩu (GET /forgot-password).
+     * [Mục đích]: Trả về giao diện user/forgot-password để người dùng nhập tên đăng nhập nhận mã OTP qua email.
+     */
     @GetMapping("/forgot-password")
     public String showForgotPasswordPage() {
 
@@ -1000,6 +1062,10 @@ public class UserController {
     // FORGOT PASSWORD - POST
     // =====================================================
 
+    /**
+     * [Chức năng]: Xử lý yêu cầu quên mật khẩu và gửi mã OTP 6 chữ số qua email (POST /forgot-password).
+     * [Mục đích]: Tìm tài khoản theo username, sinh mã OTP ngẫu nhiên bằng SecureRandom có hiệu lực 5 phút, lưu TokenType.OTP vào bảng tokens, gửi email qua EmailService (có fallback dev hint nếu lỗi SMTP), lưu thông tin phiên đặt lại mật khẩu và chuyển sang /verify-otp.
+     */
     @PostMapping("/forgot-password")
     public String processForgotPassword(
             @RequestParam("username") String username,
@@ -1146,6 +1212,10 @@ public class UserController {
     // VERIFY OTP - GET
     // =====================================================
 
+    /**
+     * [Chức năng]: Hiển thị trang nhập mã xác thực OTP đặt lại mật khẩu (GET /verify-otp).
+     * [Mục đích]: Kiểm tra phiên quên mật khẩu (resetUsername) trong session, truyền địa chỉ email đã che vào Model và trả về view user/verify-otp.
+     */
     @GetMapping("/verify-otp")
     public String showVerifyOtpPage(
             HttpSession session,
@@ -1179,6 +1249,10 @@ public class UserController {
     // VERIFY OTP - POST
     // =====================================================
 
+    /**
+     * [Chức năng]: Kiểm tra và xác thực mã OTP 6 chữ số của người dùng (POST /verify-otp).
+     * [Mục đích]: Xác thực định dạng OTP, đối chiếu bản ghi token chưa dùng và còn hạn trong TokenRepository, đánh dấu token đã sử dụng (xóa nếu hết hạn), đặt cờ resetVerified vào session và điều hướng sang /reset-password.
+     */
     @PostMapping("/verify-otp")
     public String processVerifyOtp(
             @RequestParam("otp") String otp,
@@ -1286,6 +1360,10 @@ public class UserController {
     // =====================================================
 
 
+    /**
+     * [Chức năng]: Hiển thị trang đặt mật khẩu mới sau khi đã xác thực OTP (GET /reset-password).
+     * [Mục đích]: Bắt buộc tồn tại resetUsername và cờ resetVerified = true trong session, nếu không chuyển ngược về /forgot-password.
+     */
     @GetMapping("/reset-password")
     public String showResetPasswordPage(
             HttpSession session) {
@@ -1314,6 +1392,10 @@ public class UserController {
     // RESET PASSWORD - POST
     // =====================================================
 
+    /**
+     * [Chức năng]: Lưu mật khẩu mới sau xác thực OTP và thu hồi toàn bộ phiên đăng nhập cũ (POST /reset-password).
+     * [Mục đích]: Kiểm tra cờ resetVerified, hợp lệ độ dài và khớp mật khẩu xác nhận, mã hóa BCrypt cập nhật User, thu hồi toàn bộ Refresh Token cũ qua revokeAllRefreshTokens, xóa thuộc tính reset khỏi session và chuyển hướng về /login.
+     */
     @PostMapping("/reset-password")
     public String processResetPassword(
             @RequestParam("newPassword")
@@ -1430,6 +1512,10 @@ public class UserController {
 
     // ================= ĐĂNG XUẤT =================
 
+    /**
+     * [Chức năng]: Đăng xuất tài khoản người dùng khỏi hệ thống (POST /logout).
+     * [Mục đích]: Thu hồi tất cả Refresh Token đang hoạt động của tài khoản, hủy HttpSession hiện tại và điều hướng về trang /login.
+     */
     @PostMapping("/logout")
     public String logout(HttpSession session) {
         Object loggedInUser = session.getAttribute("loggedInUser");
@@ -1441,6 +1527,9 @@ public class UserController {
         return "redirect:/login";
     }
 
+    /**
+     * [Hàm hỗ trợ]: Kiểm tra đối tượng User có sở hữu vai trò ADMIN hoặc ROLE_ADMIN trong danh sách vai trò hay không.
+     */
     private boolean isAdmin(User user) {
         if (user == null || user.getRoles() == null) {
             return false;

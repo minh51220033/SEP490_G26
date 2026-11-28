@@ -11,6 +11,8 @@ public interface PrescriptionRepository extends JpaRepository<Prescription, Long
 
     List<Prescription> findByVisit_VisitIdOrderByCreatedAtDesc(Long visitId);
 
+    java.util.Optional<Prescription> findByClientRequestId(String clientRequestId);
+
     List<Prescription> findByPatientProfile_ProfileIdOrderByCreatedAtDesc(Long profileId);
 
     @org.springframework.data.jpa.repository.Query("""

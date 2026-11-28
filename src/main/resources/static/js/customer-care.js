@@ -222,6 +222,10 @@
         if ($("statEscalatedTasksSub")) $("statEscalatedTasksSub").textContent = msg;
     }
 
+    /**
+     * Tải số liệu tổng hợp KPI CSKH từ GET /api/customer-care/summary cho chi nhánh đang chọn
+     * và cập nhật 4 thẻ KPI (Tổng đang mở, Quá hạn, Hôm nay, Chờ bác sĩ) cùng badge đếm trên từng tab.
+     */
     async function loadSummary() {
         setKpiLoading();
         try {
@@ -292,6 +296,11 @@
     // 2. LOAD CHI NHÁNH & DANH MỤC TRA CỨU (LOOKUPS)
     // =========================================================================
 
+    /**
+     * Khởi tạo toàn bộ trang /customer-care: gọi GET /api/customer-care/branches để lấy quyền vai trò & chi nhánh,
+     * thiết lập bộ chọn chi nhánh, tải đồng loạt lookups/KPI/danh sách, nạp thông báo, kết nối WebSocket STOMP
+     * và tự mở modal chi tiết nếu URL có tham số ?taskId=...
+     */
     async function loadBranchesAndInit() {
         const branchSelect = $("branchId");
         setKpiLoading();
@@ -825,6 +834,13 @@
         visibleLimit: 10
     };
 
+    /**
+     * Mở Drawer bên phải hiển thị lịch sử CSKH riêng của một bệnh nhân (gọi GET /api/customer-care/patients/{profileId}/history).
+     * Hỗ trợ 2 cấp xem: Cấp 1 danh sách công việc CSKH của BN và Cấp 2 timeline tương tác chi tiết của 1 task hoặc toàn bộ.
+     *
+     * @param {number|string} profileId ID hồ sơ bệnh nhân
+     * @param {number|string|null} targetTaskId ID công việc muốn mở thẳng ở Cấp 2 (tùy chọn)
+     */
     async function openPatientHistoryDrawer(profileId, targetTaskId = null) {
         const pid = Number(profileId);
         if (!pid) return;
@@ -894,6 +910,7 @@
         patientDrawerState.viewLevel = "TASKS";
         patientDrawerState.selectedTaskId = null;
     }
+    window.closePatientHistoryDrawer = closePatientHistoryDrawer;
 
     function renderPatientDrawerContent() {
         const container = $("patientHistoryDrawerTimeline");
@@ -1059,6 +1076,12 @@
         debounceTimer: null
     };
 
+    /**
+     * Tải danh sách lịch sử tương tác CSKH chung có phân trang cho tab Lịch sử BN (gọi GET /api/customer-care/interactions)
+     * với đầy đủ bộ lọc chi nhánh, từ khóa, mốc thời gian VN, nhân viên, bác sĩ, kênh, kết quả và nhóm CSKH.
+     *
+     * @param {number} page Chỉ số trang (0-indexed)
+     */
     async function loadGeneralHistory(page = generalHistoryState.page) {
         generalHistoryState.page = page;
 
@@ -1547,6 +1570,13 @@
         };
     }
 
+    /**
+     * Tải danh sách công việc CSKH phân trang từ GET /api/customer-care/tasks theo tab đang chọn
+     * (TODAY/OVERDUE/ESCALATED/ALL/COMPLETED/CANCELLED), bộ lọc nâng cao và chế độ "Việc của tôi",
+     * sau đó render bảng dữ liệu theo cấu hình cột tùy biến và thanh phân trang.
+     *
+     * @param {number} page Chỉ số trang cần tải (0-indexed)
+     */
     async function loadTasks(page = state.page) {
         state.page = page;
         renderCcTableHeader();
@@ -1634,36 +1664,20 @@
                         cells.push(`
                             <td class="cc-col-sticky-taskcode" style="${sizeStyle}">
                                 <span class="font-mono-code">${escapeHtml(t.taskCode)}</span>
-                                <div class="cc-clamp-1" style="font-size:11px;color:#64748b;margin-top:2px;">${escapeHtml(t.branchCode || "")}</div>
                             </td>
                         `);
                     } else if (col.id === "patient") {
                         cells.push(`
                             <td class="patient-cell cc-col-sticky-patient" style="${sizeStyle}left:${patientLeft}px;">
                                 <div class="cc-clamp-1 fw-bold text-dark" style="font-size:13px;" title="${escapeHtml(t.patientName)}">${escapeHtml(t.patientName)}</div>
-                                <div class="cc-clamp-1 text-muted" style="font-size:11.5px;margin-top:2px;" title="Mã BN: ${escapeHtml(t.patientCode)} · SĐT: ${escapeHtml(t.patientPhone || '—')}">
-                                    <span class="font-mono-code" style="font-size:10.5px;padding:1px 4px;">${escapeHtml(t.patientCode)}</span> · ${escapeHtml(t.patientPhone || "—")}
-                                </div>
                             </td>
                         `);
                     } else if (col.id === "careGroup") {
-                        const refs = [];
-                        if (t.visitCode) {
-                            const examUrl = t.examinationDetailUrl || (t.visitId ? `/doctor/examination/${t.visitId}/diagnoses#tab-instructions` : null);
-                            if (examUrl) {
-                                refs.push(`<a class="source-ref" href="${escapeHtml(examUrl)}" target="_blank" rel="noopener" title="Xem hồ sơ khám">Ca: <strong>${escapeHtml(t.visitCode)}</strong></a>`);
-                            } else {
-                                refs.push(`<span class="source-ref">Ca: <strong>${escapeHtml(t.visitCode)}</strong></span>`);
-                            }
-                        }
-                        if (t.prescriptionCode) refs.push(`<span class="source-ref">Thuốc: <strong>${escapeHtml(t.prescriptionCode)}</strong></span>`);
-                        if (t.appointmentCode) refs.push(`<span class="source-ref">Hẹn: <strong>${escapeHtml(t.appointmentCode)}</strong></span>`);
                         cells.push(`
                             <td style="${sizeStyle}">
                                 <div class="d-flex align-items-center gap-1">
                                     <span class="badge ${getCareGroupBadgeClass(t.careGroup)}">${escapeHtml(t.careGroupLabel)}</span>
                                 </div>
-                                ${refs.length ? `<div class="cc-clamp-1" style="font-size:11px;margin-top:3px;" title="${escapeHtml([t.visitCode, t.prescriptionCode, t.appointmentCode].filter(Boolean).join(' · '))}">${refs.join(" ")}</div>` : (t.doctorName ? `<div class="cc-clamp-1" style="font-size:11px;color:#64748b;margin-top:2px;">BS: <strong>${escapeHtml(t.doctorName)}</strong></div>` : "")}
                             </td>
                         `);
                     } else if (col.id === "due") {
@@ -1757,9 +1771,6 @@
                                 <button type="button" class="btn btn-outline-secondary btn-sm cc-act-btn" data-view-history="${t.profileId}" title="Xem lịch sử chăm sóc bệnh nhân">
                                     <i class="bi bi-clock-history"></i> Lịch sử
                                 </button>
-                                <button type="button" class="btn btn-outline-secondary btn-sm cc-act-btn cc-act-icon-btn" data-edit-task="${t.taskId}" title="Sửa / Phân công lại">
-                                    <i class="bi bi-pencil"></i>
-                                </button>
                             `;
                         } else {
                             actBtns = `
@@ -1771,9 +1782,6 @@
                                 </button>
                                 <button type="button" class="btn btn-outline-secondary btn-sm cc-act-btn" data-view-history="${t.profileId}" title="Xem lịch sử chăm sóc bệnh nhân">
                                     <i class="bi bi-clock-history"></i> Lịch sử
-                                </button>
-                                <button type="button" class="btn btn-outline-secondary btn-sm cc-act-btn cc-act-icon-btn" data-edit-task="${t.taskId}" title="Sửa / Phân công lại">
-                                    <i class="bi bi-pencil"></i>
                                 </button>
                             `;
                         }
@@ -1798,12 +1806,14 @@
         }
     }
 
+    const ADV_FILTER_STORAGE_KEY = "cvdcms_cc_adv_filter_open";
     window.toggleCcAdvFilter = function() {
         const panel = $("advFilterPanel");
         const btn = $("btnToggleAdvFilter");
         if (!panel) return;
-        panel.classList.toggle("show");
-        if (btn) btn.classList.toggle("is-open", panel.classList.contains("show"));
+        const isOpen = panel.classList.toggle("show");
+        if (btn) btn.classList.toggle("is-open", isOpen);
+        try { localStorage.setItem(ADV_FILTER_STORAGE_KEY, isOpen ? "1" : "0"); } catch {}
     };
     window.toggleCAdvFilter = window.toggleCcAdvFilter;
 
@@ -1811,6 +1821,12 @@
     // 4. MODAL LẬP LỊCH / PHÂN CÔNG CHĂM SÓC & TỰ ĐỘNG TỔNG HỢP (SCR-44.3)
     // =========================================================================
 
+    /**
+     * Mở Modal Lập lịch / Phân công công việc CSKH (SCR-44.3) ở chế độ tạo mới (task = null)
+     * hoặc chỉnh sửa/phân công lại (task != null), đồng thời nạp danh sách ca khám/đơn thuốc/lịch hẹn của bệnh nhân.
+     *
+     * @param {Object|null} task Dữ liệu công việc cần chỉnh sửa hoặc null khi tạo mới
+     */
     function openTaskFormModal(task = null) {
         $("taskForm").reset();
         $("editTaskId").value = task?.taskId || "";
@@ -1841,6 +1857,10 @@
         $("taskFormModal").hidden = false;
     }
 
+    /**
+     * Validate và gửi form tạo mới (POST /api/customer-care/tasks) hoặc cập nhật (PUT /api/customer-care/tasks/{id})
+     * công việc CSKH, sau đó đóng modal và làm mới KPI + bảng/lịch.
+     */
     async function submitTaskForm(event) {
         event.preventDefault();
         const editId = $("editTaskId").value;
@@ -1924,6 +1944,11 @@
                 const tzOffset = suggested.getTimezoneOffset() * 60000;
                 retryInput.value = new Date(suggested - tzOffset).toISOString().slice(0, 16);
             }
+        } else if (resultVal === "FAILED") {
+            retryLabel.textContent = "Thời gian hẹn gọi lại (next_retry_at - tùy chọn)";
+            retryHint.className = "field-hint";
+            retryHint.textContent = "Không liên lạc được / Sai số: công việc giữ trạng thái Đang chăm sóc (IN_PROGRESS), có thể hẹn gọi lại hoặc đổi kênh liên hệ.";
+            nextStatusSelect.value = "IN_PROGRESS";
         } else {
             retryLabel.textContent = "Thời gian hẹn gọi lại (next_retry_at - tùy chọn)";
             retryHint.className = "field-hint";
@@ -1987,6 +2012,94 @@
         `;
     }
 
+    function formatVndMoney(val) {
+        if (val == null || isNaN(Number(val))) return "0 đ";
+        return Number(val).toLocaleString("vi-VN") + " đ";
+    }
+
+    function renderInteractionSpecialContextBox(t) {
+        const box = $("interactionSpecialContextBox");
+        if (!box) return;
+        const type = t.taskType || t.careGroup;
+        if (type === "DOCTOR_LEAVE_RESCHEDULE" || (type === "APPOINTMENT_REMINDER" && t.appointmentId)) {
+            const isLeave = type === "DOCTOR_LEAVE_RESCHEDULE";
+            const leaveRange = (t.leaveStartDate || "") + (t.leaveEndDate && t.leaveEndDate !== t.leaveStartDate ? " đến " + t.leaveEndDate : "");
+            const apptId = t.appointmentId;
+            box.hidden = false;
+            box.innerHTML = `
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+                    <strong class="${isLeave ? "text-danger" : "text-primary"}">
+                        <i class="bi ${isLeave ? "bi-calendar-x" : "bi-calendar2-check"} me-1"></i>${isLeave ? "Bác sĩ nghỉ – Cần liên hệ bệnh nhân" : "Nhắc lịch hẹn – Thao tác lịch khám"}
+                    </strong>
+                    <span class="badge bg-warning-subtle text-dark border">${escapeHtml(t.branchName || "")}</span>
+                </div>
+                <div class="row g-2 small">
+                    <div class="col-md-6"><strong>Bác sĩ phụ trách:</strong> ${escapeHtml(t.leaveDoctorName || t.doctorName || "—")}</div>
+                    ${isLeave ? `<div class="col-md-6"><strong>Thời gian BS nghỉ:</strong> ${escapeHtml(leaveRange || "—")}${t.leaveShiftName ? " (" + escapeHtml(t.leaveShiftName) + ")" : ""}</div>` : ""}
+                    <div class="col-md-6"><strong>Lịch khám:</strong> ${escapeHtml(t.appointmentCode || "—")} · ${escapeHtml(t.appointmentDate || "—")} ${escapeHtml(t.appointmentExpectedTime || "")}</div>
+                    <div class="col-md-6"><strong>Trạng thái lịch hẹn:</strong> ${escapeHtml(t.appointmentStatus || "—")}</div>
+                </div>
+                ${apptId ? `
+                <div class="d-flex flex-wrap gap-2 mt-2 pt-2 border-top">
+                    <a class="btn btn-sm btn-primary" href="/reception/appointments?branchId=${encodeURIComponent(t.branchId || "")}&rescheduleId=${encodeURIComponent(apptId)}" target="_blank" rel="noopener">
+                        <i class="bi bi-calendar2-week me-1"></i>Đổi lịch theo quy trình đặt lịch
+                    </a>
+                    <button type="button" class="btn btn-sm btn-outline-danger" id="ccQuickCancelLeaveApptBtn">
+                        <i class="bi bi-x-circle me-1"></i>Hủy lịch hẹn này
+                    </button>
+                </div>` : ""}
+            `;
+            const cancelBtn = $("ccQuickCancelLeaveApptBtn");
+            if (cancelBtn && apptId) {
+                cancelBtn.onclick = async () => {
+                    const reason = window.prompt("Nhập lý do hủy lịch hẹn theo yêu cầu của bệnh nhân:");
+                    if (!reason || !reason.trim()) return;
+                    cancelBtn.disabled = true;
+                    try {
+                        await request(`/api/reception/appointments/${apptId}/cancel`, {
+                            method: "POST",
+                            body: JSON.stringify({ cancelReason: reason.trim() })
+                        });
+                        showMessage("Đã hủy lịch hẹn theo quy trình Lễ tân. Vui lòng lưu kết quả liên hệ CSKH.", "success");
+                        $("intContactResult").value = "CONNECTED";
+                        $("intNotes").value = ($("intNotes").value ? $("intNotes").value + "\n" : "") + "Bệnh nhân đồng ý hủy lịch hẹn. Lý do: " + reason.trim();
+                        updateRetryFieldRequirement();
+                    } catch (err) {
+                        showMessage(err.message || "Không thể hủy lịch hẹn.", "error");
+                    } finally {
+                        cancelBtn.disabled = false;
+                    }
+                };
+            }
+            return;
+        }
+        if (type === "PAYMENT_REMINDER") {
+            box.hidden = false;
+            box.innerHTML = `
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+                    <strong class="text-primary"><i class="bi bi-cash-coin me-1"></i>Nhắc thanh toán theo đợt trả góp</strong>
+                    <span class="badge bg-info-subtle text-dark border">${escapeHtml(t.treatmentPlanCode || "")} · ${escapeHtml(t.reminderStage || "")}</span>
+                </div>
+                <div class="row g-2 small">
+                    <div class="col-md-6"><strong>1. Bệnh nhân:</strong> ${escapeHtml(t.patientName || "—")}</div>
+                    <div class="col-md-6"><strong>2. Tổng chi phí kế hoạch:</strong> ${formatVndMoney(t.planTotalCost)}</div>
+                    <div class="col-md-6"><strong>3. Đã thanh toán toàn KH:</strong> <span class="text-success fw-semibold">${formatVndMoney(t.planPaidAmount)}</span></div>
+                    <div class="col-md-6"><strong>4. Còn phải thanh toán toàn KH:</strong> <span class="fw-semibold">${formatVndMoney(t.planRemainingAmount)}</span></div>
+                    <div class="col-md-6"><strong>5. Đợt cần nhắc:</strong> Đợt ${escapeHtml(t.installmentOrder ?? "—")} (${escapeHtml(t.installmentPhaseName || "—")})</div>
+                    <div class="col-md-6"><strong>6. Hạn thanh toán:</strong> <strong>${escapeHtml(t.installmentExpectedDate || t.dueDate || "—")}</strong></div>
+                    <div class="col-md-6"><strong>7. Đã thanh toán đợt này:</strong> <span class="text-success">${formatVndMoney(t.installmentPaidAmount)}</span></div>
+                    <div class="col-md-6"><strong>8. Còn thiếu đợt này:</strong> <strong class="text-danger">${formatVndMoney(t.installmentRemainingAmount)}</strong></div>
+                </div>
+                <div class="small text-muted mt-2 pt-2 border-top">
+                    <i class="bi bi-shield-lock me-1"></i>Lễ tân chỉ liên hệ nhắc thanh toán và hẹn ngày thanh toán. Việc ghi nhận khoản thu thực tế do Bộ phận Kế toán thực hiện.
+                </div>
+            `;
+            return;
+        }
+        box.hidden = true;
+        box.innerHTML = "";
+    }
+
     function renderInteractionTaskHeaderAndAlert(t) {
         $("interactionTaskMeta").innerHTML = `
             <div class="detail-meta-item"><span>Mã công việc</span><strong class="code">${escapeHtml(t.taskCode)}</strong></div>
@@ -2000,6 +2113,7 @@
             <div class="detail-meta-item"><span>Nhân viên phụ trách</span><strong>${escapeHtml(t.assignedStaffName || "Chưa gán")}</strong></div>
         `;
 
+        renderInteractionSpecialContextBox(t);
         renderInteractionExaminationBox(t);
 
         const docAlert = $("interactionDoctorAlert");
@@ -2057,6 +2171,13 @@
         }
     }
 
+    /**
+     * Tải chi tiết công việc CSKH từ GET /api/customer-care/tasks/{taskId} và mở Modal Chi tiết & Ghi kết quả liên hệ (SCR-44.4),
+     * hiển thị thông tin khám lâm sàng/lời dặn, ngữ cảnh đặc thù (FT01/FT02), phản hồi bác sĩ, khóa form nếu task đã đóng
+     * và render timeline tương tác của công việc.
+     *
+     * @param {number|string} taskId ID công việc CSKH
+     */
     async function openInteractionModal(taskId) {
         try {
             const t = await request(`/api/customer-care/tasks/${taskId}`);
@@ -2111,6 +2232,10 @@
         });
     }
 
+    /**
+     * Validate và gửi kết quả liên hệ CSKH tới POST /api/customer-care/tasks/{taskId}/interactions
+     * (bắt buộc nhập nextRetryAt khi kết quả là NO_ANSWER hoặc BUSY), sau đó làm mới KPI và bảng/lịch.
+     */
     async function submitInteractionForm(event) {
         event.preventDefault();
         const taskId = $("intTaskId").value;
@@ -2162,6 +2287,12 @@
     // 6. CHUYỂN BÁC SĨ HỖ TRỢ CHUYÊN MÔN & PHẢN HỒI BÁC SĨ (SCR-44.5)
     // =========================================================================
 
+    /**
+     * Mở Modal Chuyển Bác sĩ hỗ trợ chuyên môn (SCR-44.5) cho một công việc đang mở,
+     * tự động gợi ý chọn bác sĩ điều trị chính của lượt khám nếu có.
+     *
+     * @param {number|string} taskId ID công việc CSKH cần chuyển lên bác sĩ
+     */
     async function openEscalateModal(taskId) {
         try {
             const t = await request(`/api/customer-care/tasks/${taskId}`);
@@ -2191,6 +2322,10 @@
         }
     }
 
+    /**
+     * Validate lý do chuyển bác sĩ (>= 5 ký tự) và gửi POST /api/customer-care/tasks/{taskId}/escalate
+     * để chuyển trạng thái công việc sang ESCALATED_TO_DOCTOR và thông báo cho bác sĩ tiếp nhận.
+     */
     async function submitEscalateForm(event) {
         event.preventDefault();
         const taskId = $("escTaskId").value;
@@ -2230,6 +2365,12 @@
         }
     }
 
+    /**
+     * Mở Modal Phản hồi chuyên môn của Bác sĩ (SCR-44.5) cho công việc đang mở,
+     * hiển thị tóm tắt chẩn đoán, lời dặn, ghi chú CSKH ban đầu và lý do lễ tân chuyển lên.
+     *
+     * @param {number|string} taskId ID công việc CSKH
+     */
     async function openDoctorResponseModal(taskId) {
         try {
             const t = await request(`/api/customer-care/tasks/${taskId}`);
@@ -2259,6 +2400,10 @@
         }
     }
 
+    /**
+     * Validate nội dung chỉ định chuyên môn (>= 5 ký tự) và gửi POST /api/customer-care/tasks/{taskId}/doctor-response
+     * kèm trạng thái tiếp theo (nextStatus: IN_PROGRESS để chuyển lại lễ tân gọi bệnh nhân, COMPLETED hoặc giữ ESCALATED_TO_DOCTOR).
+     */
     async function submitDoctorResponseForm(event) {
         event.preventDefault();
         const taskId = $("docRespTaskId").value;
@@ -2298,6 +2443,11 @@
     // 6B. MỞ LẠI CÔNG VIỆC ĐÃ HOÀN THÀNH (CHỈ ADMIN) - BẮT BUỘC NHẬP LÝ DO
     // =========================================================================
 
+    /**
+     * Mở Modal Mở lại công việc CSKH đã hoàn thành (chỉ cho phép vai trò ADMIN) để nhập lý do mở lại bắt buộc.
+     *
+     * @param {number|string} taskId ID công việc đã COMPLETED
+     */
     function openReopenModal(taskId) {
         const t = state.tasksById[String(taskId)];
         if (!t) return;
@@ -2321,6 +2471,10 @@
         $("reopenReason")?.focus();
     }
 
+    /**
+     * Validate lý do mở lại (>= 5 ký tự) và gửi POST /api/customer-care/tasks/{taskId}/reopen
+     * để chuyển công việc từ COMPLETED về IN_PROGRESS (kèm ghi Audit Log ở backend) rồi làm mới dữ liệu.
+     */
     async function submitReopenForm(event) {
         event.preventDefault();
         const taskId = $("reopenTaskId").value;
@@ -2475,6 +2629,12 @@
         }
     }
 
+    /**
+     * Chuyển đổi giữa các tab trạng thái (TODAY, OVERDUE, ESCALATED, ALL, COMPLETED, CANCELLED, HISTORY),
+     * ẩn/hiện panel bảng, lịch, lịch sử và dải lọc con tương ứng rồi tải lại dữ liệu.
+     *
+     * @param {string} tab Mã tab đích
+     */
     function switchTab(tab) {
         state.activeTab = tab;
         document.querySelectorAll(".tab").forEach(btn => {
@@ -2553,6 +2713,10 @@
         };
     }
 
+    /**
+     * Tải danh sách công việc CSKH cho chế độ xem Lịch (Ngày/Tuần/Tháng) qua GET /api/customer-care/calendar
+     * theo khoảng ngày hiện tại và bộ lọc trên lịch, sau đó gọi renderCalendarGrid().
+     */
     async function loadCalendar() {
         const grid = $("ccCalendarGrid");
         if (!grid) return;
@@ -2628,21 +2792,25 @@
     }
 
     function renderCalendarCard(t, extraClass = "", dataAttr = "data-cal-task-id") {
-        const timeText = t.nextRetryAt && !isTaskClosed(t) ? String(t.nextRetryAt).replace("T", " ").slice(11, 16) : "";
         return `
             <button type="button" class="cc-cal-card ${getCalCardStatusClass(t)} ${extraClass}" ${dataAttr}="${t.taskId}"
-                    title="${escapeHtml(`${t.taskCode} · ${t.patientName || ""} · ${t.careGroupLabel || ""} (${t.statusLabel || ""})`)}">
+                    title="${escapeHtml(`${t.taskCode} · ${t.patientName || ""} · ${t.careGroupLabel || ""}`)}">
                 <div class="d-flex align-items-center justify-content-between gap-1">
                     <span class="cc-cal-card-code">${escapeHtml(shortTaskCode(t.taskCode))}</span>
-                    <span class="cc-cal-pill ${getCalStatusPillClass(t.status)}">${escapeHtml(t.statusLabel || statusLabelOf(t.status))}</span>
                 </div>
                 <div class="cc-cal-card-patient">${escapeHtml(t.patientName || "—")}</div>
                 <div class="cc-cal-card-meta">${escapeHtml(t.careGroupLabel || "")}</div>
-                <div class="cc-cal-card-meta"><i class="bi bi-person me-1"></i>${escapeHtml(t.assignedStaffName || "Chưa gán")}${timeText ? ` · <i class="bi bi-telephone-forward"></i> ${escapeHtml(timeText)}` : ""}</div>
             </button>
         `;
     }
 
+    /**
+     * Dựng giao diện lưới Lịch CSKH theo chế độ đang chọn:
+     * - Chế độ "day": hiển thị bảng chi tiết công việc trong ngày.
+     * - Chế độ "week" / "month": hiển thị lưới 7 cột (Thứ 2 - Chủ nhật) với các thẻ công việc phân màu theo trạng thái/hạn.
+     *
+     * @param {Object} range Khoảng ngày { startDate, endDate, monthIndex, year, title }
+     */
     function renderCalendarGrid(range) {
         const grid = $("ccCalendarGrid");
         if (!grid) return;
@@ -2850,11 +3018,32 @@
     // 10. NOTIFICATION CENTER BỀN VỮNG (CHUÔNG THÔNG BÁO + READ STATE)
     // =========================================================================
 
+    function renderCompactTimeline(items, opts = {}) {
+        if (!Array.isArray(items) || !items.length) {
+            return `<div class="text-muted small py-2">${escapeHtml(opts.emptyText || "Chưa có lịch sử tương tác.")}</div>`;
+        }
+        return items.map(item => `
+            <div class="border-start border-2 border-primary ps-3 pb-2 mb-2 small">
+                <div class="d-flex justify-content-between gap-2">
+                    <strong>${escapeHtml(item.contactResultLabel || item.contactResult || "Liên hệ")}</strong>
+                    <span class="text-muted">${escapeHtml(formatDateTime(item.createdAt))}</span>
+                </div>
+                <div class="text-secondary">${escapeHtml(item.notes || "")}</div>
+                <div class="text-muted">${escapeHtml(item.staffName || "Nhân viên")} · ${escapeHtml(item.channelLabel || item.channel || "")}</div>
+            </div>
+        `).join("");
+    }
+
+    /**
+     * Tải danh sách 30 thông báo CSKH gần nhất, số lượng chưa đọc và số chưa đọc theo tab
+     * từ GET /api/customer-care/notifications rồi cập nhật chuông thông báo và badge KPI.
+     */
     async function loadNotifications() {
         try {
             const data = await request("/api/customer-care/notifications?limit=30");
             state.notifications = Array.isArray(data?.notifications) ? data.notifications : [];
             state.unreadNotifCount = Number(data?.unreadCount ?? 0);
+            state.tabUnreadCounts = data?.tabUnreadCounts || {};
             renderNotificationCenter();
         } catch {
             // ignore silent notification error
@@ -2885,6 +3074,21 @@
                 badge.hidden = true;
             }
         }
+
+        const tabUnread = state.tabUnreadCounts || {};
+        const acked = state.ackedKpiUnread || {};
+        ["TODAY", "OVERDUE", "ESCALATED", "ALL"].forEach(tabKey => {
+            const el = $(`kpiUnread_${tabKey}`);
+            if (!el) return;
+            const rawCnt = Number(tabUnread[tabKey] || 0);
+            const cnt = acked[tabKey] ? 0 : rawCnt;
+            if (cnt > 0) {
+                el.textContent = cnt > 99 ? "99+" : String(cnt);
+                el.classList.remove("d-none");
+            } else {
+                el.classList.add("d-none");
+            }
+        });
 
         const list = $("ccNotifList");
         if (!list) return;
@@ -2986,6 +3190,13 @@
         }, 5000);
     }
 
+    /**
+     * Xử lý payload sự kiện thời gian thực nhận qua WebSocket STOMP:
+     * hiển thị toast thông báo, đồng bộ tức thì modal chi tiết nếu đang mở đúng taskId,
+     * và debounce 350ms để làm mới KPI, thông báo và bảng/lịch.
+     *
+     * @param {string|Object} payload Chuỗi JSON hoặc object CustomerCareRealtimeEventDTO
+     */
     function handleIncomingRealtimeEvent(payload) {
         let evt = null;
         try {
@@ -3015,6 +3226,11 @@
         }, 350);
     }
 
+    /**
+     * Đăng ký (hoặc đăng ký lại khi đổi chi nhánh) 2 kênh WebSocket STOMP:
+     * 1) /user/queue/customer-care/notifications (thông báo cá nhân).
+     * 2) /topic/customer-care/branch/{branchId} (hoặc /topic/customer-care/admin nếu Admin xem tất cả cơ sở).
+     */
     function subscribeWsTopics() {
         const client = state.wsClient;
         if (!client || !state.wsConnected) return;
@@ -3053,6 +3269,13 @@
         }, delay);
     }
 
+    /**
+     * Khởi tạo kết nối WebSocket STOMP qua SockJS tới endpoint /ws-chat,
+     * cập nhật badge trạng thái kết nối (Trực tuyến / Đang kết nối lại), đăng ký topic
+     * và tự động reconnect theo cơ chế exponential backoff khi mất kết nối.
+     *
+     * @param {boolean} isReconnect true nếu đây là lần kết nối lại tự động
+     */
     function initWebSocket(isReconnect = false) {
         if (typeof SockJS === "undefined" || typeof Stomp === "undefined") {
             setWsStatusBadge("offline", "Thiếu thư viện WS");
@@ -3097,6 +3320,12 @@
         document.querySelectorAll("[data-kpi-tab]").forEach(card => {
             const activate = () => {
                 const target = card.dataset.kpiTab;
+                state.ackedKpiUnread = state.ackedKpiUnread || {};
+                if (target) {
+                    state.ackedKpiUnread[target] = true;
+                    const badgeEl = $(`kpiUnread_${target}`);
+                    if (badgeEl) badgeEl.classList.add("d-none");
+                }
                 if ($("filterStatus")) $("filterStatus").value = "";
                 if (target === "ACTIONABLE_OVERDUE") {
                     state.dueFilter = "OVERDUE";
@@ -3255,12 +3484,17 @@
         safeOn("closeDayTasksModalBtn", "click", () => { if ($("ccDayTasksModal")) $("ccDayTasksModal").hidden = true; });
 
         // Notification Center events
-        safeOn("ccNotifBellBtn", "click", (e) => {
+        safeOn("ccNotifBellBtn", "click", async (e) => {
             e.stopPropagation();
             const dd = $("ccNotifDropdown");
             if (!dd) return;
             dd.hidden = !dd.hidden;
-            if (!dd.hidden) loadNotifications();
+            if (!dd.hidden) {
+                await loadNotifications();
+                if (state.unreadNotifCount > 0) {
+                    await markAllNotificationsRead();
+                }
+            }
         });
         safeOn("ccNotifMarkAllBtn", "click", markAllNotificationsRead);
         document.addEventListener("click", (e) => {
@@ -3272,6 +3506,14 @@
         });
 
         safeOn("btnToggleAdvFilter", "click", window.toggleCcAdvFilter);
+        try {
+            if (localStorage.getItem(ADV_FILTER_STORAGE_KEY) === "1") {
+                const p = $("advFilterPanel");
+                const b = $("btnToggleAdvFilter");
+                if (p) p.classList.add("show");
+                if (b) b.classList.add("is-open");
+            }
+        } catch {}
         safeOn("openCreateTaskBtn", "click", () => openTaskFormModal());
         safeOn("refreshBtn", "click", async () => {
             await refreshAllData();
@@ -3338,7 +3580,7 @@
         safeOn("patientHistoryDrawerResultFilter", "change", applyPatientDrawerFilters);
         safeOn("patientHistoryDrawerMoreBtn", "click", () => {
             patientDrawerState.visibleLimit += 10;
-            renderPatientDrawerTimeline();
+            renderPatientDrawerContent();
         });
 
         // General History Dashboard events

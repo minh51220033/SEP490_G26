@@ -1,12 +1,15 @@
 <!DOCTYPE html>
 <html lang="vi" xmlns:th="http://www.thymeleaf.org">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Màn hình Gọi số Khám bệnh | CV-DCMS</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@700;800&family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@700;800&family=Inter:wght@400;500;600;700;800;900&display=swap"
+    rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
   <style>
     :root {
@@ -177,9 +180,20 @@
     }
 
     @keyframes pulseDot {
-      0% { transform: scale(0.9); opacity: 0.7; }
-      50% { transform: scale(1.15); opacity: 1; }
-      100% { transform: scale(0.9); opacity: 0.7; }
+      0% {
+        transform: scale(0.9);
+        opacity: 0.7;
+      }
+
+      50% {
+        transform: scale(1.15);
+        opacity: 1;
+      }
+
+      100% {
+        transform: scale(0.9);
+        opacity: 0.7;
+      }
     }
 
     /* ================= MAIN TABLE LIST ================= */
@@ -321,10 +335,24 @@
       color: #b91c1c;
     }
 
+    .tv-doctor-tag.handover {
+      background: #eef2ff;
+      color: #4338ca;
+      border: 1px solid #c7d2fe;
+    }
+
     @keyframes pulseActive {
-      0% { transform: scale(1); }
-      50% { transform: scale(1.05); }
-      100% { transform: scale(1); }
+      0% {
+        transform: scale(1);
+      }
+
+      50% {
+        transform: scale(1.05);
+      }
+
+      100% {
+        transform: scale(1);
+      }
     }
 
     .tv-status-badge {
@@ -521,150 +549,166 @@
     }
   </style>
 </head>
+
 <body th:attr="data-branch=${branchId}">
-<div class="tv-wrapper">
+  <div class="tv-wrapper">
 
-  <!-- ================= TOP HEADER ================= -->
-  <header class="tv-header">
-    <div class="tv-brand">
-      <div class="tv-logo">
-        <i class="bi bi-hospital"></i>
+    <!-- ================= TOP HEADER ================= -->
+    <header class="tv-header">
+      <div class="tv-brand">
+        <div class="tv-logo">
+          <i class="bi bi-hospital"></i>
+        </div>
+        <div>
+          <div class="tv-brand-title">Hệ thống gọi số khám bệnh tự động</div>
+          <div id="branch" class="tv-branch-name" th:text="${board.branch}">Cơ sở Quận 1</div>
+        </div>
       </div>
-      <div>
-        <div class="tv-brand-title">Hệ thống gọi số khám bệnh tự động</div>
-        <div id="branch" class="tv-branch-name" th:text="${board.branch}">Cơ sở Quận 1</div>
+
+      <!-- Clock -->
+      <div class="tv-clock">
+        <div id="tvClockTime" class="tv-clock-time">00:00:00</div>
+        <div id="tvClockDate" class="tv-clock-date">Đang cập nhật...</div>
       </div>
-    </div>
 
-    <!-- Clock -->
-    <div class="tv-clock">
-      <div id="tvClockTime" class="tv-clock-time">00:00:00</div>
-      <div id="tvClockDate" class="tv-clock-date">Đang cập nhật...</div>
-    </div>
+      <!-- Actions -->
+      <div class="tv-actions">
+        <a th:href="@{/reception/queue(branchId=${branchId})}" class="tv-btn" style="text-decoration: none;"
+          onclick="if (window.history.length > 1 && document.referrer) { window.history.back(); return false; }"
+          title="Quay lại màn hình Hàng chờ">
+          <i class="bi bi-arrow-left"></i>
+          <span>Quay lại</span>
+        </a>
 
-    <!-- Actions -->
-    <div class="tv-actions">
-      <a th:href="@{/reception/queue(branchId=${branchId})}"
-         class="tv-btn"
-         style="text-decoration: none;"
-         onclick="if (window.history.length > 1 && document.referrer) { window.history.back(); return false; }"
-         title="Quay lại màn hình Hàng chờ">
-        <i class="bi bi-arrow-left"></i>
-        <span>Quay lại</span>
-      </a>
+        <button id="soundToggle" class="tv-btn tv-sound-btn" type="button" aria-pressed="false" title="Bật hoặc tắt âm thanh đọc số tiếng Việt">
+          <i id="soundIcon" class="bi bi-volume-mute-fill"></i>
+          <span id="soundText">Âm thanh đang tắt</span>
+        </button>
+        <button id="testVoiceBtn" class="tv-btn" type="button" style="display:none;" title="Đọc thử thông báo gọi bệnh nhân tiếng Việt">
+          <i class="bi bi-megaphone-fill text-primary"></i>
+          <span>Đọc thử</span>
+        </button>
+        <span id="tvVoiceWarning" class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle px-2 py-1" style="display:none; font-size:12px;"></span>
 
-      <button id="soundToggle" class="tv-btn tv-sound-btn" type="button" title="Bật hoặc tắt âm thanh đọc số">
-        <i id="soundIcon" class="bi bi-volume-mute-fill"></i>
-        <span id="soundText">Bật âm thanh</span>
-      </button>
+        <button id="fullscreenToggle" class="tv-btn" type="button" title="Bật toàn màn hình">
+          <i class="bi bi-arrows-fullscreen"></i>
+          <span>Toàn màn hình</span>
+        </button>
 
-      <button id="fullscreenToggle" class="tv-btn" type="button" title="Bật toàn màn hình">
-        <i class="bi bi-arrows-fullscreen"></i>
-        <span>Toàn màn hình</span>
-      </button>
-
-      <div id="tvLivePill" class="tv-live-pill">
-        <span class="tv-live-dot"></span>
-        <span id="tvLiveText">TRỰC TIẾP</span>
+        <div id="tvLivePill" class="tv-live-pill">
+          <span class="tv-live-dot"></span>
+          <span id="tvLiveText">TRỰC TIẾP</span>
+        </div>
       </div>
-    </div>
-  </header>
+    </header>
 
-  <!-- ================= BẢNG HÀNG ĐỢI THỐNG NHẤT ================= -->
-  <main class="tv-main-card">
-    <div class="tv-section-header" style="padding: 16px 22px 0 22px; margin-bottom: 10px; flex-wrap: wrap;">
-      <div class="tv-section-title" style="color: #0f172a;">
-        <i class="bi bi-display"></i>
-        <span>Bảng theo dõi gọi số &amp; hàng đợi khám</span>
+    <!-- ================= BẢNG HÀNG ĐỢI THỐNG NHẤT ================= -->
+    <main class="tv-main-card">
+      <div class="tv-section-header" style="padding: 16px 22px 0 22px; margin-bottom: 10px; flex-wrap: wrap;">
+        <div class="tv-section-title" style="color: #0f172a;">
+          <i class="bi bi-display"></i>
+          <span>Bảng theo dõi gọi số &amp; hàng đợi khám</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+          <span id="tvCallingCount" class="tv-status-badge calling" style="margin-left: 0;"
+            th:text="${#lists.size(board.queueList.?[status == 'CALLED']) + ' đang gọi'}">0 đang gọi</span>
+          <span id="tvExaminingCount" class="tv-status-badge examining" style="margin-left: 0;"
+            th:text="${#lists.size(board.queueList.?[status == 'IN_SERVICE']) + ' đang khám'}">0 đang khám</span>
+          <span id="tvWaitingCount" class="tv-status-badge" style="background: #f1f5f9; color: #475569; margin-left: 0;"
+            th:text="${#lists.size(board.queueList.?[status != 'CALLED' and status != 'IN_SERVICE']) + ' đang chờ'}">0
+            đang chờ</span>
+        </div>
       </div>
-      <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-        <span id="tvCallingCount" class="tv-status-badge calling" style="margin-left: 0;"
-              th:text="${#lists.size(board.queueList.?[status == 'CALLED']) + ' đang gọi'}">0 đang gọi</span>
-        <span id="tvExaminingCount" class="tv-status-badge examining" style="margin-left: 0;"
-              th:text="${#lists.size(board.queueList.?[status == 'IN_SERVICE']) + ' đang khám'}">0 đang khám</span>
-        <span id="tvWaitingCount" class="tv-status-badge" style="background: #f1f5f9; color: #475569; margin-left: 0;"
-              th:text="${#lists.size(board.queueList.?[status != 'CALLED' and status != 'IN_SERVICE']) + ' đang chờ'}">0 đang chờ</span>
-      </div>
-    </div>
-    <div class="tv-table-container tv-table-scroll">
-      <table class="tv-table" id="tvListTable">
-        <thead>
-          <tr>
-            <th class="cell-center" style="width: 160px;">Số thứ tự / Phiếu</th>
-            <th style="text-align: left; padding-left: 20px;">Họ và tên</th>
-            <th style="text-align: left; padding-left: 16px; width: 250px;">Bác sĩ phụ trách</th>
-            <th class="cell-center" style="width: 165px;">Trạng thái</th>
-            <th class="cell-center" style="width: 190px;">Phòng khám</th>
-            <th class="cell-center" style="width: 175px;">Ghế nha</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr th:each="row : ${board.queueList}"
+      <div class="tv-table-container tv-table-scroll">
+        <table class="tv-table" id="tvListTable">
+          <thead>
+            <tr>
+              <th class="cell-center" style="width: 160px;">Số thứ tự / Phiếu</th>
+              <th style="text-align: left; padding-left: 20px;">Họ và tên</th>
+              <th style="text-align: left; padding-left: 16px; width: 250px;">Bác sĩ phụ trách</th>
+              <th class="cell-center" style="width: 165px;">Trạng thái</th>
+              <th class="cell-center" style="width: 190px;">Phòng khám</th>
+              <th class="cell-center" style="width: 175px;">Ghế nha</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr th:each="row : ${board.queueList}"
               th:classappend="${row.status == 'CALLED'} ? 'tv-row-calling' : (${row.status == 'IN_SERVICE'} ? 'tv-row-examining' : '')">
-            <td class="cell-center">
-              <span class="tv-badge-stt" th:text="${row.ticketNumber}">01</span>
-            </td>
-            <td style="text-align: left; padding-left: 20px; font-size: clamp(18px, 1.4vw, 24px); font-weight: 800; color: var(--tv-text-main); overflow-wrap: anywhere;"
+              <td class="cell-center">
+                <span class="tv-badge-stt" th:text="${row.ticketNumber}">01</span>
+              </td>
+              <td
+                style="text-align: left; padding-left: 20px; font-size: clamp(18px, 1.4vw, 24px); font-weight: 800; color: var(--tv-text-main); overflow-wrap: anywhere;"
                 th:text="${row.patientFullName ?: '—'}">Nguyễn Văn A</td>
-            <td style="text-align: left; padding-left: 16px;">
-              <div class="tv-doctor-name" th:text="${row.doctorDisplay != null and row.doctorDisplay != '—' ? row.doctorDisplay : 'Chưa phân công'}">Chưa phân công</div>
-              <span class="tv-doctor-tag"
-                    th:classappend="${row.doctorAssignmentType == 'BOOKED_DOCTOR'} ? 'booked' : (${row.doctorAssignmentType == 'ASSIGNED_DOCTOR'} ? 'assigned' : (${row.doctorAssignmentType == 'WAITING_DOCTOR'} ? 'waiting-doc' : ''))"
-                    th:text="${row.doctorStatusLabel != null ? row.doctorStatusLabel : 'Chưa phân công'}">Chưa phân công</span>
-            </td>
-            <td class="cell-center">
-              <span th:if="${row.status == 'CALLED'}" class="tv-status-badge calling" style="margin-left: 0;">
-                <i class="bi bi-megaphone-fill"></i> Đang gọi
-              </span>
-              <span th:if="${row.status == 'IN_SERVICE'}" class="tv-status-badge examining" style="margin-left: 0;">
-                <i class="bi bi-heart-pulse-fill"></i> Đang khám
-              </span>
-              <span th:if="${row.status == 'PAUSED'}" class="tv-status-badge" style="background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; margin-left: 0;">
-                Tạm hoãn
-              </span>
-              <span th:if="${row.status != 'CALLED' and row.status != 'IN_SERVICE' and row.status != 'PAUSED'}"
-                    class="tv-status-badge" style="background: #f1f5f9; color: #475569; margin-left: 0;">
-                Đang chờ
-              </span>
-            </td>
-            <td class="cell-center"
+              <td style="text-align: left; padding-left: 16px;">
+                <div class="tv-doctor-name"
+                  th:text="${row.doctorDisplay != null and row.doctorDisplay != '—' ? row.doctorDisplay : 'Chưa phân công'}">
+                  Chưa phân công</div>
+                <span class="tv-doctor-tag"
+                  th:classappend="${row.doctorAssignmentType == 'BOOKED_DOCTOR'} ? 'booked' : (${row.doctorAssignmentType == 'ASSIGNED_DOCTOR'} ? 'assigned' : (${row.doctorAssignmentType == 'HANDOVER_DOCTOR'} ? 'handover' : (${row.doctorAssignmentType == 'WAITING_DOCTOR'} ? 'waiting-doc' : '')))"
+                  th:text="${row.doctorStatusLabel != null ? row.doctorStatusLabel : 'Chưa phân công'}">Chưa phân
+                  công</span>
+              </td>
+              <td class="cell-center">
+                <span th:if="${row.status == 'CALLED'}" class="tv-status-badge calling" style="margin-left: 0;">
+                  <i class="bi bi-megaphone-fill"></i> Đang gọi
+                </span>
+                <span th:if="${row.status == 'IN_SERVICE'}" class="tv-status-badge examining" style="margin-left: 0;">
+                  <i class="bi bi-heart-pulse-fill"></i> Đang khám
+                </span>
+                <span th:if="${row.status == 'PAUSED'}" class="tv-status-badge"
+                  style="background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; margin-left: 0;">
+                  Tạm hoãn
+                </span>
+                <span th:if="${row.status != 'CALLED' and row.status != 'IN_SERVICE' and row.status != 'PAUSED'}"
+                  class="tv-status-badge" style="background: #f1f5f9; color: #475569; margin-left: 0;">
+                  Đang chờ
+                </span>
+              </td>
+              <td class="cell-center"
                 th:classappend="${row.isCallingOrExam and row.roomName != 'Chưa phân công'} ? 'fw-bold text-dark' : 'cell-dash'"
-                th:text="${row.isCallingOrExam ? (row.roomName ?: 'Chưa phân công') : 'Chưa phân công'}">Chưa phân công</td>
-            <td class="cell-center"
+                th:text="${row.isCallingOrExam ? (row.roomName ?: 'Chưa phân công') : 'Chưa phân công'}">Chưa phân công
+              </td>
+              <td class="cell-center"
                 th:classappend="${row.isCallingOrExam and row.chairName != 'Chưa phân công'} ? 'fw-bold text-dark' : 'cell-dash'"
-                th:text="${row.isCallingOrExam ? (row.chairName ?: 'Chưa phân công') : 'Chưa phân công'}">Chưa phân công</td>
-          </tr>
+                th:text="${row.isCallingOrExam ? (row.chairName ?: 'Chưa phân công') : 'Chưa phân công'}">Chưa phân công
+              </td>
+            </tr>
 
-          <!-- Empty state row -->
-          <tr th:if="${#lists.isEmpty(board.queueList)}" id="tvEmptyRow">
-            <td colspan="6">
-              <div class="tv-empty-box">
-                <i class="bi bi-person-lines-fill"></i>
-                <div style="font-size: 18px; font-weight: 700; color: #475569;">Hiện tại chưa có bệnh nhân trong hàng đợi</div>
-                <div style="font-size: 14px; margin-top: 4px;">Quý khách vui lòng liên hệ quầy Tiếp đón &amp; Lễ tân để nhận phiếu thứ tự.</div>
-              </div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  </main>
+            <!-- Empty state row -->
+            <tr th:if="${#lists.isEmpty(board.queueList)}" id="tvEmptyRow">
+              <td colspan="6">
+                <div class="tv-empty-box">
+                  <i class="bi bi-person-lines-fill"></i>
+                  <div style="font-size: 18px; font-weight: 700; color: #475569;">Hiện tại chưa có bệnh nhân trong hàng
+                    đợi</div>
+                  <div style="font-size: 14px; margin-top: 4px;">Quý khách vui lòng liên hệ quầy Tiếp đón &amp; Lễ tân
+                    để nhận phiếu thứ tự.</div>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </main>
 
-  <!-- ================= BOTTOM NOTICE TICKER ================= -->
-  <footer class="tv-footer">
-    <div class="tv-footer-tag">
-      <i class="bi bi-info-circle-fill"></i>
-      <span>LƯU Ý</span>
-    </div>
-    <div class="tv-footer-marquee">
-      <marquee behavior="scroll" direction="left" scrollamount="6">
-        Quý khách vui lòng theo dõi số thứ tự và họ tên trên màn hình. Khi được gọi, vui lòng di chuyển đến đúng phòng khám và ghế nha được hiển thị. Nếu cần hỗ trợ, vui lòng liên hệ quầy lễ tân.
-      </marquee>
-    </div>
-  </footer>
+    <!-- ================= BOTTOM NOTICE TICKER ================= -->
+    <footer class="tv-footer">
+      <div class="tv-footer-tag">
+        <i class="bi bi-info-circle-fill"></i>
+        <span>LƯU Ý</span>
+      </div>
+      <div class="tv-footer-marquee">
+        <marquee behavior="scroll" direction="left" scrollamount="6">
+          Quý khách vui lòng theo dõi số thứ tự và họ tên trên màn hình. Khi được gọi, vui lòng di chuyển đến đúng phòng
+          khám và ghế nha được hiển thị. Nếu cần hỗ trợ, vui lòng liên hệ quầy lễ tân.
+        </marquee>
+      </div>
+    </footer>
 
-</div>
+  </div>
 
-<script th:src="@{/js/reception-queue-tv.js}" defer></script>
+  <script th:src="@{/js/reception-queue-tv.js}" defer></script>
 </body>
+
 </html>

@@ -1,4 +1,10 @@
 <!DOCTYPE html>
+<!--
+  Trang xem trước & in Phiếu nhập kho chuẩn A4 (inventory/print-receipt.html).
+  Controller: InventoryPageController.printReceiptPage (GET /inventory/receipts/{receiptId}/print).
+  Model đầu vào: receipt (StockReceiptResponseDTO), printedAt (LocalDateTime).
+  Hỗ trợ tải PDF trực tiếp (/api/inventory/receipts/{id}/pdf?download=true) và tự động mở hộp thoại in khi có ?autoprint=true.
+-->
 <html lang="vi" xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{fragments/head :: head('Xem trước & In phiếu nhập kho - ' + ${receipt.receiptCode})}"></head>
 <body class="app-body">
@@ -145,7 +151,7 @@
                         </div>
                     </div>
 
-                    <!-- CHỮ KÝ ĐIỆN TỬ & XÁC NHẬN -->
+                    <!-- CHỮ KÝ XÁC NHẬN -->
                     <div class="sig-grid">
                         <div>
                             <div class="sig-title">NGƯỜI GIAO HÀNG / NHÀ CUNG CẤP</div>
@@ -158,17 +164,11 @@
 
                         <div>
                             <div class="sig-title">NGƯỜI LẬP PHIẾU / THỦ KHO</div>
-                            <div class="sig-sub">(Chữ ký điện tử &amp; họ tên)</div>
+                            <div class="sig-sub">(Ký và ghi rõ họ tên)</div>
                             <div class="sig-box">
-                                <img th:if="${receipt.signatureUrl != null and !#strings.isEmpty(receipt.signatureUrl)}"
-                                     th:src="${receipt.signatureUrl}"
-                                     alt="Chữ ký điện tử"/>
-                                <span th:if="${receipt.signatureUrl == null or #strings.isEmpty(receipt.signatureUrl)}"
-                                      class="sig-unsigned">(Chưa ký điện tử)</span>
+                                <span class="sig-unsigned">(Ký xác nhận khi lập phiếu)</span>
                             </div>
-                            <div class="sig-name" th:text="${receipt.signedByName != null ? receipt.signedByName : receipt.receiverName}">Thủ kho</div>
-                            <div class="sig-time" th:if="${receipt.signedAt != null}"
-                                 th:text="'Đã ký: ' + ${#temporals.format(receipt.signedAt, 'dd/MM/yyyy HH:mm')}">Đã ký: 31/10/2026 10:15</div>
+                            <div class="sig-name" th:text="${receipt.receiverName}">Thủ kho</div>
                         </div>
                     </div>
 
@@ -179,6 +179,7 @@
     </div>
 </div>
 
+<!-- Script tự động chờ font & hình ảnh tải xong rồi kích hoạt window.print() khi mở với tham số ?autoprint=true -->
 <script>
 (function() {
     const params = new URLSearchParams(window.location.search);

@@ -2,31 +2,48 @@ package com.cvdcms.DTO;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * DTO trả về thông tin tóm tắt hoặc chi tiết đầy đủ của một Phiếu nhập kho ({@code StockReceipt}).
+ * <p>Sử dụng cho API danh sách ({@code GET /api/inventory/receipts}), chi tiết ({@code GET /api/inventory/receipts/{id}}),
+ * xuất PDF ({@link com.cvdcms.util.InventoryPdfGenerator#generateReceiptPdf}) và trang in {@code inventory/print-receipt.html}.</p>
+ */
 public class StockReceiptResponseDTO {
+    /** Mã định danh phiếu nhập kho. */
     private Long receiptId;
+    /** Mã phiếu nhập kho duy nhất (tiền tố {@code PN}). */
     private String receiptCode;
+    /** Mã chi nhánh nhập kho. */
     private Long branchId;
+    /** Tên chi nhánh nhập kho. */
     private String branchName;
+    /** Mã nhà cung cấp. */
     private Long supplierId;
+    /** Mã code nhà cung cấp. */
     private String supplierCode;
+    /** Tên nhà cung cấp. */
     private String supplierName;
+    /** Số hóa đơn VAT / chứng từ nhà cung cấp. */
     private String supplierInvoiceNo;
+    /** Ngày lập phiếu nhập kho. */
     private LocalDate receiptDate;
+    /** Tổng giá trị phiếu nhập kho (VNĐ). */
     private BigDecimal totalAmount;
+    /** Tổng số tiền đã thanh toán cho phiếu nhập này (VNĐ). */
     private BigDecimal paidAmount;
+    /** Công nợ còn lại của phiếu nhập ({@code max(0, totalAmount - paidAmount)}). */
     private BigDecimal remainingDebt;
+    /** Họ tên nhân viên lập phiếu / tiếp nhận kho. */
     private String receiverName;
+    /** Ghi chú phiếu nhập. */
     private String notes;
+    /** Đường dẫn URL chứng từ hóa đơn đính kèm ({@code /uploads/invoices/...}). */
     private String attachmentUrl;
-    private String signatureUrl;
-    private Long signedByUserId;
-    private String signedByName;
-    private LocalDateTime signedAt;
+    /** Tổng số dòng vật tư trong phiếu nhập. */
     private int itemCount;
+    /** Danh sách chi tiết từng dòng vật tư/lô đã nhập (chỉ có dữ liệu đầy đủ khi xem chi tiết hoặc in phiếu). */
     private List<ItemDetail> items = new ArrayList<>();
 
     public StockReceiptResponseDTO() {
@@ -41,6 +58,9 @@ public class StockReceiptResponseDTO {
         this.totalAmount = total;
     }
 
+    /**
+     * DTO chi tiết một dòng vật tư &amp; lô hàng trong phiếu nhập kho.
+     */
     public static class ItemDetail {
         private Long receiptItemId;
         private Long materialId;
@@ -123,14 +143,6 @@ public class StockReceiptResponseDTO {
     public void setNotes(String notes) { this.notes = notes; }
     public String getAttachmentUrl() { return attachmentUrl; }
     public void setAttachmentUrl(String attachmentUrl) { this.attachmentUrl = attachmentUrl; }
-    public String getSignatureUrl() { return signatureUrl; }
-    public void setSignatureUrl(String signatureUrl) { this.signatureUrl = signatureUrl; }
-    public Long getSignedByUserId() { return signedByUserId; }
-    public void setSignedByUserId(Long signedByUserId) { this.signedByUserId = signedByUserId; }
-    public String getSignedByName() { return signedByName; }
-    public void setSignedByName(String signedByName) { this.signedByName = signedByName; }
-    public LocalDateTime getSignedAt() { return signedAt; }
-    public void setSignedAt(LocalDateTime signedAt) { this.signedAt = signedAt; }
     public BigDecimal getTotalQuantity() {
         if (items == null || items.isEmpty()) {
             return BigDecimal.ZERO;

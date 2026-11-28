@@ -76,7 +76,7 @@ public interface ClinicalQueueTicketRepository extends JpaRepository<QueueTicket
     @Query("""
             SELECT t FROM QueueTicket t
             JOIN FETCH t.visit v
-            JOIN FETCH v.primaryDoctor d
+            LEFT JOIN FETCH v.primaryDoctor d
             JOIN FETCH t.branch b
             WHERE t.queueDate = :queueDate
               AND t.queueType = :type

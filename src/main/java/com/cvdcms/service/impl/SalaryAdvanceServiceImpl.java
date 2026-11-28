@@ -22,6 +22,10 @@ import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
 
+/**
+ * [Phân hệ]: Tài chính - Tạm ứng lương nhân viên
+ * [Vai trò]: Triển khai quy trình nghiệp vụ đề nghị, phê duyệt, từ chối và giải ngân tạm ứng lương (tự động phát sinh phiếu chi vận hành khi chi tiền).
+ */
 @Service
 @Transactional
 public class SalaryAdvanceServiceImpl implements SalaryAdvanceService {
@@ -49,6 +53,10 @@ public class SalaryAdvanceServiceImpl implements SalaryAdvanceService {
         this.userRepository = userRepository;
     }
 
+    /**
+     * [Chức năng]: Tra cứu phân trang danh sách đơn tạm ứng lương theo chi nhánh, trạng thái, nhân viên, khoảng thời gian và từ khóa.
+     * [Mục đích]: Giới hạn dữ liệu trong danh sách chi nhánh được phép (allowedBranchIds) và truy vấn SalaryAdvanceRepository.findFilteredAdvances.
+     */
     @Override
     @Transactional(readOnly = true)
     public Page<SalaryAdvance> getAdvances(
@@ -89,6 +97,10 @@ public class SalaryAdvanceServiceImpl implements SalaryAdvanceService {
         );
     }
 
+    /**
+     * [Chức năng]: Lấy thông tin chi tiết một đơn tạm ứng lương theo ID.
+     * [Mục đích]: Tải đầy đủ bản ghi SalaryAdvance và kiểm tra quyền truy cập chi nhánh nếu người dùng không phải Admin.
+     */
     @Override
     @Transactional(readOnly = true)
     public SalaryAdvance getAdvanceDetail(Long advanceId, Long currentUserId) {
@@ -102,6 +114,10 @@ public class SalaryAdvanceServiceImpl implements SalaryAdvanceService {
         return advance;
     }
 
+    /**
+     * [Chức năng]: Tạo mới yêu cầu tạm ứng lương ở trạng thái PENDING cho nhân viên tại chi nhánh.
+     * [Mục đích]: Kiểm tra tài khoản người lập còn hoạt động, nhân viên đang ACTIVE và có phân công ACTIVE tại chi nhánh, số tiền tối thiểu 1.000 VNĐ và có lý do, sau đó khởi tạo số dư chưa khấu trừ bằng số tiền tạm ứng trong bảng salary_advances.
+     */
     @Override
     public SalaryAdvance createAdvanceRequest(SalaryAdvanceRequestDTO dto, Long currentUserId) {
         if (currentUserId == null) {
@@ -159,6 +175,10 @@ public class SalaryAdvanceServiceImpl implements SalaryAdvanceService {
         return salaryAdvanceRepository.save(advance);
     }
 
+    /**
+     * [Chức năng]: Phê duyệt đơn tạm ứng lương, chuyển trạng thái từ PENDING sang APPROVED.
+     * [Mục đích]: Kiểm tra quyền Admin/FINANCE_PAYROLL_ADVANCES, khóa bản ghi đơn tạm ứng (findByIdForUpdate) để chống duyệt trùng, xác nhận trạng thái PENDING và lưu người duyệt cùng thời gian duyệt.
+     */
     @Override
     public SalaryAdvance approveAdvance(Long advanceId, Long approverUserId) {
         if (approverUserId == null || (!userRepository.hasActiveAdminRole(approverUserId)
@@ -183,6 +203,10 @@ public class SalaryAdvanceServiceImpl implements SalaryAdvanceService {
         return salaryAdvanceRepository.save(advance);
     }
 
+    /**
+     * [Chức năng]: Xác nhận giải ngân (chi tiền) cho đơn tạm ứng lương đã duyệt và tự động tạo phiếu chi vận hành tương ứng.
+     * [Mục đích]: Khóa bản ghi đơn tạm ứng (findByIdForUpdate), kiểm tra quyền chi nhánh và trạng thái APPROVED, cập nhật trạng thái PAID cùng số dư chờ khấu trừ, đồng thời sinh 1 bản ghi OperatingExpense nguồn SALARY_ADVANCE nếu chưa tồn tại.
+     */
     @Override
     public SalaryAdvance payAdvance(Long advanceId, RefundMethod paymentMethod, Long payerUserId) {
         if (payerUserId == null) {
@@ -237,6 +261,10 @@ public class SalaryAdvanceServiceImpl implements SalaryAdvanceService {
         return savedAdvance;
     }
 
+    /**
+     * [Chức năng]: Từ chối đơn tạm ứng lương đang chờ duyệt, chuyển trạng thái sang REJECTED và nối lý do vào ghi chú.
+     * [Mục đích]: Kiểm tra quyền Admin/FINANCE_PAYROLL_ADVANCES, khóa bản ghi đơn tạm ứng (findByIdForUpdate) và chỉ cho phép từ chối khi trạng thái là PENDING.
+     */
     @Override
     public SalaryAdvance rejectAdvance(Long advanceId, String reason, Long rejecterUserId) {
         if (rejecterUserId == null || (!userRepository.hasActiveAdminRole(rejecterUserId)
@@ -257,6 +285,10 @@ public class SalaryAdvanceServiceImpl implements SalaryAdvanceService {
         return salaryAdvanceRepository.save(advance);
     }
 
+    /**
+     * [Chức năng]: Lấy danh sách các khoản tạm ứng đã chi (PAID) nhưng vẫn còn số dư chờ cấn trừ lương của một nhân viên.
+     * [Mục đích]: Cung cấp thông tin tạm ứng chưa tất toán của nhân viên phục vụ hiển thị và đối soát cấn trừ vào bảng lương.
+     */
     @Override
     @Transactional(readOnly = true)
     public List<SalaryAdvance> getActiveAdvancesForStaff(Long staffId) {
@@ -267,6 +299,9 @@ public class SalaryAdvanceServiceImpl implements SalaryAdvanceService {
         );
     }
 
+    /**
+     * [Hàm hỗ trợ]: Kiểm tra người dùng có quyền truy cập chi nhánh mục tiêu thông qua vai trò Admin, phân công ACTIVE hoặc chi nhánh mặc định.
+     */
     private void validateBranchAccess(Long branchId, Long currentUserId) {
         if (currentUserId == null) {
             throw new AccessDeniedException("Người dùng chưa đăng nhập");

@@ -85,6 +85,8 @@ public class ServiceUpdateDTO {
 
     private Boolean doctorRequiredInTurnover;
 
+    private Boolean allowSameVisit;
+
     private String description;
 
     @Size(max = 500, message = "Đường dẫn ảnh tối đa 500 ký tự.")

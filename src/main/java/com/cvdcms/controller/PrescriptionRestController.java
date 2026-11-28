@@ -24,11 +24,24 @@ public class PrescriptionRestController {
     private final com.cvdcms.security.DoctorVisitAccess doctorVisitAccess;
 
     /**
-     * Lấy danh mục thuốc nha khoa khả dụng (dùng cho autocomplete / dropdown)
+     * Lấy danh mục thuốc nha khoa khả dụng kèm tồn kho còn hạn theo chi nhánh
      */
     @GetMapping("/medications/catalog")
-    public ResponseEntity<List<MedicationDTO>> getMedicationCatalog() {
-        List<MedicationDTO> list = prescriptionService.getActiveMedications();
+    public ResponseEntity<List<MedicationDTO>> getMedicationCatalog(
+            @RequestParam(required = false) Long visitId,
+            @RequestParam(required = false) Long branchId,
+            jakarta.servlet.http.HttpSession session) {
+        com.cvdcms.entity.User currentUser = doctorVisitAccess.requireAuthenticatedUser(session);
+        Long resolvedBranchId = branchId;
+        if (visitId != null) {
+            doctorVisitAccess.require(session, visitId);
+            resolvedBranchId = prescriptionService.resolveBranchIdForVisit(visitId);
+        } else if (branchId != null) {
+            doctorVisitAccess.requireBranch(session, branchId);
+        } else if (currentUser != null && currentUser.getBranch() != null) {
+            resolvedBranchId = currentUser.getBranch().getBranchId();
+        }
+        List<MedicationDTO> list = prescriptionService.getActiveMedicationsForBranch(resolvedBranchId);
         return ResponseEntity.ok(list);
     }
 
@@ -82,6 +95,69 @@ public class PrescriptionRestController {
             Map<String, Object> error = new HashMap<>();
             error.put("success", false);
             error.put("message", "Lỗi máy chủ khi tạo đơn thuốc: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+        }
+    }
+
+    /**
+     * Cập nhật đơn thuốc và điều chỉnh chênh lệch tồn kho
+     */
+    @PutMapping("/prescriptions/{id}")
+    public ResponseEntity<?> updatePrescription(
+            @PathVariable Long id,
+            @RequestBody PrescriptionRequestDTO request,
+            jakarta.servlet.http.HttpSession session) {
+        doctorVisitAccess.requirePrescription(session, id);
+        try {
+            PrescriptionResponseDTO updated = prescriptionService.updatePrescription(id, request);
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "Đã cập nhật đơn thuốc và đồng bộ tồn kho thành công!");
+            response.put("data", updated);
+            return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            log.warn("Validation error updatePrescription {}: {}", id, e.getMessage());
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(error);
+        } catch (Exception e) {
+            log.error("Internal error updatePrescription {}: ", id, e);
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("message", "Lỗi máy chủ khi cập nhật đơn thuốc: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+        }
+    }
+
+    /**
+     * Hủy đơn thuốc và hoàn trả tồn kho (nếu đủ điều kiện)
+     */
+    @PostMapping("/prescriptions/{id}/cancel")
+    public ResponseEntity<?> cancelPrescription(
+            @PathVariable Long id,
+            @RequestBody(required = false) Map<String, String> body,
+            jakarta.servlet.http.HttpSession session) {
+        doctorVisitAccess.requirePrescription(session, id);
+        try {
+            String reason = body != null ? body.get("reason") : null;
+            PrescriptionResponseDTO cancelled = prescriptionService.cancelPrescription(id, reason);
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "Đã hủy đơn thuốc và hoàn kho thành công!");
+            response.put("data", cancelled);
+            return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            log.warn("Validation error cancelPrescription {}: {}", id, e.getMessage());
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(error);
+        } catch (Exception e) {
+            log.error("Internal error cancelPrescription {}: ", id, e);
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("message", "Lỗi máy chủ khi hủy đơn thuốc: " + e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
         }
     }

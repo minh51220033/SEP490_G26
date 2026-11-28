@@ -11,6 +11,13 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * Repository truy vấn bảng tin nhắn chat ({@code chat_messages}).
+ * <p>
+ * Lưu ý kiến trúc: Trạng thái đã đọc/đã xóa riêng cho từng tài khoản hiện tại được quản lý tách biệt
+ * qua {@link ChatMessageUserStateRepository} và {@link ChatConversationUserStateRepository} nhằm
+ * không làm thay đổi cột {@code ChatMessage.isRead} dùng chung giữa các nhân viên trong cùng cơ sở.
+ */
 @Repository
 public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> {
 

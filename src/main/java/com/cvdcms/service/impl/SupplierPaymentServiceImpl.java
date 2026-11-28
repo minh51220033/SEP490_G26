@@ -35,11 +35,8 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Pattern;
 
 /**
- * Xử lý nghiệp vụ Công nợ & Thanh toán Nhà cung cấp (Supplier Payment):
- * - Tổng hợp công nợ nhà cung cấp theo từng chi nhánh (Tổng tiền nhập - Tổng tiền đã thanh toán) tối ưu chống N+1 query.
- * - Khóa bi quan (Pessimistic Write Lock) trên Nhà cung cấp & Phiếu nhập khi thanh toán để chống race condition.
- * - Chặn gửi trùng thanh toán (clientRequestId idempotency + kiểm tra giao dịch trùng trong 5 giây).
- * - Kiểm tra số tiền thanh toán không vượt quá công nợ còn lại của phiếu nhập VÀ tổng công nợ nhà cung cấp tại chi nhánh.
+ * [Phân hệ]: Tài chính & Kho - Công nợ và thanh toán nhà cung cấp
+ * [Vai trò]: Triển khai nghiệp vụ tổng hợp công nợ NCC theo chi nhánh (tối ưu chống N+1 query), tra cứu phiếu nhập/lịch sử thanh toán và tạo phiếu thanh toán NCC với khóa bi quan (Pessimistic Write Lock), chống gửi trùng (clientRequestId + cửa sổ 5 giây) và kiểm soát không chi vượt công nợ.
  */
 @Service
 public class SupplierPaymentServiceImpl implements SupplierPaymentService {
@@ -79,6 +76,16 @@ public class SupplierPaymentServiceImpl implements SupplierPaymentService {
         this.accessService = accessService;
     }
 
+    /**
+     * Tổng hợp công nợ nhà cung cấp tại chi nhánh cho phân hệ Kho (kiểm tra quyền qua {@link BranchAccessService}).
+     *
+     * <p><b>Được gọi từ:</b> {@link com.cvdcms.controller.SupplierPaymentController#getDebtSummaries}.</p>
+     *
+     * @param branchId ID chi nhánh
+     * @param keyword  từ khóa tìm kiếm NCC (tùy chọn)
+     * @param userId   ID người dùng hiện tại
+     * @return danh sách {@link SupplierDebtSummaryDTO}
+     */
     @Override
     @Transactional(readOnly = true)
     public List<SupplierDebtSummaryDTO> getDebtSummaries(Long branchId, String keyword, Long userId) {
@@ -91,6 +98,17 @@ public class SupplierPaymentServiceImpl implements SupplierPaymentService {
         return getDebtSummariesInternal(branchId, keyword);
     }
 
+    /**
+     * Tổng hợp công nợ nhà cung cấp tại chi nhánh cho phân hệ Tài chính
+     * (kiểm tra quyền chi nhánh qua {@link #canAccessBranchForFinance}).
+     *
+     * <p><b>Được gọi từ:</b> {@link com.cvdcms.controller.SupplierPaymentPageController}.</p>
+     *
+     * @param branchId ID chi nhánh
+     * @param keyword  từ khóa tìm kiếm NCC (tùy chọn)
+     * @param userId   ID người dùng hiện tại
+     * @return danh sách {@link SupplierDebtSummaryDTO}
+     */
     @Override
     @Transactional(readOnly = true)
     public List<SupplierDebtSummaryDTO> getDebtSummariesForFinance(Long branchId, String keyword, Long userId) {
@@ -103,6 +121,24 @@ public class SupplierPaymentServiceImpl implements SupplierPaymentService {
         return getDebtSummariesInternal(branchId, keyword);
     }
 
+    /**
+     * Logic lõi tính công nợ động {@code remainingDebt = max(0, totalImport - totalPaid)} cho danh sách nhà cung cấp tại chi nhánh.
+     *
+     * <p><b>Xử lý tối ưu chống N+1 query:</b>
+     * <ol>
+     *   <li>Truy vấn tối đa 500 nhà cung cấp khớp {@code keyword}, sắp xếp theo {@code supplierName} tăng dần.</li>
+     *   <li>Thực hiện 2 truy vấn tổng hợp theo lô ({@code GROUP BY supplierId}):
+     *   {@code receiptRepository.aggregateReceiptsByBranchAndSuppliers} (đếm số phiếu nhập + tổng tiền nhập)
+     *   và {@code paymentRepository.aggregatePaidByBranchAndSuppliers} (tổng tiền đã trả).</li>
+     *   <li>Nếu batch trả về rỗng (ví dụ trong unit test mock hoặc chưa có dữ liệu batch), fallback sang truy vấn đơn lẻ theo từng NCC.</li>
+     *   <li>Tính {@code remainingDebt = totalImport.subtract(totalPaid)} (nếu âm thì kẹp về {@code 0}) và map ra {@link SupplierDebtSummaryDTO}.</li>
+     * </ol>
+     * </p>
+     *
+     * @param branchId ID chi nhánh
+     * @param keyword  từ khóa tìm kiếm NCC (có thể {@code null})
+     * @return danh sách tổng hợp công nợ nhà cung cấp
+     */
     private List<SupplierDebtSummaryDTO> getDebtSummariesInternal(Long branchId, String keyword) {
 
         Page<Supplier> suppliers = supplierRepository.searchSuppliers(
@@ -198,6 +234,11 @@ public class SupplierPaymentServiceImpl implements SupplierPaymentService {
         return result;
     }
 
+    /**
+     * Tra cứu lịch sử thanh toán nhà cung cấp có phân trang cho phân hệ Kho.
+     *
+     * <p><b>Được gọi từ:</b> {@link com.cvdcms.controller.SupplierPaymentController#listPayments}.</p>
+     */
     @Override
     @Transactional(readOnly = true)
     public Page<SupplierPaymentResponseDTO> searchPayments(
@@ -218,6 +259,11 @@ public class SupplierPaymentServiceImpl implements SupplierPaymentService {
         return searchPaymentsInternal(branchId, supplierId, keyword, fromDate, toDate, pageable);
     }
 
+    /**
+     * Tra cứu lịch sử thanh toán nhà cung cấp có phân trang cho phân hệ Tài chính.
+     *
+     * <p><b>Được gọi từ:</b> {@link com.cvdcms.controller.SupplierPaymentPageController}.</p>
+     */
     @Override
     @Transactional(readOnly = true)
     public Page<SupplierPaymentResponseDTO> searchPaymentsForFinance(
@@ -238,6 +284,10 @@ public class SupplierPaymentServiceImpl implements SupplierPaymentService {
         return searchPaymentsInternal(branchId, supplierId, keyword, fromDate, toDate, pageable);
     }
 
+    /**
+     * Logic lõi tra cứu lịch sử thanh toán: kiểm tra {@code fromDate <= toDate}, truy vấn
+     * {@link SupplierPaymentRepository#searchPayments} và chuyển đổi sang {@link SupplierPaymentResponseDTO}.
+     */
     private Page<SupplierPaymentResponseDTO> searchPaymentsInternal(
             Long branchId,
             Long supplierId,
@@ -255,6 +305,11 @@ public class SupplierPaymentServiceImpl implements SupplierPaymentService {
         return page.map(this::toDTO);
     }
 
+    /**
+     * Tạo mới phiếu thanh toán công nợ nhà cung cấp cho phân hệ Kho (kiểm tra quyền chi nhánh qua {@link BranchAccessService}).
+     *
+     * <p><b>Được gọi từ:</b> {@link com.cvdcms.controller.SupplierPaymentController#createPayment}.</p>
+     */
     @Override
     @Transactional
     public SupplierPaymentResponseDTO createPayment(SupplierPaymentCreateDTO dto, Long userId) {
@@ -267,6 +322,12 @@ public class SupplierPaymentServiceImpl implements SupplierPaymentService {
         return createPaymentInternal(dto, userId);
     }
 
+    /**
+     * Tạo mới phiếu thanh toán công nợ nhà cung cấp cho phân hệ Tài chính
+     * (kiểm tra quyền chi nhánh qua {@link #canAccessBranchForFinance}).
+     *
+     * <p><b>Được gọi từ:</b> {@link com.cvdcms.controller.SupplierPaymentPageController#createSupplierPayment}.</p>
+     */
     @Override
     @Transactional
     public SupplierPaymentResponseDTO createPaymentForFinance(SupplierPaymentCreateDTO dto, Long userId) {
@@ -279,6 +340,15 @@ public class SupplierPaymentServiceImpl implements SupplierPaymentService {
         return createPaymentInternal(dto, userId);
     }
 
+    /**
+     * Lấy danh sách phiếu nhập kho ({@link StockReceipt}) còn công nợ ({@code totalAmount - paidAmount > 0})
+     * của một nhà cung cấp tại chi nhánh.
+     *
+     * <p><b>Xử lý:</b> Truy vấn toàn bộ phiếu nhập của NCC tại chi nhánh, tổng hợp theo lô số tiền đã trả
+     * của từng phiếu qua {@link SupplierPaymentRepository#sumPaidAmountByReceipts}, tính {@code remaining = total - paid}
+     * và chỉ giữ lại các phiếu có {@code remaining > 0}.</p>
+     * <p><b>Được gọi từ:</b> {@link com.cvdcms.controller.SupplierPaymentPageController}.</p>
+     */
     @Override
     @Transactional(readOnly = true)
     public List<StockReceiptResponseDTO> getUnpaidReceiptsForFinance(Long branchId, Long supplierId, Long userId) {
@@ -331,6 +401,11 @@ public class SupplierPaymentServiceImpl implements SupplierPaymentService {
         return result;
     }
 
+    /**
+     * Lấy chi tiết tổng hợp công nợ của một nhà cung cấp cụ thể tại chi nhánh (tính động {@code totalImport - totalPaid}).
+     *
+     * <p><b>Được gọi từ:</b> {@link com.cvdcms.controller.SupplierPaymentPageController#supplierPaymentDetail}.</p>
+     */
     @Override
     @Transactional(readOnly = true)
     public SupplierDebtSummaryDTO getSupplierDebtDetailForFinance(Long branchId, Long supplierId, Long userId) {
@@ -367,6 +442,12 @@ public class SupplierPaymentServiceImpl implements SupplierPaymentService {
         );
     }
 
+    /**
+     * Tra cứu phân trang danh sách phiếu nhập kho ({@link StockReceipt}) của nhà cung cấp tại chi nhánh,
+     * đồng thời tính động {@code paidAmount} và {@code remainingDebt} cho từng phiếu nhập theo lô (batch).
+     *
+     * <p><b>Được gọi từ:</b> {@link com.cvdcms.controller.SupplierPaymentPageController#supplierPaymentDetail} (tab {@code receipts}).</p>
+     */
     @Override
     @Transactional(readOnly = true)
     public Page<StockReceiptResponseDTO> getReceiptsForFinance(
@@ -431,6 +512,14 @@ public class SupplierPaymentServiceImpl implements SupplierPaymentService {
         });
     }
 
+    /**
+     * Kiểm tra quyền truy cập chi nhánh mở rộng cho phân hệ Tài chính.
+     *
+     * <p><b>Xử lý:</b> Cho phép nếu {@link BranchAccessService#canAccessBranch} trả về {@code true};
+     * nếu không, kiểm tra người dùng có ít nhất một quyền tài chính/NCC ({@code FINANCE_EXPENSES},
+     * {@code FINANCE_DASHBOARD}, {@code SUPPLIER_MANAGE}) VÀ được phân công chi nhánh {@code branchId}
+     * trong {@code staff_branch_assignments} (hoặc thuộc chi nhánh chính của user khi chưa có bản ghi phân công).</p>
+     */
     private boolean canAccessBranchForFinance(Long userId, Long branchId) {
         if (accessService.canAccessBranch(userId, branchId)) {
             return true;
@@ -457,6 +546,35 @@ public class SupplierPaymentServiceImpl implements SupplierPaymentService {
                 .orElse(false);
     }
 
+    /**
+     * Logic lõi ghi nhận một phiếu thanh toán công nợ Nhà cung cấp ({@link SupplierPayment}).
+     *
+     * <p><b>Quy trình xử lý từng bước:</b>
+     * <ol>
+     *   <li><b>Validate đầu vào:</b> Kiểm tra {@code supplierId > 0}, {@code amount > 0},
+     *   {@code paymentDate <= hôm nay}, {@code paymentMethod} thuộc {@code {CASH, BANK_TRANSFER}},
+     *   định dạng {@code referenceNo} (regex {@code ^[A-Za-z0-9._/-]{1,100}$}) và độ dài {@code notes <= 255}.</li>
+     *   <li><b>Chống double-submit tầng bộ nhớ (30 giây):</b> Dọn các khóa hết hạn trong {@code recentRequestIds}
+     *   và kiểm tra {@code userId + "::" + clientRequestId}; nếu trùng thì từ chối ngay.</li>
+     *   <li><b>Khóa bi quan Nhà cung cấp ({@code PESSIMISTIC_WRITE}):</b> Gọi {@code supplierRepository.findByIdForUpdate}
+     *   để tuần tự hóa các giao dịch thanh toán đồng thời cùng NCC, tránh race condition thanh toán vượt nợ.</li>
+     *   <li><b>Chống double-submit tầng CSDL (5 giây):</b> Gọi {@code paymentRepository.existsRecentDuplicatePayment}
+     *   với cùng {@code (branchId, supplierId, receiptId, amount)} trong 5 giây gần nhất.</li>
+     *   <li><b>Liên kết &amp; kiểm tra công nợ phiếu nhập đối ứng ({@code StockReceipt ↔ SupplierPayment}):</b>
+     *   Nếu có {@code receiptId}, khóa bi quan phiếu nhập qua {@code receiptRepository.findByIdForUpdate},
+     *   xác minh phiếu thuộc đúng chi nhánh và NCC, tính công nợ còn lại của phiếu
+     *   ({@code receipt.totalAmount - sumPaidByReceipt}) và đảm bảo {@code amount <= receiptRemaining}.</li>
+     *   <li><b>Kiểm tra tổng công nợ động toàn chi nhánh:</b> Tính {@code totalRemaining = totalImport - totalPaid};
+     *   đảm bảo NCC còn công nợ và {@code amount <= totalRemaining}.</li>
+     *   <li><b>Lưu phiếu thanh toán:</b> Xác định nhân viên chi qua {@link #resolveOrCreateStaffProfile},
+     *   sinh mã phiếu duy nhất {@code PC<seq>}, lưu ảnh chữ ký (nếu có {@code signatureData}) và persist {@link SupplierPayment}.</li>
+     * </ol>
+     * </p>
+     *
+     * @param dto    dữ liệu thanh toán từ client
+     * @param userId ID người dùng thực hiện thanh toán
+     * @return {@link SupplierPaymentResponseDTO} của phiếu vừa lưu
+     */
     private SupplierPaymentResponseDTO createPaymentInternal(SupplierPaymentCreateDTO dto, Long userId) {
         if (dto.getSupplierId() == null || dto.getSupplierId() <= 0) {
             bad("Vui lòng chọn nhà cung cấp.");
@@ -583,6 +701,10 @@ public class SupplierPaymentServiceImpl implements SupplierPaymentService {
         return toDTO(saved != null ? saved : payment);
     }
 
+    /**
+     * Sinh mã phiếu thanh toán duy nhất theo định dạng {@code PC<số tăng dần theo timestamp>},
+     * kiểm tra vòng lặp {@link SupplierPaymentRepository#existsByPaymentCode} để đảm bảo không trùng trong DB.
+     */
     private String generateUniquePaymentCode() {
         String code;
         do {
@@ -592,6 +714,11 @@ public class SupplierPaymentServiceImpl implements SupplierPaymentService {
         return code;
     }
 
+    /**
+     * Tìm hồ sơ nhân viên ({@link StaffProfile}) gắn với {@code userId} để ghi nhận người lập phiếu chi ({@code paidBy}).
+     * Nếu chưa có hồ sơ và người dùng là Admin, tự động khởi tạo một {@link StaffProfile} quản trị viên tương ứng;
+     * nếu không phải Admin thì ném HTTP {@code 400 Bad Request}.
+     */
     private StaffProfile resolveOrCreateStaffProfile(Long userId) {
         return staffRepository.findByUser_UserId(userId).orElseGet(() -> {
             if (!accessService.isAdmin(userId)) {
@@ -613,6 +740,9 @@ public class SupplierPaymentServiceImpl implements SupplierPaymentService {
         });
     }
 
+    /**
+     * Ánh xạ entity {@link SupplierPayment} (đã fetch sẵn branch, supplier, receipt, paidBy) sang {@link SupplierPaymentResponseDTO}.
+     */
     private SupplierPaymentResponseDTO toDTO(SupplierPayment sp) {
         SupplierPaymentResponseDTO dto = new SupplierPaymentResponseDTO();
         dto.setSupplierPaymentId(sp.getSupplierPaymentId());
@@ -637,10 +767,16 @@ public class SupplierPaymentServiceImpl implements SupplierPaymentService {
         return dto;
     }
 
+    /**
+     * [Hàm hỗ trợ]: Cắt khoảng trắng đầu cuối chuỗi đầu vào và trả về null nếu chuỗi rỗng hoặc toàn khoảng trắng.
+     */
     private static String trimToNull(String s) {
         return s == null || s.isBlank() ? null : s.trim();
     }
 
+    /**
+     * [Hàm hỗ trợ]: Ném ResponseStatusException với mã 400 BAD_REQUEST và thông điệp lỗi truyền vào.
+     */
     private static void bad(String message) {
         throw new ResponseStatusException(HttpStatus.BAD_REQUEST, message);
     }

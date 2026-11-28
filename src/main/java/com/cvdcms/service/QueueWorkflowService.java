@@ -223,7 +223,24 @@ public class QueueWorkflowService {
                         && (t.getVisit().getStatus() == VisitStatus.WAITING || t.getVisit().getStatus() == VisitStatus.WAITING_RESULT))
                 .limit(5).map(QueueTicket::getDisplayNumber).toList();
         List<PublicQueueRow> queueList = buildPublicQueueList(all);
-        return new PublicBoard(branch.getBranchName(), called, serving, next, waiting, queueList, System.currentTimeMillis());
+        long nowMs = System.currentTimeMillis();
+        List<ChairTurnoverItem> cleaningChairs = chairs.findByBranchBranchIdOrderByChairCode(branchId).stream()
+                .filter(c -> c.getStatus() == ChairStatus.TURNOVER)
+                .map(c -> {
+                    long startedMs = c.getTurnoverStartedAt() != null
+                            ? c.getTurnoverStartedAt().atZone(ZONE).toInstant().toEpochMilli()
+                            : nowMs;
+                    int durMin = c.getTurnoverDurationMinutes() != null && c.getTurnoverDurationMinutes() > 0
+                            ? c.getTurnoverDurationMinutes()
+                            : 5;
+                    long elapsedSec = Math.max(0L, (nowMs - startedMs) / 1000L);
+                    long totalSec = durMin * 60L;
+                    long remSec = Math.max(0L, totalSec - elapsedSec);
+                    String rName = c.getRoom() != null ? c.getRoom().getRoomName() : "";
+                    return new ChairTurnoverItem(c.getChairId(), c.getChairName(), rName, startedMs, durMin, remSec, elapsedSec >= totalSec);
+                })
+                .toList();
+        return new PublicBoard(branch.getBranchName(), called, serving, next, waiting, queueList, nowMs, cleaningChairs);
     }
 
     @Transactional(readOnly = true)
@@ -293,8 +310,8 @@ public class QueueWorkflowService {
             String rawChair = cId != null ? chairLookup.getOrDefault(cId, "Ghế " + cId) : "";
 
             boolean isCallingOrExam = (t.getStatus() == QueueStatus.CALLED || t.getStatus() == QueueStatus.IN_SERVICE);
-            String displayRoom = (isCallingOrExam && !rawRoom.isEmpty()) ? rawRoom : "Chưa phân công";
-            String displayChair = (isCallingOrExam && !rawChair.isEmpty()) ? rawChair : "Chưa phân công";
+            String displayRoom = !rawRoom.isEmpty() ? rawRoom : "Chưa phân công";
+            String displayChair = !rawChair.isEmpty() ? rawChair : "Chưa phân công";
             String rawPatientName = (t.getVisit() != null && t.getVisit().getPatientProfile() != null
                     && t.getVisit().getPatientProfile().getFullName() != null
                     && !t.getVisit().getPatientProfile().getFullName().isBlank())
@@ -310,19 +327,28 @@ public class QueueWorkflowService {
                     : null;
             Long bookedDoctorId = null;
             String bookedDoctorName = null;
+            Appointment linkedAppt = null;
             if (appointmentRepository != null && t.getVisit() != null && t.getVisit().getAppointmentId() != null) {
                 var apptOpt = appointmentRepository.findById(t.getVisit().getAppointmentId());
-                if (apptOpt.isPresent()
-                        && Boolean.TRUE.equals(apptOpt.get().getIsDoctorRequested())
-                        && apptOpt.get().getDoctor() != null) {
-                    bookedDoctorId = apptOpt.get().getDoctor().getStaffId();
-                    bookedDoctorName = apptOpt.get().getDoctor().getFullName();
+                if (apptOpt.isPresent()) {
+                    linkedAppt = apptOpt.get();
+                    if (Boolean.TRUE.equals(linkedAppt.getIsDoctorRequested()) && linkedAppt.getDoctor() != null) {
+                        bookedDoctorId = linkedAppt.getDoctor().getStaffId();
+                        bookedDoctorName = linkedAppt.getDoctor().getFullName();
+                    }
                 }
             }
             String doctorAssignmentType;
             String doctorStatusLabel;
             String doctorDisplay;
-            if (bookedDoctorId != null && bookedDoctorName != null && !bookedDoctorName.isBlank()) {
+            boolean isHandover = t.getPriorityReason() != null && t.getPriorityReason().startsWith("HANDOVER:");
+            if (isHandover && primaryDoctorName != null) {
+                doctorAssignmentType = "HANDOVER_DOCTOR";
+                doctorStatusLabel = t.getStatus() == QueueStatus.IN_SERVICE
+                        ? "Đang khám (Chuyển BS)"
+                        : (t.getStatus() == QueueStatus.CALLED ? "Đang gọi (Chuyển BS)" : "Chờ chuyển BS");
+                doctorDisplay = primaryDoctorName;
+            } else if (bookedDoctorId != null && bookedDoctorName != null && !bookedDoctorName.isBlank()) {
                 if (!isCallingOrExam || Objects.equals(bookedDoctorId, primaryDoctorId) || primaryDoctorId == null) {
                     doctorAssignmentType = "BOOKED_DOCTOR";
                     doctorStatusLabel = "Đã đặt bác sĩ";
@@ -332,9 +358,9 @@ public class QueueWorkflowService {
                     doctorStatusLabel = "Đã được phân bổ";
                     doctorDisplay = primaryDoctorName != null ? primaryDoctorName : bookedDoctorName.trim();
                 }
-            } else if (isCallingOrExam && primaryDoctorName != null) {
+            } else if (primaryDoctorName != null) {
                 doctorAssignmentType = "ASSIGNED_DOCTOR";
-                doctorStatusLabel = "Đã được phân bổ";
+                doctorStatusLabel = isCallingOrExam ? "Đã được phân bổ" : "Đã chỉ định BS";
                 doctorDisplay = primaryDoctorName;
             } else if (t.getVisit() != null && t.getVisit().getNotes() != null
                     && t.getVisit().getNotes().contains("Chờ")) {
@@ -347,6 +373,10 @@ public class QueueWorkflowService {
                 doctorDisplay = "Chưa phân công";
             }
 
+            ServicePhaseProgress phaseProgress = t.getStatus() == QueueStatus.IN_SERVICE
+                    ? computePhaseProgress(t, linkedAppt)
+                    : null;
+
             rows.add(new PublicQueueRow(
                     idx,
                     t.getDisplayNumber(),
@@ -357,7 +387,8 @@ public class QueueWorkflowService {
                     rawPatientName,
                     doctorDisplay,
                     doctorAssignmentType,
-                    doctorStatusLabel
+                    doctorStatusLabel,
+                    phaseProgress
             ));
         }
         return rows;
@@ -504,9 +535,18 @@ public class QueueWorkflowService {
                         .map(b -> Boolean.TRUE.equals(b.getResourceEngineEnabled()))
                         .orElse(false);
                 if (visit.getChairId() != null) {
+                    int turnMin = resolveTurnoverMinutes(visit);
                     chairs.findById(visit.getChairId()).ifPresent(chair -> {
                         if (chair.getStatus() == ChairStatus.IN_USE) {
-                            chair.setStatus(engineEnabled ? ChairStatus.TURNOVER : ChairStatus.AVAILABLE);
+                            if (engineEnabled || turnMin > 0) {
+                                chair.setStatus(ChairStatus.TURNOVER);
+                                chair.setTurnoverStartedAt(doneNow);
+                                chair.setTurnoverDurationMinutes(turnMin > 0 ? turnMin : 5);
+                            } else {
+                                chair.setStatus(ChairStatus.AVAILABLE);
+                                chair.setTurnoverStartedAt(null);
+                                chair.setTurnoverDurationMinutes(null);
+                            }
                             chairs.save(chair);
                         }
                     });
@@ -552,6 +592,11 @@ public class QueueWorkflowService {
         require(scope.permits(branchId), "Không có quyền thao tác ghế tại chi nhánh này.");
         if (resourceBookingTransactionService != null) {
             resourceBookingTransactionService.completeChairTurnover(chairId, appointmentId, LocalDateTime.now(ZONE));
+            chairs.findById(chairId).ifPresent(c -> {
+                c.setTurnoverStartedAt(null);
+                c.setTurnoverDurationMinutes(null);
+                chairs.save(c);
+            });
         } else if (chair.getStatus() == ChairStatus.TURNOVER) {
             chair.setStatus(ChairStatus.AVAILABLE);
             chairs.save(chair);
@@ -703,16 +748,167 @@ public class QueueWorkflowService {
             this(null, number, room, chair, null, null);
         }
     }
+    public record ServicePhaseProgress(
+            long actualStartTimeEpochMs,
+            String currentPhase,
+            String currentPhaseLabel,
+            long phaseStartTimeEpochMs,
+            long phaseEndTimeEpochMs,
+            long phaseRemainingSeconds,
+            long totalRemainingSeconds,
+            long elapsedSeconds,
+            long totalDurationSeconds,
+            long overtimeSeconds,
+            int prepMinutes,
+            int examMinutes,
+            int cleaningMinutes,
+            boolean hasPrep,
+            boolean hasCleaning,
+            boolean overtime,
+            int progressPercent
+    ) {}
+
+    public record ChairTurnoverItem(
+            Long chairId,
+            String chairName,
+            String roomName,
+            long startedAtEpochMs,
+            int durationMinutes,
+            long remainingSeconds,
+            boolean overtime
+    ) {}
+
+    private int resolveTurnoverMinutes(Visit visit) {
+        if (visit != null && visit.getAppointmentId() != null && appointmentRepository != null) {
+            var apptOpt = appointmentRepository.findById(visit.getAppointmentId());
+            if (apptOpt.isPresent()) {
+                Appointment appt = apptOpt.get();
+                if (appt.getTurnoverDurationMinutes() != null) {
+                    return Math.max(0, appt.getTurnoverDurationMinutes());
+                }
+                if (appt.getService() != null && appt.getService().getTurnoverDurationMinutes() != null) {
+                    return Math.max(0, appt.getService().getTurnoverDurationMinutes());
+                }
+            }
+        }
+        return 0;
+    }
+
+    private ServicePhaseProgress computePhaseProgress(QueueTicket ticket, Appointment appt) {
+        Visit visit = ticket.getVisit();
+        if (visit == null || visit.getActualStartTime() == null) {
+            return null;
+        }
+        int prepMin = 0;
+        int examMin = 30;
+        int cleanMin = 0;
+        if (appt != null) {
+            if (appt.getPreparationDurationMinutes() != null) {
+                prepMin = Math.max(0, appt.getPreparationDurationMinutes());
+            } else if (appt.getService() != null && appt.getService().getPreparationDurationMinutes() != null) {
+                prepMin = Math.max(0, appt.getService().getPreparationDurationMinutes());
+            }
+            if (appt.getProcedureDurationMinutes() != null && appt.getProcedureDurationMinutes() > 0) {
+                examMin = appt.getProcedureDurationMinutes();
+            } else if (appt.getService() != null && appt.getService().getProcedureDurationMinutes() != null
+                    && appt.getService().getProcedureDurationMinutes() > 0) {
+                examMin = appt.getService().getProcedureDurationMinutes();
+            } else if (appt.getDurationMinutes() != null && appt.getDurationMinutes() > 0) {
+                examMin = appt.getDurationMinutes();
+            } else if (appt.getService() != null && appt.getService().getEstimatedDurationMinutes() != null
+                    && appt.getService().getEstimatedDurationMinutes() > 0) {
+                examMin = appt.getService().getEstimatedDurationMinutes();
+            }
+            if (appt.getTurnoverDurationMinutes() != null) {
+                cleanMin = Math.max(0, appt.getTurnoverDurationMinutes());
+            } else if (appt.getService() != null && appt.getService().getTurnoverDurationMinutes() != null) {
+                cleanMin = Math.max(0, appt.getService().getTurnoverDurationMinutes());
+            }
+        }
+
+        long startMs = visit.getActualStartTime().atZone(ZONE).toInstant().toEpochMilli();
+        long nowMs = System.currentTimeMillis();
+        long elapsedSec = Math.max(0L, (nowMs - startMs) / 1000L);
+        long prepSec = prepMin * 60L;
+        long examSec = examMin * 60L;
+        long cleanSec = cleanMin * 60L;
+        long totalSec = Math.max(1L, prepSec + examSec + cleanSec);
+
+        String phase;
+        String phaseLabel;
+        long phaseStartMs;
+        long phaseEndMs;
+        long phaseRemSec;
+        long overtimeSec = 0L;
+        boolean isOvertime = false;
+
+        if (prepSec > 0 && elapsedSec < prepSec) {
+            phase = "PREP";
+            phaseLabel = "Đang chuẩn bị";
+            phaseStartMs = startMs;
+            phaseEndMs = startMs + prepSec * 1000L;
+            phaseRemSec = prepSec - elapsedSec;
+        } else if (elapsedSec < prepSec + examSec) {
+            phase = "EXAM";
+            phaseLabel = "Đang khám";
+            phaseStartMs = startMs + prepSec * 1000L;
+            phaseEndMs = startMs + (prepSec + examSec) * 1000L;
+            phaseRemSec = (prepSec + examSec) - elapsedSec;
+        } else if (cleanSec > 0 && elapsedSec < totalSec) {
+            phase = "CLEANING";
+            phaseLabel = "Đang vệ sinh";
+            phaseStartMs = startMs + (prepSec + examSec) * 1000L;
+            phaseEndMs = startMs + totalSec * 1000L;
+            phaseRemSec = totalSec - elapsedSec;
+        } else {
+            phase = "OVERTIME";
+            phaseLabel = "Đã vượt thời gian dự kiến";
+            phaseStartMs = startMs + totalSec * 1000L;
+            phaseEndMs = phaseStartMs;
+            phaseRemSec = 0L;
+            overtimeSec = Math.max(0L, elapsedSec - totalSec);
+            isOvertime = true;
+        }
+
+        long totalRemSec = Math.max(0L, totalSec - elapsedSec);
+        int pct = (int) Math.min(100L, Math.round((elapsedSec * 100.0d) / totalSec));
+
+        return new ServicePhaseProgress(
+                startMs,
+                phase,
+                phaseLabel,
+                phaseStartMs,
+                phaseEndMs,
+                phaseRemSec,
+                totalRemSec,
+                elapsedSec,
+                totalSec,
+                overtimeSec,
+                prepMin,
+                examMin,
+                cleanMin,
+                prepMin > 0,
+                cleanMin > 0,
+                isOvertime,
+                pct
+        );
+    }
+
     public record PublicBoard(String branch, List<PublicNumber> called, List<PublicNumber> serving,
                               List<String> next, long waiting, List<PublicQueueRow> queueList,
-                              long serverNowEpochMs) {
+                              long serverNowEpochMs, List<ChairTurnoverItem> cleaningChairs) {
         public PublicBoard(String branch, List<PublicNumber> called, List<PublicNumber> serving,
                            List<String> next, long waiting) {
-            this(branch, called, serving, next, waiting, List.of(), System.currentTimeMillis());
+            this(branch, called, serving, next, waiting, List.of(), System.currentTimeMillis(), List.of());
         }
         public PublicBoard(String branch, List<PublicNumber> called, List<PublicNumber> serving,
                            List<String> next, long waiting, List<PublicQueueRow> queueList) {
-            this(branch, called, serving, next, waiting, queueList, System.currentTimeMillis());
+            this(branch, called, serving, next, waiting, queueList, System.currentTimeMillis(), List.of());
+        }
+        public PublicBoard(String branch, List<PublicNumber> called, List<PublicNumber> serving,
+                           List<String> next, long waiting, List<PublicQueueRow> queueList,
+                           long serverNowEpochMs) {
+            this(branch, called, serving, next, waiting, queueList, serverNowEpochMs, List.of());
         }
     }
     public record PublicQueueRow(
@@ -725,8 +921,25 @@ public class QueueWorkflowService {
             String patientFullName,
             String doctorDisplay,
             String doctorAssignmentType,
-            String doctorStatusLabel
+            String doctorStatusLabel,
+            ServicePhaseProgress phaseProgress
     ) {
+        public PublicQueueRow(
+                int stt,
+                String ticketNumber,
+                String roomName,
+                String chairName,
+                String status,
+                boolean isCallingOrExam,
+                String patientFullName,
+                String doctorDisplay,
+                String doctorAssignmentType,
+                String doctorStatusLabel
+        ) {
+            this(stt, ticketNumber, roomName, chairName, status, isCallingOrExam,
+                    patientFullName, doctorDisplay, doctorAssignmentType, doctorStatusLabel, null);
+        }
+
         public PublicQueueRow(
                 int stt,
                 String ticketNumber,
@@ -738,7 +951,7 @@ public class QueueWorkflowService {
                 String doctorDisplay
         ) {
             this(stt, ticketNumber, roomName, chairName, status, isCallingOrExam,
-                    patientFullName, doctorDisplay, "ASSIGNED_DOCTOR", "Đã được phân bổ");
+                    patientFullName, doctorDisplay, "ASSIGNED_DOCTOR", "Đã được phân bổ", null);
         }
 
         public PublicQueueRow(
@@ -750,7 +963,7 @@ public class QueueWorkflowService {
                 boolean isCallingOrExam
         ) {
             this(stt, ticketNumber, roomName, chairName, status, isCallingOrExam,
-                    "—", "Chưa chỉ định", "UNSPECIFIED", "Chưa chỉ định");
+                    "—", "Chưa chỉ định", "UNSPECIFIED", "Chưa chỉ định", null);
         }
     }
 }

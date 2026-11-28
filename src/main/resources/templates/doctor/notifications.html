@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+
+<head th:replace="~{fragments/head :: head('Thông báo bác sĩ - DentalFlow')}"></head>
+
+<body class="app-body">
+    <div class="app-shell">
+        <aside th:replace="~{fragments/sidebar :: sidebar('doctor-notifications')}"></aside>
+        <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
+
+        <div class="app-main">
+            <header th:replace="~{fragments/header :: appTopbar('Thông báo bác sĩ')}"></header>
+
+            <main class="app-content p-3 p-md-4" style="background: #f1f5f9 !important; min-height: calc(100vh - 64px); font-family: 'Roboto', 'Be Vietnam Pro', sans-serif;">
+                <style>
+                    .dn-toolbar-card {
+                        background: #ffffff;
+                        border: 1px solid #e2e8f0;
+                        border-radius: 16px;
+                        padding: 14px 18px;
+                        box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+                    }
+                    .dn-list-card {
+                        background: #ffffff;
+                        border: 1px solid #e2e8f0;
+                        border-radius: 16px;
+                        overflow: hidden;
+                        box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+                    }
+                    .dn-item {
+                        display: flex;
+                        align-items: flex-start;
+                        gap: 14px;
+                        padding: 14px 18px;
+                        border-bottom: 1px solid #f1f5f9;
+                        background: #ffffff;
+                        transition: background-color 0.15s ease;
+                        cursor: pointer;
+                    }
+                    .dn-item:last-child {
+                        border-bottom: none;
+                    }
+                    .dn-item:hover {
+                        background: #f8fafc;
+                    }
+                    .dn-item.is-unread {
+                        background: #f0f9ff;
+                    }
+                    .dn-item.is-unread:hover {
+                        background: #e0f2fe;
+                    }
+                    .dn-icon {
+                        width: 40px;
+                        height: 40px;
+                        border-radius: 12px;
+                        display: inline-flex;
+                        align-items: center;
+                        justify-content: center;
+                        font-size: 17px;
+                        flex-shrink: 0;
+                    }
+                    .dn-cat-btn {
+                        border: 1px solid #e2e8f0;
+                        background: #ffffff;
+                        color: #475569;
+                        border-radius: 999px;
+                        padding: 6px 13px;
+                        font-size: 13px;
+                        font-weight: 600;
+                        transition: all 0.15s ease;
+                    }
+                    .dn-cat-btn:hover {
+                        border-color: #38bdf8;
+                        color: #0284c7;
+                    }
+                    .dn-cat-btn.active {
+                        background: #0284c7;
+                        border-color: #0284c7;
+                        color: #ffffff;
+                    }
+                    .dn-dot-unread {
+                        width: 9px;
+                        height: 9px;
+                        border-radius: 50%;
+                        background: #0284c7;
+                        display: inline-block;
+                        flex-shrink: 0;
+                    }
+                </style>
+
+                <div class="container-fluid px-0" style="max-width: 1120px;">
+                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+                        <div>
+                            <h1 class="h5 fw-bold text-dark mb-1">Thông báo của bác sĩ</h1>
+                            <div class="small text-secondary">
+                                Ca chuyển BS, kết quả X-Quang / xét nghiệm ngoài viện, ca CSKH cần hỗ trợ và lịch trực.
+                            </div>
+                        </div>
+                        <button type="button" id="dnMarkAllBtn" class="btn btn-primary rounded-pill px-4 py-2 fw-semibold d-inline-flex align-items-center gap-2 text-nowrap"
+                                style="background: #0284c7; border-color: #0284c7; font-size: 13.5px;"
+                                onclick="markAllDoctorNotificationsRead()">
+                            <i class="bi bi-check2-all"></i>
+                            <span>Đánh dấu tất cả đã đọc</span>
+                        </button>
+                    </div>
+
+                    <div class="dn-toolbar-card mb-3">
+                        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+                            <div class="d-flex flex-wrap align-items-center gap-2" id="dnCategoryTabs">
+                                <button type="button" class="dn-cat-btn active" data-cat="ALL" onclick="selectCategory('ALL')">Tất cả <span id="cnt-ALL" class="ms-1 opacity-75">0</span></button>
+                                <button type="button" class="dn-cat-btn" data-cat="HANDOVER" onclick="selectCategory('HANDOVER')">Chuyển BS <span id="cnt-HANDOVER" class="ms-1 opacity-75">0</span></button>
+                                <button type="button" class="dn-cat-btn" data-cat="LAB_RESULT" onclick="selectCategory('LAB_RESULT')">CLS &amp; X-Quang <span id="cnt-LAB_RESULT" class="ms-1 opacity-75">0</span></button>
+                                <button type="button" class="dn-cat-btn" data-cat="CUSTOMER_CARE" onclick="selectCategory('CUSTOMER_CARE')">CSKH hỗ trợ <span id="cnt-CUSTOMER_CARE" class="ms-1 opacity-75">0</span></button>
+                                <button type="button" class="dn-cat-btn" data-cat="LEAVE_APPROVAL" onclick="selectCategory('LEAVE_APPROVAL')">Nghỉ phép <span id="cnt-LEAVE_APPROVAL" class="ms-1 opacity-75">0</span></button>
+                            </div>
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="form-check form-switch mb-0 d-inline-flex align-items-center gap-2 ps-0">
+                                    <input class="form-check-input ms-0 mt-0" type="checkbox" role="switch" id="dnUnreadOnlySwitch" onchange="loadDoctorNotifications()" style="cursor: pointer;">
+                                    <label class="form-check-label small fw-semibold text-dark mb-0" for="dnUnreadOnlySwitch" style="cursor: pointer;">Chỉ hiện chưa đọc</label>
+                                </div>
+                                <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-1 fw-semibold d-inline-flex align-items-center gap-1"
+                                        onclick="loadDoctorNotifications()">
+                                    <i class="bi bi-arrow-clockwise"></i><span>Làm mới</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="dn-list-card" id="dnListContainer">
+                        <div class="p-5 text-center text-muted small">Đang tải thông báo...</div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let currentCategory = 'ALL';
+
+        function esc(str) {
+            if (str === null || str === undefined) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function csrfHeaders() {
+            const h = { 'Accept': 'application/json', 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' };
+            const t = document.querySelector('meta[name="_csrf"]')?.getAttribute('content');
+            const n = document.querySelector('meta[name="_csrf_header"]')?.getAttribute('content');
+            if (t && n) h[n] = t;
+            return h;
+        }
+
+        function iconMeta(cat) {
+            switch (cat) {
+                case 'HANDOVER': return { icon: 'bi-arrow-left-right', bg: '#e0f2fe', color: '#0284c7' };
+                case 'LAB_RESULT': return { icon: 'bi-file-earmark-medical', bg: '#dcfce7', color: '#15803d' };
+                case 'CUSTOMER_CARE': return { icon: 'bi-headset', bg: '#fef3c7', color: '#b45309' };
+                case 'LEAVE_APPROVAL': return { icon: 'bi-calendar2-check', bg: '#ede9fe', color: '#6d28d9' };
+                default: return { icon: 'bi-bell', bg: '#f1f5f9', color: '#475569' };
+            }
+        }
+
+        function selectCategory(cat) {
+            currentCategory = cat || 'ALL';
+            document.querySelectorAll('#dnCategoryTabs .dn-cat-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.cat === currentCategory);
+            });
+            loadDoctorNotifications();
+        }
+
+        async function loadDoctorNotifications() {
+            const unreadOnly = Boolean(document.getElementById('dnUnreadOnlySwitch')?.checked);
+            const url = `/api/doctor/notifications?category=${encodeURIComponent(currentCategory)}&unreadOnly=${unreadOnly}&limit=50`;
+            const container = document.getElementById('dnListContainer');
+            try {
+                const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+                if (!res.ok) throw new Error('Không thể tải thông báo');
+                const data = await res.json();
+
+                if (window.DFDoctorNotif) {
+                    window.DFDoctorNotif.setBadgeCount(data.unreadCount);
+                }
+
+                const counts = data.categoryCounts || {};
+                Object.keys(counts).forEach(k => {
+                    const el = document.getElementById('cnt-' + k);
+                    if (el) el.textContent = counts[k];
+                });
+
+                const items = Array.isArray(data.notifications) ? data.notifications : [];
+                if (items.length === 0) {
+                    container.innerHTML = `
+                        <div class="p-5 text-center">
+                            <div class="text-secondary mb-2" style="font-size: 32px;"><i class="bi bi-bell-slash"></i></div>
+                            <div class="fw-bold text-dark mb-1">Không có thông báo nào</div>
+                            <div class="small text-muted">${unreadOnly ? 'Bạn đã đọc hết các thông báo trong mục này.' : 'Khi có ca chuyển BS hoặc kết quả mới, thông báo sẽ hiện tại đây.'}</div>
+                        </div>`;
+                    return;
+                }
+
+                container.innerHTML = items.map(n => {
+                    const meta = iconMeta(n.category);
+                    const highBadge = n.priorityLevel === 'HIGH'
+                        ? '<span class="badge bg-danger-subtle text-danger border border-danger-subtle ms-1" style="font-size:11px;">Ưu tiên</span>'
+                        : '';
+                    const openBtn = n.actionUrl
+                        ? `<a href="${esc(n.actionUrl)}" class="btn btn-sm btn-outline-primary rounded-pill px-3 py-1 fw-semibold text-nowrap" onclick="event.stopPropagation(); markAndNavigate(event, ${Number(n.notificationId)}, '${esc(n.actionUrl)}')">Mở ngay</a>`
+                        : '';
+                    return `
+                        <div class="dn-item ${n.isRead ? '' : 'is-unread'}" onclick="markDoctorNotificationRead(${Number(n.notificationId)}, null)">
+                            <div class="dn-icon" style="background:${meta.bg};color:${meta.color};">
+                                <i class="bi ${meta.icon}"></i>
+                            </div>
+                            <div class="flex-grow-1" style="min-width: 0;">
+                                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-1">
+                                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                                        ${n.isRead ? '' : '<span class="dn-dot-unread" title="Chưa đọc"></span>'}
+                                        <span class="fw-bold text-dark" style="font-size: 14px;">${esc(n.title)}</span>
+                                        <span class="badge bg-light text-secondary border" style="font-size: 11px;">${esc(n.typeLabel || '')}</span>
+                                        ${highBadge}
+                                    </div>
+                                    <span class="small text-muted text-nowrap" title="${esc(n.createdAtText)}">${esc(n.relativeTime || n.createdAtText)}</span>
+                                </div>
+                                <div class="small text-secondary" style="line-height: 1.5;">${esc(n.message)}</div>
+                            </div>
+                            <div class="d-flex align-items-center gap-2 flex-shrink-0">
+                                ${openBtn}
+                            </div>
+                        </div>`;
+                }).join('');
+            } catch (err) {
+                container.innerHTML = `<div class="p-4 text-center text-danger small">${esc(err.message)}</div>`;
+            }
+        }
+
+        async function markDoctorNotificationRead(id, redirectUrl) {
+            try {
+                const res = await fetch(`/api/doctor/notifications/${encodeURIComponent(id)}/read`, {
+                    method: 'POST',
+                    headers: csrfHeaders()
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    if (window.DFDoctorNotif) window.DFDoctorNotif.setBadgeCount(data.unreadCount);
+                }
+            } catch (e) {}
+            if (redirectUrl) {
+                window.location.href = redirectUrl;
+            } else {
+                loadDoctorNotifications();
+            }
+        }
+
+        function markAndNavigate(ev, id, url) {
+            ev.preventDefault();
+            markDoctorNotificationRead(id, url);
+        }
+
+        async function markAllDoctorNotificationsRead() {
+            try {
+                const res = await fetch('/api/doctor/notifications/read-all', {
+                    method: 'POST',
+                    headers: csrfHeaders()
+                });
+                if (res.ok) {
+                    if (window.DFDoctorNotif) window.DFDoctorNotif.setBadgeCount(0);
+                    loadDoctorNotifications();
+                }
+            } catch (e) {}
+        }
+
+        document.addEventListener('DOMContentLoaded', loadDoctorNotifications);
+    </script>
+</body>
+</html>

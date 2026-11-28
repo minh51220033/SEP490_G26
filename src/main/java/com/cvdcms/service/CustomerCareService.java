@@ -53,6 +53,26 @@ public interface CustomerCareService {
             Long userId
     );
 
+    /**
+     * Tìm kiếm, lọc và phân trang danh sách công việc CSKH phiên bản mở rộng (hỗ trợ đầy đủ bộ lọc Today/Overdue,
+     * nhóm CSKH, trạng thái phản hồi bác sĩ và chế độ "Công việc của tôi").
+     *
+     * @param branchId             ID chi nhánh cần lọc (null để lấy theo phạm vi quyền)
+     * @param tabGroup             Nhóm tab: ACTIONABLE (cần xử lý), COMPLETED (đã xong) hoặc ALL
+     * @param status               Lọc theo trạng thái cụ thể (PENDING, IN_PROGRESS, ESCALATED_TO_DOCTOR, COMPLETED, CANCELLED)
+     * @param assignedStaffId      ID nhân viên CSKH phụ trách
+     * @param escalatedToDoctorId  ID bác sĩ tiếp nhận hỗ trợ chuyên môn
+     * @param fromDate             Ngày hạn từ
+     * @param toDate               Ngày hạn đến
+     * @param keyword              Từ khóa tìm kiếm (mã task, tên/mã/SĐT bệnh nhân, ghi chú...)
+     * @param dueFilter            Lọc theo hạn xử lý (TODAY, OVERDUE, UPCOMING...)
+     * @param careGroupFilter      Lọc theo nhóm chăm sóc (POST_TREATMENT_FOLLOWUP, PAYMENT_REMINDER, DOCTOR_LEAVE_RESCHEDULE...)
+     * @param doctorResponseFilter Lọc theo tình trạng phản hồi bác sĩ (WAITING_DOCTOR, RESPONDED...)
+     * @param myTasksOnly          Chỉ lấy công việc gắn với nhân viên/bác sĩ hiện tại
+     * @param pageable             Thông tin phân trang
+     * @param userId               ID tài khoản đang đăng nhập
+     * @return Trang dữ liệu {@link CustomerCareTaskDTO}
+     */
     Page<CustomerCareTaskDTO> searchTasks(
             Long branchId,
             String tabGroup,
@@ -70,6 +90,9 @@ public interface CustomerCareService {
             Long userId
     );
 
+    /**
+     * Lấy danh sách công việc CSKH trong khoảng ngày {@code startDate..endDate} phục vụ chế độ xem Lịch (Calendar).
+     */
     List<CustomerCareTaskDTO> getCalendarTasks(
             Long branchId,
             LocalDate startDate,

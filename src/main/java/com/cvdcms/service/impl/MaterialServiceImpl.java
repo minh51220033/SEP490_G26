@@ -19,9 +19,16 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
+/**
+ * Triển khai nghiệp vụ quản lý Danh mục vật tư nha khoa ({@link MaterialService}).
+ * <p>Đảm bảo chuẩn hóa mã vật tư (chữ hoa), chống trùng mã, bảo toàn tính nhất quán với danh mục thuốc đồng bộ
+ * ({@code material.getMedication()}) và cung cấp bộ nhóm vật tư mặc định cho giao diện.</p>
+ * <p>Được gọi từ {@link com.cvdcms.controller.MaterialController}.</p>
+ */
 @Service
 public class MaterialServiceImpl implements MaterialService {
 
+    /** Danh sách các nhóm vật tư nha khoa mặc định luôn hiển thị trong bộ lọc và dropdown chọn nhóm. */
     private static final List<String> DEFAULT_CATEGORIES = List.of(
             "Trám răng",
             "Chỉnh nha",
@@ -35,10 +42,14 @@ public class MaterialServiceImpl implements MaterialService {
 
     private final MaterialRepository materialRepository;
 
+    /** Khởi tạo service với repository danh mục vật tư. */
     public MaterialServiceImpl(MaterialRepository materialRepository) {
         this.materialRepository = materialRepository;
     }
 
+    /**
+     * Chuẩn hóa từ khóa/nhóm vật tư và gọi {@link MaterialRepository#searchMaterials} để phân trang danh mục.
+     */
     @Override
     @Transactional(readOnly = true)
     public Page<Material> search(
@@ -58,12 +69,17 @@ public class MaterialServiceImpl implements MaterialService {
         );
     }
 
+    /** Trả về danh sách vật tư đang hoạt động ({@code isActive = true}) sắp theo tên A–Z. */
     @Override
     @Transactional(readOnly = true)
     public List<Material> listActive() {
         return materialRepository.findByIsActiveTrueOrderByMaterialNameAsc();
     }
 
+    /**
+     * Tổng hợp số lượng vật tư (tổng và đang hoạt động) theo từng nhóm từ CSDL,
+     * sau đó gộp thêm {@link #DEFAULT_CATEGORIES} nếu nhóm mặc định chưa có dữ liệu.
+     */
     @Override
     @Transactional(readOnly = true)
     public List<MaterialCategoryDTO> getCategories() {
@@ -86,6 +102,9 @@ public class MaterialServiceImpl implements MaterialService {
         return new ArrayList<>(map.values());
     }
 
+    /**
+     * Đổi tên nhóm vật tư hàng loạt (so khớp không phân biệt hoa thường) cho tất cả vật tư thuộc {@code oldCategory}.
+     */
     @Override
     @Transactional
     public int renameCategory(String oldCategory, String newCategory) {
@@ -104,6 +123,7 @@ public class MaterialServiceImpl implements MaterialService {
         return updated;
     }
 
+    /** Tra cứu chi tiết vật tư theo {@code id}; báo lỗi nếu {@code id <= 0} hoặc không tồn tại. */
     @Override
     @Transactional(readOnly = true)
     public Material getById(Long id) {
@@ -114,6 +134,10 @@ public class MaterialServiceImpl implements MaterialService {
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy vật tư."));
     }
 
+    /**
+     * Tạo mới vật tư: chuẩn hóa mã chữ hoa, kiểm tra không trùng mã, chuẩn hóa tên/nhóm/đơn vị/ngưỡng tối thiểu
+     * và đặt mặc định {@code isActive = true}.
+     */
     @Override
     @Transactional
     public Material create(MaterialCreateDTO dto) {
@@ -137,6 +161,10 @@ public class MaterialServiceImpl implements MaterialService {
         return materialRepository.save(material);
     }
 
+    /**
+     * Cập nhật vật tư: chặn sửa mã/tên/đơn vị nếu mặt hàng được đồng bộ từ danh mục thuốc ({@code medication != null}),
+     * kiểm tra trùng mã với vật tư khác và lưu thông tin mới.
+     */
     @Override
     @Transactional
     public Material update(Long id, MaterialUpdateDTO dto) {
@@ -172,6 +200,7 @@ public class MaterialServiceImpl implements MaterialService {
         return materialRepository.save(material);
     }
 
+    /** Chuyển trạng thái vật tư sang ngừng sử dụng ({@code isActive = false}); báo lỗi nếu đã ngừng trước đó. */
     @Override
     @Transactional
     public Material deactivate(Long id) {
@@ -183,6 +212,10 @@ public class MaterialServiceImpl implements MaterialService {
         return materialRepository.save(material);
     }
 
+    /**
+     * Kích hoạt lại vật tư ({@code isActive = true}).
+     * Nếu vật tư liên kết với danh mục thuốc và thuốc gốc đang ngừng sử dụng, từ chối kích hoạt để giữ nhất quán dữ liệu.
+     */
     @Override
     @Transactional
     public Material activate(Long id) {
@@ -199,6 +232,7 @@ public class MaterialServiceImpl implements MaterialService {
         return materialRepository.save(material);
     }
 
+    /** Chuẩn hóa mã vật tư: cắt khoảng trắng và chuyển sang chữ in hoa; báo lỗi nếu rỗng. */
     private String normalizeCode(String code) {
         if (code == null || code.isBlank()) {
             throw new IllegalArgumentException("Mã vật tư không được để trống.");
@@ -206,6 +240,7 @@ public class MaterialServiceImpl implements MaterialService {
         return code.trim().toUpperCase(Locale.ROOT);
     }
 
+    /** Chuẩn hóa trường văn bản bắt buộc: cắt khoảng trắng đầu cuối và gộp nhiều khoảng trắng liên tiếp thành 1. */
     private String normalizeRequired(String value, String fieldName) {
         if (value == null || value.isBlank()) {
             throw new IllegalArgumentException(fieldName + " không được để trống.");
@@ -213,6 +248,7 @@ public class MaterialServiceImpl implements MaterialService {
         return value.trim().replaceAll("\\s+", " ");
     }
 
+    /** Chuẩn hóa ngưỡng tồn tối thiểu: mặc định {@code 10.000} nếu null, không cho phép âm, làm tròn 3 chữ số thập phân. */
     private BigDecimal normalizeThreshold(BigDecimal value) {
         if (value == null) {
             return new BigDecimal("10.000");

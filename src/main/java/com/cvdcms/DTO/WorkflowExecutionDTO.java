@@ -45,11 +45,16 @@ public class WorkflowExecutionDTO {
     // Liên kết Kế hoạch điều trị & ca nhiều buổi
     private Long planItemId;
     private Long planStageId;
+    private Integer planStageOrder;
+    private String planStageName;
     private String planCode;
     private String planName;
     private String toothNumbers;
     private Boolean continuedFromOtherVisit;
     private Boolean canDelete;
+    private Boolean canCurrentDoctorPerform;
+    private String capabilityReason;
+    private Boolean requiresHandover;
 
     @Builder.Default
     private List<WorkflowStepDTO> steps = new ArrayList<>();

@@ -140,8 +140,11 @@ public class PublicBookingRestController {
         private String phoneNumber;
         private String note;
         private String requestKey;
+        private Boolean confirmOverlap;
     }
 
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.cvdcms.service.AppointmentOverlapService appointmentOverlapService;
     /**
      * Trả ngữ cảnh đặt lịch cho tài khoản đang đăng nhập (danh sách hồ sơ bệnh nhân gia đình thuộc tài khoản).
      * Nếu chưa đăng nhập hoặc là tài khoản nhân sự -> không trả danh sách hồ sơ bệnh nhân.
@@ -296,13 +299,40 @@ public class PublicBookingRestController {
     /**
      * Endpoint lấy danh sách khung giờ 15 phút còn trống cho ca khám dựa theo thời lượng dịch vụ và bác sĩ.
      */
+    @GetMapping("/overlap-check")
+    public ResponseEntity<com.cvdcms.service.AppointmentOverlapService.OverlapCheckResult> checkOverlap(
+            @RequestParam Long branchId,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+            @RequestParam PreferredSession sessionPeriod,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.TIME) LocalTime expectedTime,
+            @RequestParam(required = false) Long doctorId,
+            @RequestParam(required = false) Long serviceId
+    ) {
+        if (appointmentOverlapService == null) {
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).build();
+        }
+        return ResponseEntity.ok(appointmentOverlapService.checkOverlap(
+                branchId, date, sessionPeriod, expectedTime, doctorId, serviceId, null));
+    }
+
+    public ResponseEntity<List<Map<String, Object>>> getAvailableSlots(
+            Long branchId,
+            LocalDate date,
+            PreferredSession sessionPeriod,
+            Long doctorId,
+            Long serviceId
+    ) {
+        return getAvailableSlots(branchId, date, sessionPeriod, doctorId, serviceId, false);
+    }
+
     @GetMapping("/slots")
     public ResponseEntity<List<Map<String, Object>>> getAvailableSlots(
             @RequestParam Long branchId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
             @RequestParam(required = false) PreferredSession sessionPeriod,
             @RequestParam(required = false) Long doctorId,
-            @RequestParam(required = false) Long serviceId
+            @RequestParam(required = false) Long serviceId,
+            @RequestParam(defaultValue = "false") boolean includeOverlap
     ) {
         Branch branch = branchRepository.findById(branchId).filter(b -> Boolean.TRUE.equals(b.getIsActive())).orElse(null);
         if (branch == null) {
@@ -337,6 +367,35 @@ public class PublicBookingRestController {
         List<AppointmentSlotService.Slot> slots = appointmentSlotService.available(
                 branch, date, sessionPeriod, doctorId, duration, null, AppointmentActorType.PATIENT
         );
+
+        if (includeOverlap && sessionPeriod != null && appointmentOverlapService != null) {
+            var range = appointmentPolicyService.sessionRange(branch, sessionPeriod);
+            if (range != null && range.active()) {
+                Map<LocalTime, Integer> freeRemaining = new HashMap<>();
+                slots.forEach(s -> freeRemaining.put(s.time(), s.remaining()));
+                java.time.LocalDateTime nowDt = java.time.LocalDateTime.now(AppointmentPolicyService.CLINIC_ZONE);
+                LocalTime cursor = range.start();
+                while (!cursor.plusMinutes(duration).isAfter(range.end())) {
+                    if (!date.equals(nowDt.toLocalDate()) || cursor.isAfter(nowDt.toLocalTime())) {
+                        var chk = appointmentOverlapService.checkOverlap(
+                                branchId, date, sessionPeriod, cursor, doctorId, service != null ? service.getServiceId() : null, null);
+                        if (chk.validOperatingWindow()) {
+                            Map<String, Object> item = new HashMap<>();
+                            item.put("time", cursor.toString().substring(0, 5));
+                            item.put("endTime", cursor.plusMinutes(duration).toString().substring(0, 5));
+                            item.put("remaining", freeRemaining.getOrDefault(cursor, 0));
+                            resp.add(item);
+                        }
+                    }
+                    LocalTime next = cursor.plusMinutes(15);
+                    if (!next.isAfter(cursor)) break;
+                    cursor = next;
+                }
+                if (!resp.isEmpty()) {
+                    return ResponseEntity.ok(resp);
+                }
+            }
+        }
 
         boolean useResourceEngine = Boolean.TRUE.equals(branch.getResourceEngineEnabled())
                 && service != null && resourceAvailabilityService != null;
@@ -658,18 +717,19 @@ public class PublicBookingRestController {
             return errorResponse(HttpStatus.CONFLICT, "Hồ sơ bệnh nhân đã ngừng hoạt động.");
         }
         try {
+            boolean allowCapacityOverlap = Boolean.TRUE.equals(form.getConfirmOverlap());
             if (transactionManager != null) {
                 TransactionTemplate readTx = new TransactionTemplate(transactionManager);
                 readTx.setReadOnly(true);
                 readTx.executeWithoutResult(status -> appointmentPolicyService.ensureBookable(
                         branch, profile, bookDate, sessionPeriod,
                         doctor != null ? doctor.getStaffId() : null,
-                        null, AppointmentActorType.PATIENT));
+                        null, AppointmentActorType.PATIENT, allowCapacityOverlap));
             } else {
                 appointmentPolicyService.ensureBookable(
                         branch, profile, bookDate, sessionPeriod,
                         doctor != null ? doctor.getStaffId() : null,
-                        null, AppointmentActorType.PATIENT);
+                        null, AppointmentActorType.PATIENT, allowCapacityOverlap);
             }
         } catch (ResponseStatusException ex) {
             return errorResponse(HttpStatus.valueOf(ex.getStatusCode().value()),
@@ -793,6 +853,7 @@ public class PublicBookingRestController {
             }
         }
 
+        boolean allowOverlap = Boolean.TRUE.equals(form.getConfirmOverlap());
         StaffProfile doctor = initialDoctor;
         try {
             appointmentPolicyService.ensureBookable(
@@ -802,7 +863,8 @@ public class PublicBookingRestController {
                     sessionPeriod,
                     doctor != null ? doctor.getStaffId() : null,
                     null,
-                    AppointmentActorType.PATIENT
+                    AppointmentActorType.PATIENT,
+                    allowOverlap
             );
         } catch (ResponseStatusException ex) {
             return errorResponse(HttpStatus.valueOf(ex.getStatusCode().value()),
@@ -822,7 +884,8 @@ public class PublicBookingRestController {
                     durationMinutes,
                     null,
                     requestedSlot,
-                    AppointmentActorType.PATIENT
+                    AppointmentActorType.PATIENT,
+                    allowOverlap
             );
         } catch (ResponseStatusException ex) {
             return errorResponse(HttpStatus.valueOf(ex.getStatusCode().value()),
@@ -834,10 +897,12 @@ public class PublicBookingRestController {
                 doctor = appointmentSlotService.autoAssignDoctorForSlot(
                         branch, bookDate, sessionPeriod, resolvedExpectedTime, durationMinutes, null);
             } catch (ResponseStatusException ex) {
-                return errorResponse(HttpStatus.valueOf(ex.getStatusCode().value()),
-                        ex.getReason() != null ? ex.getReason() : "Không còn bác sĩ khả dụng cho khung giờ đã chọn.");
+                if (!allowOverlap) {
+                    return errorResponse(HttpStatus.valueOf(ex.getStatusCode().value()),
+                            ex.getReason() != null ? ex.getReason() : "Không còn bác sĩ khả dụng cho khung giờ đã chọn.");
+                }
             }
-        } else if (doctor != null && resolvedExpectedTime == null) {
+        } else if (doctor != null && resolvedExpectedTime == null && !allowOverlap) {
             try {
                 appointmentSlotService.lockAndValidateDoctorSession(
                         branch.getBranchId(), doctor.getStaffId(), bookDate, sessionPeriod, null);
@@ -846,7 +911,7 @@ public class PublicBookingRestController {
                         ex.getReason() != null ? ex.getReason() : "Bác sĩ hoặc ca khám không còn sức chứa khả dụng.");
             }
         }
-        if (resolvedExpectedTime != null) {
+        if (resolvedExpectedTime != null && !allowOverlap) {
             try {
                 appointmentSlotService.validateBranchResourceCapacity(
                         branch, service, bookDate,
@@ -867,6 +932,17 @@ public class PublicBookingRestController {
         appointment.setPatientProfile(profile);
         appointment.setDoctor(doctor);
         appointment.setIsDoctorRequested(form.getDoctorId() != null);
+        if (allowOverlap && resolvedExpectedTime != null && appointmentOverlapService != null) {
+            var chk = appointmentOverlapService.checkOverlap(
+                    branch.getBranchId(), bookDate, sessionPeriod, resolvedExpectedTime,
+                    form.getDoctorId(), service != null ? service.getServiceId() : null, null);
+            if (chk.hasAnyWarning()) {
+                appointment.setOverlapWarningAcknowledged(true);
+                String note = (chk.clinicOverlap() ? "[Clinic] " + chk.clinicOverlapCount() + "/" + chk.branchCapacity() + " " : "")
+                        + (chk.doctorOverlap() ? "[Doctor] " + chk.doctorOverlapCount() + " overlap" : "");
+                appointment.setOverlapWarningNote(note.trim());
+            }
+        }
         appointment.setService(service);
         appointment.setAppointmentDate(bookDate);
         appointment.setPreferredSession(sessionPeriod);

@@ -41,7 +41,13 @@ import java.util.Set;
 import java.util.TreeSet;
 
 /**
- * API xem danh sách tồn kho, chỉ số KPI tổng quan kho và danh sách chọn nhanh vật tư (Material Picker Modal) theo cơ sở.
+ * REST Controller cung cấp các API tra cứu tồn kho chi nhánh ({@code /api/inventory}):
+ * <ul>
+ *   <li>{@code GET /api/inventory}: Danh sách tồn kho phân trang, tìm kiếm và lọc sắp hết hàng.</li>
+ *   <li>{@code GET /api/inventory/picker-materials}: Danh sách vật tư phục vụ Modal chọn nhiều vật tư (Material Picker).</li>
+ *   <li>{@code GET /api/inventory/summary}: Tổng hợp 4 chỉ số KPI đầu trang Quản lý kho.</li>
+ * </ul>
+ * Được gọi từ các hàm {@code loadInventory()}, {@code loadPickerMaterials()} và {@code updateSummaryStats()} trong {@code inventory.js}.
  */
 @RestController
 @RequestMapping("/api/inventory")
@@ -56,13 +62,16 @@ public class BranchInventoryController {
     @Autowired(required = false)
     private MaterialRepository materialRepository;
 
-    // Chỉ cho phép sắp xếp theo các trường đã khai báo.
+    /** Danh sách whitelist các trường được phép dùng để sắp xếp kết quả tồn kho. */
     private static final Set<String> ALLOWED_SORT_FIELDS = Set.of(
             "inventoryId",
             "currentStock",
             "lastUpdated"
     );
 
+    /**
+     * Khởi tạo controller với các service/repository tồn kho, phân quyền cơ sở, lô vật tư và công nợ nhà cung cấp.
+     */
     public BranchInventoryController(
             BranchInventoryService inventoryService,
             BranchAccessService branchAccessService,
@@ -78,8 +87,22 @@ public class BranchInventoryController {
     }
 
     /**
-     * Lấy danh sách tồn kho của một cơ sở.
-     * Chỉ tài khoản có quyền với cơ sở được yêu cầu mới được truy cập.
+     * Lấy danh sách tồn kho phân trang của một cơ sở.
+     * <p>Endpoint: {@code GET /api/inventory}</p>
+     * <p>Xử lý: xác thực phiên đăng nhập → kiểm tra quyền truy cập chi nhánh qua {@link BranchAccessService}
+     * → kiểm tra hợp lệ tham số phân trang ({@code page >= 0}, {@code 1 <= size <= 100}), whitelist trường sắp xếp và chiều sắp xếp
+     * → gọi {@link BranchInventoryService#search(Long, String, Boolean, Pageable)}.</p>
+     * <p>Được gọi từ: {@code loadInventory()} trong {@code inventory.js} (Tab Tồn kho hiện tại).</p>
+     *
+     * @param branchId  mã cơ sở cần xem tồn kho (bắt buộc)
+     * @param keyword   từ khóa tìm kiếm theo mã/tên/nhóm vật tư (tùy chọn)
+     * @param lowStock  {@code true} để chỉ lấy mặt hàng chạm ngưỡng tối thiểu (tùy chọn)
+     * @param page      chỉ số trang (bắt đầu từ 0)
+     * @param size      số bản ghi mỗi trang (1–100)
+     * @param sortBy    trường sắp xếp ({@code inventoryId}, {@code currentStock}, {@code lastUpdated})
+     * @param direction chiều sắp xếp ({@code asc} hoặc {@code desc})
+     * @param session   phiên đăng nhập hiện tại
+     * @return trang dữ liệu {@link Page} chứa {@link InventoryItemDTO}
      */
     @GetMapping
     public Page<InventoryItemDTO> getInventory(
@@ -165,10 +188,22 @@ public class BranchInventoryController {
     }
 
     /**
-     * API phục vụ Modal tìm kiếm và chọn nhiều vật tư (Material Picker Modal) cho:
-     * - Phiếu nhập kho (Stock Receipt)
-     * - Phiếu xuất kho (Stock Issue)
-     * - Phiếu điều chuyển kho (Stock Transfer)
+     * Cung cấp dữ liệu vật tư kèm tồn kho thực tế, tồn khả dụng (chưa hết hạn), tồn hết hạn và hạn sử dụng gần nhất
+     * phục vụ Modal chọn nhiều vật tư (Material Picker Modal) cho Phiếu nhập kho, Phiếu xuất kho và Điều chuyển kho.
+     * <p>Endpoint: {@code GET /api/inventory/picker-materials}</p>
+     * <p>Xử lý: xác thực phiên đăng nhập và quyền chi nhánh → tải toàn bộ vật tư đang hoạt động, tồn kho chi nhánh và các lô còn tồn
+     * → phân tách tồn khả dụng/hết hạn và hạn gần nhất theo từng vật tư → lọc theo {@code category}, {@code keyword}, {@code stockFilter}
+     * → cắt trang thủ công và trả kèm danh sách {@code categories} không trùng lặp.</p>
+     * <p>Được gọi từ: {@code loadPickerMaterials()} trong {@code inventory.js}.</p>
+     *
+     * @param branchId    mã chi nhánh cần tra cứu tồn kho
+     * @param keyword     từ khóa tìm kiếm mã/tên/nhóm/đơn vị vật tư (tùy chọn)
+     * @param category    nhóm vật tư cần lọc hoặc {@code ALL} (tùy chọn)
+     * @param stockFilter chế độ lọc tồn kho ({@code ALL}, {@code IN_STOCK}, {@code AVAILABLE_STOCK}, {@code LOW_STOCK}, {@code EXPIRED_ONLY})
+     * @param page        chỉ số trang (mặc định 0)
+     * @param size        số bản ghi mỗi trang (1–100, mặc định 20)
+     * @param session     phiên đăng nhập hiện tại
+     * @return map gồm {@code content}, {@code page}, {@code size}, {@code totalElements}, {@code totalPages}, {@code hasMore}, {@code categories}
      */
     @GetMapping("/picker-materials")
     public Map<String, Object> getPickerMaterials(

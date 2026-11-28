@@ -17,6 +17,21 @@ public interface ParaclinicalOrderService {
     List<ServiceDTO> getParaclinicalServices();
     void syncParaclinicalOrdersToPerformedServices(Long visitId);
 
+    default boolean isExternalOrCrossVisitUpload(Long orderItemId, Long activeVisitId) {
+        return false;
+    }
+
+    default ParaclinicalOrderItemResponseDTO recordExternalLabResult(
+            Long orderItemId,
+            Long activeVisitId,
+            String labPartnerName,
+            String resultSummary,
+            String fileUrl,
+            String fileName,
+            boolean isPdf) {
+        throw new UnsupportedOperationException("Chưa hỗ trợ ghi nhận kết quả xét nghiệm ngoài viện.");
+    }
+
     default ParaclinicalBackfillReportDTO reconcileCompletedOrdersMissingPerformedService() {
         return reconcileCompletedOrdersMissingPerformedService(true);
     }

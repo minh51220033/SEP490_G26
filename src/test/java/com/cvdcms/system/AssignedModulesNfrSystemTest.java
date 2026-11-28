@@ -326,7 +326,6 @@ public class AssignedModulesNfrSystemTest {
 
         // 2. File Upload Magic-Byte, Path Traversal & /uploads/invoices Patient IDOR Fix
         byte[] pngBytes = createValidPngBytes();
-        String sigDataUrl = "data:image/png;base64," + Base64.getEncoder().encodeToString(pngBytes);
 
         // Fake PNG containing XSS HTML payload -> 400
         mockMvc.perform(multipart("/api/inventory/receipts/upload-invoice")
@@ -394,7 +393,6 @@ public class AssignedModulesNfrSystemTest {
         recDto.setReceiptDate(LocalDate.now());
         recDto.setAttachmentUrl(invoiceUrl);
         recDto.setPaidAmount(BigDecimal.ZERO);
-        recDto.setSignatureData(sigDataUrl);
         StockReceiptCreateDTO.Item recItem = new StockReceiptCreateDTO.Item();
         recItem.setMaterialId(matId);
         recItem.setBatchNumber("LOT-NFR-01");
@@ -408,9 +406,6 @@ public class AssignedModulesNfrSystemTest {
                         .content(mapper.writeValueAsString(recDto)))
                 .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString());
         long recId = recNode.get("receiptId").asLong();
-        if (recNode.hasNonNull("signatureUrl")) {
-            uploadedFilesToCleanup.add(Paths.get(recNode.get("signatureUrl").asText().substring(1)).toAbsolutePath().normalize());
-        }
 
         // Inventory cross-branch IDOR by KHO CN02 -> 403 everywhere
         mockMvc.perform(get("/api/inventory").param("branchId", String.valueOf(cn01.getBranchId()))
@@ -646,7 +641,6 @@ public class AssignedModulesNfrSystemTest {
     @DisplayName("NFR Concurrency: Pessimistic Lock prevents Inventory negative stock & Supplier overpayment under 6 concurrent threads")
     void concurrentPessimisticLockRaceConditions() throws Exception {
         byte[] pngBytes = createValidPngBytes();
-        String sigDataUrl = "data:image/png;base64," + Base64.getEncoder().encodeToString(pngBytes);
 
         JsonNode invRes = mapper.readTree(mockMvc.perform(multipart("/api/inventory/receipts/upload-invoice")
                         .file(new MockMultipartFile("file", "conc_inv.png", "image/png", pngBytes))
@@ -716,7 +710,6 @@ public class AssignedModulesNfrSystemTest {
                 dto.setIssueType("INTERNAL_USE");
                 dto.setIssueDate(LocalDate.now());
                 dto.setNotes("Concurrent issue #" + idx);
-                dto.setSignatureData(sigDataUrl);
                 StockIssueCreateDTO.Item it = new StockIssueCreateDTO.Item();
                 it.setMaterialId(matId);
                 it.setQuantity(new BigDecimal("3"));
@@ -753,11 +746,6 @@ public class AssignedModulesNfrSystemTest {
         BigDecimal remaining = inventoryRepository.findByBranch_BranchIdAndMaterial_MaterialId(cn01.getBranchId(), matId)
                 .orElseThrow().getCurrentStock();
         assertEquals(0, new BigDecimal("2").compareTo(remaining), "Remaining stock must be exactly 2.000");
-
-        // Clean up signature created by winning issue
-        issueRepository.findAll().stream()
-                .filter(si -> si.getBranch().getBranchId().equals(cn01.getBranchId()) && si.getSignatureUrl() != null)
-                .forEach(si -> uploadedFilesToCleanup.add(Paths.get(si.getSignatureUrl().substring(1)).toAbsolutePath().normalize()));
 
         // B. 6 concurrent threads each try to pay 600,000 on 1,000,000 receipt debt -> ONLY 1 can succeed (201), 5 rejected (400)
         CountDownLatch readyB = new CountDownLatch(threads);

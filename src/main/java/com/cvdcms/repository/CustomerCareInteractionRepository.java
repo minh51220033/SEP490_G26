@@ -9,7 +9,11 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 
 /**
- * Repository truy vấn dữ liệu bảng lịch sử tương tác chăm sóc khách hàng (customer_care_interactions - FT44).
+ * Repository truy vấn dữ liệu bảng lịch sử tương tác chăm sóc khách hàng ({@code customer_care_interactions} - FT44).
+ *
+ * <p><b>Chức năng:</b> Cung cấp các truy vấn {@code JOIN FETCH} an toàn để lấy lịch sử cuộc gọi/nhắn tin CSKH
+ * theo công việc, theo bệnh nhân (Timeline SCR-44.6) và theo chi nhánh (Lịch sử chung & theo dõi {@code next_retry_at}).</p>
+ * <p><b>Được gọi từ:</b> {@link com.cvdcms.service.impl.CustomerCareServiceImpl}.</p>
  */
 @Repository
 public interface CustomerCareInteractionRepository extends JpaRepository<CustomerCareInteraction, Long> {

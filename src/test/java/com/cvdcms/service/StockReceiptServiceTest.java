@@ -7,7 +7,6 @@ import com.cvdcms.entity.enums.BatchStatus;
 import com.cvdcms.entity.enums.StaffStatus;
 import com.cvdcms.repository.*;
 import com.cvdcms.service.impl.StockReceiptServiceImpl;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -22,17 +21,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
-import javax.imageio.ImageIO;
-import java.awt.*;
-import java.awt.image.BufferedImage;
-import java.io.ByteArrayOutputStream;
 import java.math.BigDecimal;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.Base64;
 import java.util.List;
 import java.util.Optional;
 
@@ -55,7 +45,6 @@ class StockReceiptServiceTest {
     @Mock private BranchAccessService accessService;
 
     private StockReceiptServiceImpl receiptService;
-    private final List<Path> createdFiles = new ArrayList<>();
 
     private Branch branch;
     private Supplier supplier;
@@ -96,15 +85,8 @@ class StockReceiptServiceTest {
         staff.setStatus(StaffStatus.ACTIVE);
     }
 
-    @AfterEach
-    void cleanupFiles() throws Exception {
-        for (Path p : createdFiles) {
-            Files.deleteIfExists(p);
-        }
-    }
-
     @Test
-    @DisplayName("create - Từ chối DTO null hoặc branchId không hợp lệ")
+    @DisplayName("create - Reject null DTO or invalid branchId")
     void create_nullDtoOrInvalidBranch_throws400() {
         ResponseStatusException ex1 = assertThrows(ResponseStatusException.class,
                 () -> receiptService.create(null, 1L));
@@ -118,7 +100,7 @@ class StockReceiptServiceTest {
     }
 
     @Test
-    @DisplayName("create - Chặn 403 khi tài khoản không có quyền truy cập chi nhánh")
+    @DisplayName("create - Block 403 when user lacks branch access")
     void create_noBranchAccess_throws403() {
         StockReceiptCreateDTO dto = validDto();
         when(accessService.canAccessBranch(99L, 1L)).thenReturn(false);
@@ -129,7 +111,7 @@ class StockReceiptServiceTest {
     }
 
     @Test
-    @DisplayName("create - Từ chối khi thiếu nhà cung cấp hoặc danh sách vật tư rỗng")
+    @DisplayName("create - Reject when supplier is missing or item list is empty")
     void create_missingSupplierOrItems_throws400() {
         when(accessService.canAccessBranch(1L, 1L)).thenReturn(true);
 
@@ -145,7 +127,7 @@ class StockReceiptServiceTest {
     }
 
     @Test
-    @DisplayName("create - Từ chối khi thiếu chứng từ hóa đơn hoặc ngày nhập ở tương lai")
+    @DisplayName("create - Reject when invoice attachment is missing or receiptDate is in the future")
     void create_missingAttachmentOrFutureDate_throws400() {
         when(accessService.canAccessBranch(1L, 1L)).thenReturn(true);
 
@@ -161,7 +143,7 @@ class StockReceiptServiceTest {
     }
 
     @Test
-    @DisplayName("create - Từ chối số hóa đơn sai định dạng hoặc ghi chú > 255 ký tự")
+    @DisplayName("create - Reject malformed supplier invoice number or notes > 255 characters")
     void create_invalidInvoiceNoOrLongNotes_throws400() {
         when(accessService.canAccessBranch(1L, 1L)).thenReturn(true);
 
@@ -177,7 +159,7 @@ class StockReceiptServiceTest {
     }
 
     @Test
-    @DisplayName("create - Trả 404/400 khi chi nhánh hoặc nhà cung cấp không tồn tại hoặc ngừng hoạt động")
+    @DisplayName("create - Return 404/400 when branch or supplier does not exist or is inactive")
     void create_missingOrInactiveBranchOrSupplier_throwsError() {
         when(accessService.canAccessBranch(1L, 1L)).thenReturn(true);
 
@@ -202,7 +184,7 @@ class StockReceiptServiceTest {
     }
 
     @Test
-    @DisplayName("create - Từ chối nhân viên thường chưa liên kết StaffProfile; Admin được tự động tạo StaffProfile")
+    @DisplayName("create - Reject normal staff without StaffProfile; auto-create StaffProfile for Admin")
     void create_missingStaffProfile_rejectedForStaffAndAutoCreatedForAdmin() {
         when(accessService.canAccessBranch(1L, 1L)).thenReturn(true);
         when(branchRepository.findById(1L)).thenReturn(Optional.of(branch));
@@ -232,7 +214,7 @@ class StockReceiptServiceTest {
     }
 
     @Test
-    @DisplayName("create - Từ chối dòng vật tư có hạn sử dụng trước ngày nhập, số lượng <= 0 hoặc đơn giá âm")
+    @DisplayName("create - Reject item with expiry before receipt date, quantity <= 0, or negative price")
     void create_invalidItemValues_throws400() {
         stubHeaderDeps();
 
@@ -253,7 +235,7 @@ class StockReceiptServiceTest {
     }
 
     @Test
-    @DisplayName("create - Từ chối vật tư ngừng hoạt động hoặc trùng (materialId, batchNumber) trong cùng phiếu")
+    @DisplayName("create - Reject inactive material or duplicate (materialId, batchNumber) in same voucher")
     void create_inactiveMaterialOrDuplicateBatchInVoucher_throws400() {
         stubHeaderDeps();
 
@@ -277,7 +259,7 @@ class StockReceiptServiceTest {
     }
 
     @Test
-    @DisplayName("create - Cộng dồn vào lô và tồn kho hiện có khi trùng số lô & khớp hạn sử dụng")
+    @DisplayName("create - Accumulate existing batch and inventory when batch number & expiry match")
     void create_existingBatchMatchingExpiry_accumulatesStock() {
         stubHeaderDeps();
         when(materialRepository.findById(100L)).thenReturn(Optional.of(material));
@@ -315,7 +297,7 @@ class StockReceiptServiceTest {
     }
 
     @Test
-    @DisplayName("create - Từ chối paidAmount âm, vượt quá tổng phiếu, sai phương thức thanh toán hoặc sai số chứng từ")
+    @DisplayName("create - Reject negative paidAmount, over-total amount, bad payment method, or invalid ref")
     void create_invalidPaymentParams_throws400() {
         stubHeaderDeps();
         when(materialRepository.findById(100L)).thenReturn(Optional.of(material));
@@ -347,8 +329,8 @@ class StockReceiptServiceTest {
     }
 
     @Test
-    @DisplayName("create - Tự động sinh SupplierPayment khi paidAmount > 0 và hỗ trợ ký điện tử ngay khi tạo")
-    void create_withInitialPaymentAndSignature_createsPaymentAndSigns() throws Exception {
+    @DisplayName("create - Auto-create SupplierPayment when paidAmount > 0")
+    void create_withInitialPayment_createsSupplierPayment() {
         stubHeaderDeps();
         when(materialRepository.findById(100L)).thenReturn(Optional.of(material));
         when(batchRepository.findForUpdate(1L, 100L, "LO-01")).thenReturn(Optional.empty());
@@ -363,16 +345,12 @@ class StockReceiptServiceTest {
         dto.setSupplierInvoiceNo("HD-001");
         dto.setPaidAmount(new BigDecimal("1000000"));
         dto.setPaymentMethod("CASH");
-        dto.setSignatureData(buildValidSignatureDataUrl());
 
         StockReceiptResponseDTO response = receiptService.create(dto, 1L);
-        trackSignatureFile(response.getSignatureUrl());
 
         assertEquals(new BigDecimal("2500000.00"), response.getTotalAmount());
         assertEquals(new BigDecimal("1000000.00"), response.getPaidAmount());
         assertEquals(new BigDecimal("1500000.00"), response.getRemainingDebt());
-        assertNotNull(response.getSignatureUrl());
-        assertEquals("Nguyễn Văn Kho", response.getSignedByName());
 
         ArgumentCaptor<SupplierPayment> payCaptor = ArgumentCaptor.forClass(SupplierPayment.class);
         verify(supplierPaymentRepository).save(payCaptor.capture());
@@ -382,7 +360,7 @@ class StockReceiptServiceTest {
     }
 
     @Test
-    @DisplayName("search - Kiểm tra quyền, khoảng ngày và tính công nợ còn lại cho từng phiếu")
+    @DisplayName("search - Check branch access, date range, and compute remaining debt per receipt")
     void search_validatesAndComputesDebtCorrectly() {
         Pageable pageable = PageRequest.of(0, 10);
         assertEquals(HttpStatus.BAD_REQUEST,
@@ -420,7 +398,7 @@ class StockReceiptServiceTest {
     }
 
     @Test
-    @DisplayName("getById - Kiểm tra ID, 404, 403 và chi tiết các dòng hàng hóa")
+    @DisplayName("getById - Validate ID, 404/403 access, and map receipt item details")
     void getById_validatesAndReturnsDetail() {
         assertEquals(HttpStatus.BAD_REQUEST,
                 assertThrows(ResponseStatusException.class, () -> receiptService.getById(null, 1L)).getStatusCode());
@@ -461,50 +439,6 @@ class StockReceiptServiceTest {
         assertEquals(new BigDecimal("400000.00"), detail.getRemainingDebt());
     }
 
-    @Test
-    @DisplayName("signReceipt - Chặn ký đè phiếu đã ký, chặn sai chi nhánh và lưu chữ ký mới thành công")
-    void signReceipt_validatesPermissionsImmutabilityAndSigns() throws Exception {
-        assertEquals(HttpStatus.BAD_REQUEST,
-                assertThrows(ResponseStatusException.class, () -> receiptService.signReceipt(0L, "data", 1L)).getStatusCode());
-
-        when(receiptRepository.findByIdWithDetails(404L)).thenReturn(Optional.empty());
-        assertEquals(HttpStatus.NOT_FOUND,
-                assertThrows(ResponseStatusException.class, () -> receiptService.signReceipt(404L, "data", 1L)).getStatusCode());
-
-        StockReceipt receipt = new StockReceipt();
-        receipt.setReceiptId(60L);
-        receipt.setReceiptCode("PN060");
-        receipt.setBranch(branch);
-        receipt.setSupplier(supplier);
-        receipt.setReceiver(staff);
-        receipt.setReceiptDate(LocalDate.now());
-        receipt.setTotalAmount(new BigDecimal("100000.00"));
-        when(receiptRepository.findByIdWithDetails(60L)).thenReturn(Optional.of(receipt));
-
-        when(accessService.canAccessBranch(9L, 1L)).thenReturn(false);
-        assertEquals(HttpStatus.FORBIDDEN,
-                assertThrows(ResponseStatusException.class, () -> receiptService.signReceipt(60L, "data", 9L)).getStatusCode());
-
-        when(accessService.canAccessBranch(1L, 1L)).thenReturn(true);
-        receipt.setSignatureUrl("/uploads/signatures/existing.png");
-        receipt.setSignedByName("Thủ kho A");
-        assertEquals(HttpStatus.BAD_REQUEST,
-                assertThrows(ResponseStatusException.class, () -> receiptService.signReceipt(60L, "data", 1L)).getStatusCode());
-
-        // Ký thành công khi chưa có chữ ký
-        receipt.setSignatureUrl(null);
-        when(staffRepository.findByUser_UserId(1L)).thenReturn(Optional.of(staff));
-        when(receiptRepository.save(any(StockReceipt.class))).thenAnswer(inv -> inv.getArgument(0));
-
-        StockReceiptResponseDTO signed = receiptService.signReceipt(60L, buildValidSignatureDataUrl(), 1L);
-        trackSignatureFile(signed.getSignatureUrl());
-
-        assertNotNull(signed.getSignatureUrl());
-        assertTrue(signed.getSignatureUrl().startsWith("/uploads/signatures/receipt_60_"));
-        assertEquals("Nguyễn Văn Kho", signed.getSignedByName());
-        assertNotNull(signed.getSignedAt());
-    }
-
     private void stubHeaderDeps() {
         when(accessService.canAccessBranch(1L, 1L)).thenReturn(true);
         when(branchRepository.findById(1L)).thenReturn(Optional.of(branch));
@@ -526,25 +460,5 @@ class StockReceiptServiceTest {
         item.setUnitPrice(new BigDecimal("250000.00"));
         dto.setItems(List.of(item));
         return dto;
-    }
-
-    private String buildValidSignatureDataUrl() throws Exception {
-        BufferedImage img = new BufferedImage(100, 40, BufferedImage.TYPE_INT_ARGB);
-        Graphics2D g = img.createGraphics();
-        g.setColor(Color.WHITE);
-        g.fillRect(0, 0, 100, 40);
-        g.setColor(Color.BLACK);
-        g.setStroke(new BasicStroke(3f));
-        g.drawLine(10, 10, 80, 30);
-        g.dispose();
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        ImageIO.write(img, "png", baos);
-        return "data:image/png;base64," + Base64.getEncoder().encodeToString(baos.toByteArray());
-    }
-
-    private void trackSignatureFile(String url) {
-        if (url != null && url.startsWith("/")) {
-            createdFiles.add(Paths.get(url.substring(1)).toAbsolutePath().normalize());
-        }
     }
 }

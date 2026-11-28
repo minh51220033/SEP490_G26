@@ -509,7 +509,7 @@
                 }
             </style>
 
-            <!-- 1. TIÊU ĐỀ TRANG & NOTIFICATION CENTER -->
+            <!-- 1. TIÊU ĐỀ TRANG, TRẠNG THÁI WEBSOCKET, CHỌN CHI NHÁNH, NOTIFICATION CENTER & NÚT TẠO MỚI -->
             <div class="d-flex flex-wrap flex-xl-nowrap align-items-center justify-content-between gap-3 mb-4">
                 <div>
                     <div class="dv-page-title">
@@ -562,10 +562,11 @@
                 </div>
             </div>
 
-            <!-- 2. 4 THẺ KPI SUMMARY CARDS -->
+            <!-- 2. 4 THẺ KPI SUMMARY CARDS (Tổng mở, Quá hạn, Hôm nay, Chờ Bác sĩ - click chuyển nhanh tab tương ứng) -->
             <div class="row g-3 mb-4" aria-label="Chỉ số tổng quan chăm sóc khách hàng">
                 <div class="col-xl-3 col-sm-6">
-                    <div class="dv-kpi-card" id="kpiCardTotal" data-kpi-tab="ALL" role="button" tabindex="0" style="--kpi-accent: #0284c7;">
+                    <div class="dv-kpi-card position-relative" id="kpiCardTotal" data-kpi-tab="ALL" role="button" tabindex="0" style="--kpi-accent: #0284c7;">
+                        <span class="position-absolute badge rounded-pill bg-danger d-none" id="kpiUnread_ALL" style="top:8px;right:8px;z-index:5;font-size:11px;padding:3px 7px;box-shadow:0 2px 4px rgba(220,38,38,0.25);">0</span>
                         <div>
                             <div class="dv-kpi-num" id="statTotalTasks">—</div>
                             <div class="dv-kpi-label">Tổng công việc đang mở</div>
@@ -578,7 +579,8 @@
                 </div>
 
                 <div class="col-xl-3 col-sm-6">
-                    <div class="dv-kpi-card" id="kpiCardDue" data-kpi-tab="OVERDUE" role="button" tabindex="0" style="--kpi-accent: #dc2626;">
+                    <div class="dv-kpi-card position-relative" id="kpiCardDue" data-kpi-tab="OVERDUE" role="button" tabindex="0" style="--kpi-accent: #dc2626;">
+                        <span class="position-absolute badge rounded-pill bg-danger d-none" id="kpiUnread_OVERDUE" style="top:8px;right:8px;z-index:5;font-size:11px;padding:3px 7px;box-shadow:0 2px 4px rgba(220,38,38,0.25);">0</span>
                         <div>
                             <div class="dv-kpi-num text-danger" id="statDueTasks">—</div>
                             <div class="dv-kpi-label">Quá hạn cần xử lý</div>
@@ -591,7 +593,8 @@
                 </div>
 
                 <div class="col-xl-3 col-sm-6">
-                    <div class="dv-kpi-card" id="kpiCardToday" data-kpi-tab="TODAY" role="button" tabindex="0" style="--kpi-accent: #f59e0b;">
+                    <div class="dv-kpi-card position-relative" id="kpiCardToday" data-kpi-tab="TODAY" role="button" tabindex="0" style="--kpi-accent: #f59e0b;">
+                        <span class="position-absolute badge rounded-pill bg-danger d-none" id="kpiUnread_TODAY" style="top:8px;right:8px;z-index:5;font-size:11px;padding:3px 7px;box-shadow:0 2px 4px rgba(220,38,38,0.25);">0</span>
                         <div>
                             <div class="dv-kpi-num text-warning" id="statTodayTasks">—</div>
                             <div class="dv-kpi-label">Hôm nay cần xử lý</div>
@@ -604,7 +607,8 @@
                 </div>
 
                 <div class="col-xl-3 col-sm-6">
-                    <div class="dv-kpi-card" id="kpiCardEscalated" data-kpi-tab="ESCALATED" role="button" tabindex="0" style="--kpi-accent: #7c3aed;">
+                    <div class="dv-kpi-card position-relative" id="kpiCardEscalated" data-kpi-tab="ESCALATED" role="button" tabindex="0" style="--kpi-accent: #7c3aed;">
+                        <span class="position-absolute badge rounded-pill bg-danger d-none" id="kpiUnread_ESCALATED" style="top:8px;right:8px;z-index:5;font-size:11px;padding:3px 7px;box-shadow:0 2px 4px rgba(220,38,38,0.25);">0</span>
                         <div>
                             <div class="dv-kpi-num" style="color: #7c3aed;" id="statEscalatedTasks">—</div>
                             <div class="dv-kpi-label">Ca chờ Bác sĩ phản hồi</div>
@@ -620,12 +624,12 @@
             <!-- THÔNG BÁO HỆ THỐNG -->
             <p id="message" class="notice" role="status" aria-live="polite" hidden></p>
 
-            <!-- 3. BỘ LỌC TÌM KIẾM, CHẾ ĐỘ XEM & TABS TRẠNG THÁI -->
+            <!-- 3. THANH CÔNG CỤ TÌM KIẾM, CHUYỂN CHẾ ĐỘ XEM (DANH SÁCH/Ô LỊCH), BỘ LỌC NÂNG CAO & TABS TRẠNG THÁI -->
             <div class="dv-toolbar-card" id="filterToolbarSection">
                 <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
                     <!-- Tìm kiếm từ khóa -->
                     <div class="dv-search-box task-filter-field">
-                        <i class="bi bi-search search-lead-icon"></i>
+                        <i class="bi bi-search dv-search-lead"></i>
                         <input id="keyword" type="search" placeholder="Tìm theo Mã CV, Mã BN, Họ tên, SĐT, Mã ca khám...">
                     </div>
 
@@ -648,45 +652,11 @@
                         </button>
 
                         <!-- Nút Lọc nâng cao -->
-                        <button type="button" class="dv-adv-filter-btn task-filter-field" id="btnToggleAdvFilter" onclick="toggleCcAdvFilter()">
+                        <button type="button" class="dv-adv-filter-btn task-filter-field" id="btnToggleAdvFilter">
                             <i class="bi bi-funnel-fill"></i>
                             <span>Lọc nâng cao</span>
                             <i class="bi bi-chevron-down small ms-1" id="advFilterChevron"></i>
                         </button>
-                    </div>
-                </div>
-
-                <!-- TABS CHÍNH THEO TRẠNG THÁI NGHIỆP VỤ -->
-                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2" id="mainStatusTabsRow">
-                    <div class="dv-quick-segment" aria-label="Phân chia trạng thái công việc CSKH">
-                        <button type="button" class="dv-seg-btn tab active" data-tab="TODAY" style="color:#b45309;">
-                            <i class="bi bi-calendar-check"></i> Cần xử lý hôm nay <span class="dv-seg-count" id="badge_TODAY" style="background:#fef3c7;color:#b45309;">0</span>
-                        </button>
-                        <button type="button" class="dv-seg-btn tab" data-tab="OVERDUE" style="color:#dc2626;">
-                            <i class="bi bi-exclamation-triangle-fill"></i> Quá hạn <span class="dv-seg-count" id="badge_OVERDUE" style="background:#fee2e2;color:#dc2626;">0</span>
-                        </button>
-                        <button type="button" class="dv-seg-btn tab" data-tab="ESCALATED" style="color:#b91c1c;">
-                            <i class="bi bi-heart-pulse"></i> Chờ bác sĩ <span class="dv-seg-count" id="badge_ESCALATED" style="background:#fee2e2;color:#b91c1c;">0</span>
-                        </button>
-                        <button type="button" class="dv-seg-btn tab" data-tab="ALL">
-                            <i class="bi bi-grid-fill"></i> Tất cả <span class="dv-seg-count" id="badge_ALL">0</span>
-                        </button>
-                        <button type="button" class="dv-seg-btn tab" data-tab="COMPLETED" style="color:#047857;">
-                            <i class="bi bi-check2-circle"></i> Đã hoàn thành <span class="dv-seg-count" id="badge_COMPLETED" style="background:#d1fae5;color:#047857;">0</span>
-                        </button>
-                        <button type="button" class="dv-seg-btn tab" data-tab="CANCELLED" style="color:#475569;">
-                            <i class="bi bi-x-circle"></i> Đã hủy <span class="dv-seg-count" id="badge_CANCELLED">0</span>
-                        </button>
-                        <button type="button" class="dv-seg-btn tab" data-tab="HISTORY">
-                            <i class="bi bi-clock-history"></i> Lịch sử BN
-                        </button>
-                    </div>
-
-                    <!-- Bộ lọc con cho Tab Chờ bác sĩ -->
-                    <div class="dv-quick-segment" id="doctorRespFilterStrip" aria-label="Lọc phản hồi bác sĩ" hidden>
-                        <button type="button" class="dv-seg-btn active" data-doc-resp-filter="ALL">Tất cả ca BS</button>
-                        <button type="button" class="dv-seg-btn" data-doc-resp-filter="WAITING" style="color:#b91c1c;">Đang chờ BS phản hồi</button>
-                        <button type="button" class="dv-seg-btn" data-doc-resp-filter="RESPONDED" style="color:#047857;">BS đã phản hồi</button>
                     </div>
                 </div>
 
@@ -700,6 +670,39 @@
                         <button type="button" class="btn btn-sm btn-link text-danger fw-bold text-decoration-none p-0" id="clearFilterBtn">
                             <i class="bi bi-arrow-counterclockwise me-1"></i>Đặt lại bộ lọc
                         </button>
+                    </div>
+                    <!-- TABS CHÍNH THEO TRẠNG THÁI NGHIỆP VỤ -->
+                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3" id="mainStatusTabsRow">
+                        <div class="dv-quick-segment" aria-label="Phân chia trạng thái công việc CSKH">
+                            <button type="button" class="dv-seg-btn tab active" data-tab="TODAY" style="color:#b45309;">
+                                <i class="bi bi-calendar-check"></i> Cần xử lý hôm nay <span class="dv-seg-count" id="badge_TODAY" style="background:#fef3c7;color:#b45309;">0</span>
+                            </button>
+                            <button type="button" class="dv-seg-btn tab" data-tab="OVERDUE" style="color:#dc2626;">
+                                <i class="bi bi-exclamation-triangle-fill"></i> Quá hạn <span class="dv-seg-count" id="badge_OVERDUE" style="background:#fee2e2;color:#dc2626;">0</span>
+                            </button>
+                            <button type="button" class="dv-seg-btn tab" data-tab="ESCALATED" style="color:#b91c1c;">
+                                <i class="bi bi-heart-pulse"></i> Chờ bác sĩ <span class="dv-seg-count" id="badge_ESCALATED" style="background:#fee2e2;color:#b91c1c;">0</span>
+                            </button>
+                            <button type="button" class="dv-seg-btn tab" data-tab="ALL">
+                                <i class="bi bi-grid-fill"></i> Tất cả <span class="dv-seg-count" id="badge_ALL">0</span>
+                            </button>
+                            <button type="button" class="dv-seg-btn tab" data-tab="COMPLETED" style="color:#047857;">
+                                <i class="bi bi-check2-circle"></i> Đã hoàn thành <span class="dv-seg-count" id="badge_COMPLETED" style="background:#d1fae5;color:#047857;">0</span>
+                            </button>
+                            <button type="button" class="dv-seg-btn tab" data-tab="CANCELLED" style="color:#475569;">
+                                <i class="bi bi-x-circle"></i> Đã hủy <span class="dv-seg-count" id="badge_CANCELLED">0</span>
+                            </button>
+                            <button type="button" class="dv-seg-btn tab" data-tab="HISTORY">
+                                <i class="bi bi-clock-history"></i> Lịch sử BN
+                            </button>
+                        </div>
+
+                        <!-- Bộ lọc con cho Tab Chờ bác sĩ -->
+                        <div class="dv-quick-segment" id="doctorRespFilterStrip" aria-label="Lọc phản hồi bác sĩ" hidden>
+                            <button type="button" class="dv-seg-btn active" data-doc-resp-filter="ALL">Tất cả ca BS</button>
+                            <button type="button" class="dv-seg-btn" data-doc-resp-filter="WAITING" style="color:#b91c1c;">Đang chờ BS phản hồi</button>
+                            <button type="button" class="dv-seg-btn" data-doc-resp-filter="RESPONDED" style="color:#047857;">BS đã phản hồi</button>
+                        </div>
                     </div>
                     <div class="row g-3">
                         <div class="col-lg-3 col-md-6 task-filter-field">
@@ -750,7 +753,7 @@
                 </div>
             </div>
 
-            <!-- 4. KHỐI BẢNG DỮ LIỆU THÔNG MINH (ĐỒNG BỘ DOCTOR/DAILY-VISITS) -->
+            <!-- 4. BẢNG DỮ LIỆU CÔNG VIỆC CSKH (Cột cố định Mã CV/Bệnh nhân/Thao tác, tùy biến cột & phân trang MISA AMIS) -->
             <div class="dv-grid-card" id="tasksPanel">
                 <!-- Thanh công cụ phía trên bảng -->
                 <div class="dv-grid-topbar">
@@ -1232,6 +1235,9 @@
                 <div class="modal-section-title">Thông tin công việc chăm sóc</div>
                 <div id="interactionTaskMeta" class="detail-meta-grid"></div>
 
+                <!-- Ngữ cảnh đặc thù FT01 (Bác sĩ nghỉ) & FT02 (Nhắc thanh toán 8 chỉ số) -->
+                <div id="interactionSpecialContextBox" class="sub-card" hidden style="margin-bottom:14px;background:#f8fafc;border:1px solid #cbd5e1;border-radius:10px;padding:12px 16px;"></div>
+
                 <!-- Thông tin Hồ sơ Khám lâm sàng, Chẩn đoán & Lời dặn sau điều trị (#tab-instructions) -->
                 <div id="interactionExaminationBox" class="sub-card" hidden style="margin-bottom:14px;background:#f8fafc;border:1px solid #cbd5e1;border-radius:10px;padding:12px 16px;"></div>
 
@@ -1264,6 +1270,7 @@
                                 <option value="BUSY">Máy bận (Cần hẹn gọi lại)</option>
                                 <option value="NO_ANSWER">Không bắt máy (Cần hẹn gọi lại)</option>
                                 <option value="SCHEDULED_APPOINTMENT">Đã đặt / đổi lịch hẹn</option>
+                                <option value="FAILED">Không liên lạc được / Sai số</option>
                             </select>
                         </label>
 
@@ -1352,9 +1359,8 @@
 </div>
 
 <!-- ========================================================================= -->
-<!-- MODAL 4: BÁC SĨ NHẬP PHẢN HỒI CHUYÊN MÔN (SCR-44.5)                       -->
+<!-- MODAL 4: MỞ LẠI CÔNG VIỆC ĐÃ HOÀN THÀNH (CHỈ ADMIN - LƯU AUDIT LOG)       -->
 <!-- ========================================================================= -->
-<!-- MODAL: MỞ LẠI CÔNG VIỆC ĐÃ HOÀN THÀNH (CHỈ ADMIN) -->
 <div id="reopenModal" class="cc-modal-backdrop modal-backdrop" hidden>
     <div class="cc-modal-dialog modal-dialog" role="dialog" aria-modal="true" aria-labelledby="reopenModalTitle">
         <div class="cc-modal-content modal-content">
@@ -1385,6 +1391,9 @@
     </div>
 </div>
 
+<!-- ========================================================================= -->
+<!-- MODAL 5: BÁC SĨ NHẬP PHẢN HỒI CHUYÊN MÔN (SCR-44.5 - nextStatus)          -->
+<!-- ========================================================================= -->
 <div id="doctorResponseModal" class="cc-modal-backdrop modal-backdrop" hidden>
     <div class="cc-modal-dialog modal-dialog modal-lg" role="dialog" aria-modal="true" aria-labelledby="doctorResponseModalTitle">
         <div class="cc-modal-content modal-content">
@@ -1426,7 +1435,9 @@
     </div>
 </div>
 
-<!-- MODAL XEM ĐẦY ĐỦ NỘI DUNG CHẨN ĐOÁN, LỜI DẶN & GHI CHÚ -->
+<!-- ========================================================================= -->
+<!-- MODAL 6: XEM ĐẦY ĐỦ NỘI DUNG CHẨN ĐOÁN, LỜI DẶN & GHI CHÚ CSKH            -->
+<!-- ========================================================================= -->
 <div id="ccContentPreviewModal" class="cc-modal-backdrop modal-backdrop" hidden>
     <div class="cc-modal-dialog modal-dialog" role="dialog" aria-modal="true" aria-labelledby="ccPreviewModalTitle">
         <div class="cc-modal-content modal-content">
@@ -1447,7 +1458,9 @@
     </div>
 </div>
 
-<!-- MODAL XEM THÊM CÔNG VIỆC TRONG NGÀY TRÊN LỊCH -->
+<!-- ========================================================================= -->
+<!-- MODAL 7: XEM THÊM & LỌC DANH SÁCH CÔNG VIỆC TRONG NGÀY TRÊN LỊCH          -->
+<!-- ========================================================================= -->
 <div id="ccDayTasksModal" class="cc-modal-backdrop modal-backdrop" hidden>
     <div class="cc-modal-dialog modal-dialog modal-lg" style="max-width: 920px;" role="dialog" aria-modal="true" aria-labelledby="ccDayTasksModalTitle">
         <div class="cc-modal-content modal-content">

@@ -442,12 +442,18 @@ public class EmrModuleService {
                 .map(EmrDocument::getDocumentHash).reduce("", (a, b) -> a + b);
         String attachmentMaterial = archived.stream().map(a -> a.getOriginalName() + ":" + a.getSha256())
                 .sorted().reduce("", String::concat);
+        LocalDateTime lockedAt = LocalDateTime.now();
         version.setContentHash(EmrHashing.sha256(version.getSnapshot().getSourceHash()
                 + documentMaterial + attachmentMaterial));
-        version.setStatus(EmrVersionStatus.LOCKED);
-        version.setLockedAt(LocalDateTime.now());
-        record.setStatus(EmrRecordStatus.DOCTOR_SIGNATURE_PENDING);
-        audit(record, version, scope.user(), "LOCK", "Khóa phiên bản và chốt content hash.");
+        versions.findAllDetailsByRecordId(recordId).stream()
+                .filter(previous -> previous.getVersionNumber() < version.getVersionNumber())
+                .filter(previous -> previous.getStatus() == EmrVersionStatus.SIGNED)
+                .forEach(previous -> previous.setStatus(EmrVersionStatus.SUPERSEDED));
+        version.setStatus(EmrVersionStatus.SIGNED);
+        version.setLockedAt(lockedAt);
+        version.setSignedAt(lockedAt);
+        record.setStatus(EmrRecordStatus.SIGNED);
+        audit(record, version, scope.user(), "LOCK", "Chốt và khóa phiên bản bệnh án (bản giấy ký tay), đóng băng content hash.");
     }
 
     @Transactional

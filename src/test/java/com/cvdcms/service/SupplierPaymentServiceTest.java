@@ -78,7 +78,7 @@ class SupplierPaymentServiceTest {
     }
 
     @Test
-    @DisplayName("getDebtSummaries - Từ chối branchId không hợp lệ hoặc không có quyền truy cập")
+    @DisplayName("getDebtSummaries - Reject invalid branchId or unauthorized branch access")
     void getDebtSummaries_invalidBranchOrUnauthorized_throws() {
         assertEquals(HttpStatus.BAD_REQUEST,
                 assertThrows(ResponseStatusException.class,
@@ -91,7 +91,7 @@ class SupplierPaymentServiceTest {
     }
 
     @Test
-    @DisplayName("getDebtSummaries - Tổng hợp công nợ theo lô (batch query) và chặn nợ âm về 0")
+    @DisplayName("getDebtSummaries - Aggregate supplier debt via batch query and clamp overpaid debt to 0")
     void getDebtSummaries_batchAggregation_computesAndClampsAtZero() {
         when(accessService.canAccessBranch(1L, 1L)).thenReturn(true);
         Supplier s2 = new Supplier();
@@ -122,7 +122,7 @@ class SupplierPaymentServiceTest {
     }
 
     @Test
-    @DisplayName("searchPayments - Kiểm tra quyền, khoảng ngày và ánh xạ sang SupplierPaymentResponseDTO")
+    @DisplayName("searchPayments - Validate branch access, date range, and map to SupplierPaymentResponseDTO")
     void searchPayments_validatesAndMaps() {
         Pageable pageable = PageRequest.of(0, 10);
         when(accessService.canAccessBranch(1L, 1L)).thenReturn(true);
@@ -151,7 +151,7 @@ class SupplierPaymentServiceTest {
     }
 
     @Test
-    @DisplayName("createPayment - Kiểm tra dữ liệu đầu vào cơ bản (chi nhánh, NCC, số tiền <= 0, ngày tương lai, phương thức, mã tham chiếu)")
+    @DisplayName("createPayment - Validate basic inputs (branch, supplier, amount <= 0, future date, method, reference)")
     void createPayment_inputValidation_throws400() {
         assertEquals(HttpStatus.BAD_REQUEST,
                 assertThrows(ResponseStatusException.class, () -> paymentService.createPayment(null, 1L)).getStatusCode());
@@ -180,7 +180,7 @@ class SupplierPaymentServiceTest {
     }
 
     @Test
-    @DisplayName("createPayment - Chặn double-submit bằng clientRequestId trong cửa sổ 30s và giao dịch trùng trong 5s")
+    @DisplayName("createPayment - Block double-submit via clientRequestId (30s) and duplicate payment within 5s")
     void createPayment_idempotencyAndDuplicateWithin5s_throws400() {
         when(accessService.canAccessBranch(1L, 1L)).thenReturn(true);
         when(branchRepository.findById(1L)).thenReturn(Optional.of(branch));
@@ -214,7 +214,7 @@ class SupplierPaymentServiceTest {
     }
 
     @Test
-    @DisplayName("createPayment - Kiểm tra phiếu nhập gắn kèm phải cùng chi nhánh/NCC và không vượt nợ còn lại của phiếu")
+    @DisplayName("createPayment - Verify linked receipt belongs to same branch/supplier and does not exceed remaining debt")
     void createPayment_linkedReceiptValidation_throws400() {
         when(accessService.canAccessBranch(1L, 1L)).thenReturn(true);
         when(branchRepository.findById(1L)).thenReturn(Optional.of(branch));
@@ -246,7 +246,7 @@ class SupplierPaymentServiceTest {
     }
 
     @Test
-    @DisplayName("createPayment - Thanh toán gắn phiếu nhập thành công và trả về đầy đủ DTO")
+    @DisplayName("createPayment - Pay against linked receipt successfully and return complete DTO")
     void createPayment_linkedReceiptSuccess_returnsDto() {
         when(accessService.canAccessBranch(1L, 1L)).thenReturn(true);
         when(branchRepository.findById(1L)).thenReturn(Optional.of(branch));

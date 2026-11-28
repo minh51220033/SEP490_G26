@@ -1,4 +1,13 @@
 <!DOCTYPE html>
+<!--
+    CV-DCMS — Trang Hộp thư Tin nhắn Realtime theo Cơ sở (/chat, /chat/inbox)
+    - Controller cấp dữ liệu: ChatPageController.chatInboxPage(...)
+    - Script điều khiển: /js/chat-inbox.js (kết nối STOMP /ws-chat, gửi tin qua POST /api/chat/messages)
+    - Phân quyền hiển thị:
+      + ADMIN: xem và lọc tất cả cơ sở, nhận sự kiện từ /topic/chat/admin.
+      + LE_TAN / BAC_SI (canHandlePatients=true): tiếp nhận hội thoại bệnh nhân + nội bộ trong cơ sở mình.
+      + QUAN_LY_KHO / KE_TOAN (canHandlePatients=false): chỉ nhắn tin nội bộ cùng cơ sở (ẩn tùy chọn Bệnh nhân).
+-->
 <html lang="vi" xmlns:th="http://www.thymeleaf.org">
 
 <head th:replace="~{fragments/head :: head('Hộp thư tin nhắn cơ sở')}"></head>
@@ -302,6 +311,7 @@
     </div>
 </div>
 
+<!-- Thư viện Bootstrap 5, SockJS + STOMP client cho WebSocket (/ws-chat) và logic Hộp thư -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>

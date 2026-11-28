@@ -13,11 +13,11 @@
     <div class="app-main">
 
         <main class="app-content p-0" style="padding: 0 !important; gap: 0 !important; background: #ffffff !important;">
-            <link rel="stylesheet" th:href="@{/css/diagnosis.css(v=20261123d)}">
+            <link rel="stylesheet" th:href="@{/css/diagnosis.css(v=20261127c)}">
 
             <style>
                 :root {
-                    --df-font-sans: 'Be Vietnam Pro', 'Inter', system-ui, -apple-system, sans-serif;
+                    --df-font-sans: 'Roboto', -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
                     --df-font-mono: 'JetBrains Mono', monospace;
                     --df-primary: #0284c7;
                     --df-primary-dark: #0369a1;
@@ -397,6 +397,11 @@
                     background: #ffffff;
                 }
 
+                .combobox-input:last-child {
+                    border-right: 1px solid var(--df-border-dark);
+                    border-radius: 8px;
+                }
+
                 .combobox-input:focus {
                     outline: none;
                     border-color: var(--df-primary);
@@ -659,6 +664,51 @@
                     background: transparent;
                     overflow: visible;
                 }
+
+                .tp-pagination-footer {
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    flex-wrap: wrap;
+                    gap: 12px;
+                    padding: 12px 18px;
+                    background: #ffffff;
+                    border-top: 1px solid #e2e8f0;
+                    font-size: 13.5px;
+                    color: #475569;
+                }
+
+                .tp-pagination-right {
+                    display: flex;
+                    align-items: center;
+                    gap: 14px;
+                    flex-wrap: wrap;
+                }
+
+                .tp-page-btn {
+                    width: 32px;
+                    height: 32px;
+                    border-radius: 8px;
+                    border: 1px solid #cbd5e1;
+                    background: #ffffff;
+                    color: #334155;
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    cursor: pointer;
+                    transition: all 0.15s;
+                }
+
+                .tp-page-btn:hover:not(:disabled) {
+                    background: #f0f9ff;
+                    border-color: #0284c7;
+                    color: #0284c7;
+                }
+
+                .tp-page-btn:disabled {
+                    opacity: 0.45;
+                    cursor: not-allowed;
+                }
             </style>
 
             <!-- 1. UNIFIED PATIENT & RECORD HEADER (ĐỒNG BỘ 100% VỚI BÀN KHÁM) -->
@@ -750,6 +800,7 @@
 
                         <div class="d-flex flex-column align-items-end gap-1 flex-shrink-0"
                             th:if="${visit.status == null or visit.status.name() != 'COMPLETED'}">
+                            <input type="hidden" id="visitId" th:value="${visit.visitId}" />
                             <div class="d-flex align-items-center gap-2 justify-content-end flex-wrap">
                                 <span id="deskQueueWaitingBadge"
                                       th:with="initWait=${deskWaitingCount != null ? deskWaitingCount : 0}"
@@ -759,16 +810,40 @@
                                     <i th:class="${initWait > 0 ? 'bi bi-people-fill' : 'bi bi-people'}"></i>
                                     <span id="deskQueueWaitingText" th:text="${initWait > 0 ? ('Hàng đợi: ' + initWait + ' đang chờ') : 'Hàng đợi: 0 chờ'}">Hàng đợi: 0 chờ</span>
                                 </span>
-                                <a th:if="${visit.status == null or visit.status.name() != 'WAITING_PAYMENT'}"
-                                    th:href="@{'/doctor/examination/' + ${visitToken} + '/diagnoses#tab-examination'}"
-                                    class="btn btn-primary rounded-pill px-3 fw-semibold d-inline-flex align-items-center gap-2 shadow-sm text-white text-nowrap text-decoration-none"
-                                    style="background: #0284c7; border-color: #0284c7; height: 36px; font-size: 13px;"
-                                    title="Quay lại Bàn khám bệnh để hoàn tất ca khám">
-                                    <i class="bi bi-check2-circle"></i>
-                                    <span>Hoàn tất khám</span>
-                                </a>
+                                <th:block th:if="${visit.status == null or visit.status.name() != 'WAITING_PAYMENT'}">
+                                    <button type="button" id="btnOpenDoctorHandover"
+                                        class="btn btn-outline-primary rounded-pill px-3 fw-semibold d-inline-flex align-items-center gap-2 text-nowrap"
+                                        style="height: 36px; font-size: 13px;"
+                                        onclick="window.DFHandover && window.DFHandover.open(null, null)"
+                                        title="Chuyển bệnh nhân sang bác sĩ chuyên môn khác qua hàng đợi &amp; TV">
+                                        <i class="bi bi-arrow-left-right"></i>
+                                        <span>Chuyển BS</span>
+                                    </button>
+                                    <a th:href="@{'/doctor/examination/' + ${visitToken} + '/diagnoses#tab-examination'}"
+                                        class="btn btn-primary rounded-pill px-3 fw-semibold d-inline-flex align-items-center gap-2 shadow-sm text-white text-nowrap text-decoration-none"
+                                        style="background: #0284c7; border-color: #0284c7; height: 36px; font-size: 13px;"
+                                        title="Quay lại Bàn khám bệnh để hoàn tất ca khám">
+                                        <i class="bi bi-check2-circle"></i>
+                                        <span>Hoàn tất khám</span>
+                                    </a>
+                                </th:block>
                             </div>
                         </div>
+                    </div>
+                    <!-- BANNER BÀN GIAO NỘI BỘ (CHỈ HIỆN KHI CA KHÁM CÓ LỊCH SỬ CHUYỂN BS) -->
+                    <div id="visitHandoverBanner"
+                         class="df-exam-bound d-none mt-2 px-3 py-2 rounded-3 bg-white border border-info shadow-sm d-flex align-items-center justify-content-between gap-2 flex-wrap"
+                         style="border-left: 4px solid #0284c7 !important; background: linear-gradient(90deg, #f0f9ff 0%, #ffffff 45%) !important;">
+                        <div class="d-flex align-items-start gap-2 small">
+                            <span class="d-inline-flex align-items-center justify-content-center rounded-2 bg-primary-subtle text-primary flex-shrink-0" style="width: 28px; height: 28px;">
+                                <i class="bi bi-arrow-left-right"></i>
+                            </span>
+                            <div id="visitHandoverBannerDetail" class="text-secondary"></div>
+                        </div>
+                        <button type="button" id="btnQuickReturnHandover"
+                                class="btn btn-sm btn-outline-primary rounded-pill px-3 py-1 fw-semibold d-none text-nowrap">
+                            Trả lại BS trước
+                        </button>
                     </div>
                 </div>
 
@@ -820,6 +895,10 @@
                             <a th:href="@{'/doctor/examination/' + ${visitToken} + '/diagnoses#tab-workflow-execution'}"
                                 class="df-subnav-item">
                                 <i class="bi bi-list-check"></i> Quy trình điều trị
+                                <span class="badge bg-light text-secondary border ms-1 df-tab-count df-num"
+                                    id="ft43SubnavCount"
+                                    th:classappend="${workflowNavCount == null or workflowNavCount == 0} ? 'd-none' : ''"
+                                    th:text="${workflowNavCount != null ? workflowNavCount : 0}">0</span>
                             </a>
                             <a th:href="@{'/doctor/examination/' + ${visitToken} + '/diagnoses#tab-emr'}"
                                 class="df-subnav-item">
@@ -877,10 +956,29 @@
                         </nav>
                     </div>
                 </div>
+                <script>
+                    (function () {
+                        var nav = document.getElementById('mainSubnav');
+                        if (!nav) return;
+                        var key = 'cvdcms_subnav_scroll_' + (window.location.pathname.split('/')[3] || 'default');
+                        try {
+                            var saved = sessionStorage.getItem(key);
+                            if (saved !== null && !isNaN(Number(saved))) {
+                                nav.scrollLeft = Number(saved);
+                            }
+                        } catch (e) {}
+                        nav.addEventListener('click', function (ev) {
+                            var link = ev.target && ev.target.closest ? ev.target.closest('a.df-subnav-item') : null;
+                            if (link) {
+                                try { sessionStorage.setItem(key, String(Math.round(nav.scrollLeft))); } catch (e) {}
+                            }
+                        });
+                    })();
+                </script>
             </div>
 
-            <!-- 2. VÙNG NỘI DUNG TAB LẬP KẾ HOẠCH (LIST-FIRST GIỐNG TAB CHẨN ĐOÁN) -->
-            <div class="p-3 p-md-4" style="background: #f8fafc;">
+            <!-- 2. VÙNG NỘI DUNG TAB LẬP KẾ HOẠCH (ĐỒNG BỘ CONTAINER VỚI BÀN KHÁM) -->
+            <div class="df-tab-content-container p-3 p-md-4 flex-grow-1" style="background: #f8fafc;">
                 <div class="df-exam-bound">
 
                     <!-- KHỐI 1: DANH SÁCH CÁC KẾ HOẠCH ĐIỀU TRỊ (MẶC ĐỊNH HIỆN BÊN NGOÀI) -->
@@ -922,9 +1020,72 @@
                                                 <div class="small text-muted">Nhấn nút &quot;Tạo thêm&quot; ở góc phải để lập kế hoạch &amp; lộ trình điều trị mới.</div>
                                             </td>
                                         </tr>
+                                        <!-- Nhóm 1: KHDT của ca khám hôm nay -->
                                         <tr th:each="plan : ${treatmentPlans}"
+                                            th:if="${visit != null and plan.visitId != null and plan.visitId == visit.visitId}"
                                             th:id="'tp-list-row-' + ${plan.planId}"
                                             th:data-plan-id="${plan.planId}"
+                                            th:data-visit-id="${plan.visitId}"
+                                            style="cursor: pointer; background: #f8fafc;"
+                                            onclick="openEditPlanWorkspace(this.getAttribute('data-plan-id'))">
+                                            <td class="df-num">
+                                                <span class="badge bg-light text-primary border font-monospace fw-bold px-2 py-1"
+                                                      th:text="${plan.planCode}">KHDT1001</span>
+                                            </td>
+                                            <td>
+                                                <div class="d-flex align-items-center gap-2 flex-wrap">
+                                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle fw-semibold" style="font-size: 11px;">Ca hôm nay</span>
+                                                    <span class="fw-bold text-dark" th:text="${plan.planName}">Kế hoạch điều trị</span>
+                                                </div>
+                                                <div class="df-meta-tertiary mt-1" th:if="${plan.diagnosisText != null and !#strings.isEmpty(plan.diagnosisText)}"
+                                                     th:text="${#strings.abbreviate(plan.diagnosisText, 90)}">Chẩn đoán</div>
+                                            </td>
+                                            <td class="small text-dark fw-semibold df-num text-nowrap">
+                                                <i class="bi bi-calendar-event me-1 text-primary"></i>
+                                                <span th:text="${plan.startDate != null ? plan.startDate : '---'}">---</span>
+                                                <span class="text-muted"> &rarr; </span>
+                                                <span th:text="${plan.expectedEndDate != null ? plan.expectedEndDate : '---'}">---</span>
+                                            </td>
+                                            <td class="text-end df-num">
+                                                <strong class="text-primary"
+                                                        th:text="${plan.finalEstimatedCost != null ? #numbers.formatDecimal(plan.finalEstimatedCost, 0, 'COMMA', 0, 'POINT') + ' đ' : '0 đ'}">0 đ</strong>
+                                                <div th:if="${plan.isInstallment}" class="small text-info fw-semibold mt-1">
+                                                    <i class="bi bi-calendar2-range me-1"></i>Trả theo đợt
+                                                </div>
+                                            </td>
+                                            <td class="text-center">
+                                                <span class="badge rounded-pill px-2 py-1 border fw-semibold"
+                                                      th:classappend="${plan.statusBadgeClass}"
+                                                      th:text="${plan.statusDisplayName}">BN đã đồng ý</span>
+                                            </td>
+                                            <td class="text-center" onclick="event.stopPropagation()">
+                                                <div class="d-inline-flex align-items-center justify-content-center gap-2">
+                                                    <button type="button"
+                                                            class="btn df-btn-tonal-primary btn-sm rounded-pill px-3 py-1 fw-semibold d-inline-flex align-items-center gap-1"
+                                                            style="font-size: 12.5px;"
+                                                            th:data-plan-id="${plan.planId}"
+                                                            onclick="openEditPlanWorkspace(this.getAttribute('data-plan-id'))"
+                                                            title="Mở &amp; thêm dịch vụ vào KHDT ca hôm nay">
+                                                        <i class="bi bi-pencil-square"></i>
+                                                        <span>Chi tiết</span>
+                                                    </button>
+                                                    <button type="button"
+                                                            th:if="${!isClinicalLocked}"
+                                                            class="df-btn-icon-muted"
+                                                            th:data-plan-id="${plan.planId}"
+                                                            onclick="deletePlanFromList(this.getAttribute('data-plan-id'))"
+                                                            title="Xóa kế hoạch điều trị">
+                                                        <i class="bi bi-trash3-fill"></i>
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <!-- Nhóm 2: KHDT từ các ca khám trước -->
+                                        <tr th:each="plan : ${treatmentPlans}"
+                                            th:if="${visit == null or plan.visitId == null or plan.visitId != visit.visitId}"
+                                            th:id="'tp-list-row-' + ${plan.planId}"
+                                            th:data-plan-id="${plan.planId}"
+                                            th:data-visit-id="${plan.visitId}"
                                             style="cursor: pointer;"
                                             onclick="openEditPlanWorkspace(this.getAttribute('data-plan-id'))">
                                             <td class="df-num">
@@ -932,7 +1093,11 @@
                                                       th:text="${plan.planCode}">KHDT1001</span>
                                             </td>
                                             <td>
-                                                <div class="fw-bold text-dark" th:text="${plan.planName}">Kế hoạch điều trị</div>
+                                                <div class="d-flex align-items-center gap-2 flex-wrap">
+                                                    <span class="badge bg-light text-secondary border fw-medium" style="font-size: 11px;"
+                                                          th:text="${plan.visitCode != null ? 'Ca trước · ' + plan.visitCode : 'Ca trước'}">Ca trước</span>
+                                                    <span class="fw-bold text-dark" th:text="${plan.planName}">Kế hoạch điều trị</span>
+                                                </div>
                                                 <div class="df-meta-tertiary mt-1" th:if="${plan.diagnosisText != null and !#strings.isEmpty(plan.diagnosisText)}"
                                                      th:text="${#strings.abbreviate(plan.diagnosisText, 90)}">Chẩn đoán</div>
                                             </td>
@@ -979,6 +1144,28 @@
                                     </tbody>
                                 </table>
                             </div>
+                        <div id="tpCreatePaginationBar" class="tp-pagination-footer"
+                             th:style="${treatmentPlans == null or #lists.isEmpty(treatmentPlans)} ? 'display:none;' : ''">
+                            <div>
+                                Tổng số: <strong class="df-num" id="tpCreateTotalCountText" th:text="${treatmentPlans != null ? #lists.size(treatmentPlans) : 0}">0</strong>
+                            </div>
+                            <div class="tp-pagination-right">
+                                <div class="d-flex align-items-center gap-2">
+                                    <span>Số dòng/trang</span>
+                                    <select id="tpCreatePageSizeSelect" class="form-select form-select-sm df-num" style="width: 72px;"
+                                            onchange="tpCreateChangePageSize(this.value)">
+                                        <option value="10" selected>10</option>
+                                        <option value="25">25</option>
+                                        <option value="50">50</option>
+                                        <option value="100">100</option>
+                                    </select>
+                                </div>
+                                <div class="fw-semibold df-num">
+                                    <span id="tpCreatePageRangeFrom">0</span> - <span id="tpCreatePageRangeTo">0</span>
+                                </div>
+                                <div class="d-flex align-items-center gap-1" id="tpCreatePaginationNav"></div>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- KHỐI 2: FORM LẬP / CẬP NHẬT KẾ HOẠCH (PHẲNG TỪ TRÊN XUỐNG DƯỚI, KHÔNG ACCORDION) -->
@@ -1250,10 +1437,11 @@
                                                 <thead>
                                                     <tr>
                                                         <th style="width: 52px;" class="text-center">Chọn</th>
-                                                        <th style="width: 145px;" class="text-nowrap">Chẩn đoán</th>
-                                                        <th style="width: 220px;">Vị trí răng &amp; mặt răng</th>
-                                                        <th style="width: 100px;">Mã ICD-10</th>
+                                                        <th style="width: 135px;" class="text-nowrap">Chẩn đoán</th>
+                                                        <th style="width: 200px;">Vị trí răng &amp; mặt răng</th>
+                                                        <th style="width: 95px;">Mã ICD-10</th>
                                                         <th>Tên bệnh lý &amp; Phân loại</th>
+                                                        <th style="width: 250px;" class="text-end">Dịch vụ &amp; Lộ trình gợi ý</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody id="diagTableBody">
@@ -1435,6 +1623,7 @@
     const SERVER_WORKFLOW_TEMPLATES = /*[[${workflowTemplates}]]*/ [];
     const SERVER_WORKFLOW_COMBOS = /*[[${workflowCombos}]]*/ [];
     const SERVER_BOOKED_SERVICE = /*[[${bookedService}]]*/ null;
+    const SERVER_TREATMENT_PLANS = /*[[${treatmentPlans}]]*/ [];
     let DESK_WAITING_COUNT = /*[[${deskWaitingCount != null ? deskWaitingCount : 0}]]*/ 0;
     /*]]>*/
 </script>
@@ -3082,7 +3271,7 @@
         if (DIAGNOSES.length === 0) {
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="5" class="text-center py-3 text-muted small">
+                    <td colspan="6" class="text-center py-3 text-muted small">
                         Ca khám hiện chưa ghi nhận chẩn đoán ICD-10. Bác sĩ có thể chọn dịch vụ ở <strong>phía trên</strong> hoặc bấm nút gắn mã ICD-10 nếu cần.
                     </td>
                 </tr>
@@ -3104,6 +3293,16 @@
             const countBadge = isFullJaw
                 ? ''
                 : `<span class="text-muted small ms-1">(${d.teeth.length} răng)</span>`;
+
+            const matchedSrv = d.serviceId ? SERVICES_DICT[d.serviceId] : null;
+            const matchedWf = d.serviceId ? getWorkflowForService(d.serviceId) : null;
+            const alreadyAdded = matchedSrv && PLAN_SERVICES.some(ps => String(ps.serviceId) === String(matchedSrv.id));
+            const suggestCell = matchedSrv
+                ? `<div class="small fw-semibold text-dark mb-1">${escapeHtml(matchedSrv.name)}${matchedWf ? ' · <span class="text-success">' + escapeHtml(matchedWf.templateName) + '</span>' : ''}</div>`
+                    + `<button type="button" class="btn btn-sm ${alreadyAdded ? 'btn-outline-success' : 'df-btn-tonal-primary'} rounded-pill px-3 py-1 fw-semibold" style="font-size:12px;" onclick="applyDiagnosisAndOpenRoadmap('${escapeJsAttr(d.id)}')">`
+                    + (alreadyAdded ? '<i class="bi bi-check2 me-1"></i>Xem lộ trình' : '<i class="bi bi-diagram-3 me-1"></i>Chọn lộ trình này')
+                    + `</button>`
+                : '<span class="small text-muted">Chọn dịch vụ ở trên</span>';
 
             html += `
                 <tr>
@@ -3127,6 +3326,7 @@
                             ${d.type === 'Chính' ? '★ Chính' : '⊕ Kèm theo'}
                         </span>
                     </td>
+                    <td class="text-end">${suggestCell}</td>
                 </tr>
             `;
         });
@@ -3134,11 +3334,27 @@
         tbody.innerHTML = html;
     }
 
+    function applyDiagnosisAndOpenRoadmap(diagId) {
+        const diag = DIAGNOSES.find(x => String(x.id) === String(diagId));
+        if (!diag) return;
+        diag.selected = true;
+        if (diag.serviceId && SERVICES_DICT[diag.serviceId]) {
+            const alreadyAdded = PLAN_SERVICES.some(ps => String(ps.serviceId) === String(diag.serviceId));
+            if (!alreadyAdded) {
+                addServiceFromDiagnosis(String(diag.id));
+            } else {
+                renderDiagnosisTable();
+            }
+        }
+        switchPlanSubTab('roadmap', true);
+    }
+
     function toggleDiag(id) {
         const d = DIAGNOSES.find(x => x.id === id);
         if (d) {
             d.selected = !d.selected;
             renderDiagnosisTable();
+            renderRoadmaps();
         }
     }
 
@@ -3181,13 +3397,25 @@
 
         if (PLAN_SERVICES.length === 0) {
             if (container) {
-                container.innerHTML = `<div class="text-center text-muted py-4 small">Chưa có dịch vụ nào. Chọn dịch vụ ở <strong>phía trên</strong> để hiển thị các giai đoạn và thủ thuật.</div>`;
+                container.innerHTML = `<div class="text-center text-muted py-4 small">Chưa có dịch vụ nào. Chọn dịch vụ ở <strong>phía trên</strong> hoặc chọn từ <strong>Chẩn đoán đính kèm (ICD-10)</strong> để hiển thị các giai đoạn và thủ thuật.</div>`;
             }
             if (stagesBadge) stagesBadge.innerText = '0 giai đoạn';
             return;
         }
 
-        let html = '';
+        const attachedDiags = [
+            ...DIAGNOSES.filter(dx => dx.selected).map(dx => `[${escapeHtml(dx.icd || 'CĐ')}] ${escapeHtml(dx.name)}`),
+            ...CUSTOM_ICDS.map(cx => `[${escapeHtml(cx.code)}] ${escapeHtml(cx.name)}`)
+        ];
+        let html = attachedDiags.length > 0
+            ? `<div class="mb-3 px-3 py-2 rounded-3 bg-light border d-flex align-items-center justify-content-between flex-wrap gap-2 small">
+                    <div><i class="bi bi-clipboard2-pulse text-primary me-1"></i><strong>Chẩn đoán áp dụng:</strong> ${attachedDiags.join(' · ')}</div>
+                    <button type="button" class="btn btn-sm btn-link p-0 text-decoration-none" onclick="switchPlanSubTab('diagnosis', true)">Đổi chẩn đoán</button>
+               </div>`
+            : `<div class="mb-3 px-3 py-2 rounded-3 bg-light border d-flex align-items-center justify-content-between flex-wrap gap-2 small text-muted">
+                    <span><i class="bi bi-info-circle me-1"></i>Chưa đính kèm chẩn đoán ICD-10 cho lộ trình này (tùy chọn).</span>
+                    <button type="button" class="btn btn-sm btn-link p-0 text-decoration-none" onclick="switchPlanSubTab('diagnosis', true)">Chọn chẩn đoán</button>
+               </div>`;
         let totalStages = 0;
 
         PLAN_SERVICES.forEach(d => {
@@ -3858,6 +4086,14 @@
         if (!SERVER_BOOKED_SERVICE || !SERVER_BOOKED_SERVICE.serviceId) return;
         const bookedId = String(SERVER_BOOKED_SERVICE.serviceId);
         if (!SERVICES_DICT[bookedId]) return;
+        const alreadyCoveredInTodayVisit = Array.isArray(SERVER_TREATMENT_PLANS) && SERVER_TREATMENT_PLANS.some(p =>
+            p && String(p.status || '').toUpperCase() !== 'CANCELLED'
+            && Number(p.visitId || 0) === Number(CURRENT_VISIT_ID || 0)
+            && Array.isArray(p.stages) && p.stages.some(st =>
+                Array.isArray(st.items) && st.items.some(it => it && String(it.serviceId) === bookedId)
+            )
+        );
+        if (alreadyCoveredInTodayVisit) return;
         const existing = PLAN_SERVICES.find(x => String(x.serviceId) === bookedId);
         if (existing) {
             existing.isBookedLocked = true;
@@ -4177,13 +4413,71 @@
             if (remaining === 0 && tbody) {
                 tbody.innerHTML = `<tr id="tpListEmptyRow"><td colspan="6" class="text-center py-5"><div class="text-secondary mb-2" style="font-size: 28px;"><i class="bi bi-inbox"></i></div><div class="fw-bold text-dark mb-1">Chưa có kế hoạch điều trị nào</div><div class="small text-muted">Nhấn nút &quot;Tạo thêm&quot; ở góc phải để lập kế hoạch &amp; lộ trình điều trị mới.</div></td></tr>`;
             }
+            updateTpCreatePagination();
             showToast('Đã xóa kế hoạch điều trị.', 'warning');
         } catch (e) {
             showToast('Lỗi kết nối khi xóa kế hoạch điều trị.', 'error');
         }
     }
 
+    const tpCreatePaginationState = { page: 1, pageSize: 10 };
+
+    function tpCreateGoPage(p) {
+        tpCreatePaginationState.page = Math.max(1, Number(p) || 1);
+        updateTpCreatePagination();
+    }
+
+    function tpCreateChangePageSize(sz) {
+        tpCreatePaginationState.pageSize = parseInt(sz, 10) || 10;
+        tpCreatePaginationState.page = 1;
+        updateTpCreatePagination();
+    }
+
+    function updateTpCreatePagination() {
+        const tbody = document.getElementById('tpPlanListTableBody');
+        const bar = document.getElementById('tpCreatePaginationBar');
+        if (!tbody || !bar) return;
+        const rows = Array.from(tbody.querySelectorAll('tr[data-plan-id]'));
+        const total = rows.length;
+        const totalEl = document.getElementById('tpCreateTotalCountText');
+        const fromEl = document.getElementById('tpCreatePageRangeFrom');
+        const toEl = document.getElementById('tpCreatePageRangeTo');
+        const navEl = document.getElementById('tpCreatePaginationNav');
+
+        if (total === 0) {
+            bar.style.display = 'none';
+            if (totalEl) totalEl.textContent = '0';
+            if (fromEl) fromEl.textContent = '0';
+            if (toEl) toEl.textContent = '0';
+            return;
+        }
+        bar.style.display = 'flex';
+        const totalPages = Math.max(1, Math.ceil(total / tpCreatePaginationState.pageSize));
+        if (tpCreatePaginationState.page > totalPages) tpCreatePaginationState.page = totalPages;
+        const startIdx = (tpCreatePaginationState.page - 1) * tpCreatePaginationState.pageSize;
+        const endIdx = Math.min(startIdx + tpCreatePaginationState.pageSize, total);
+
+        rows.forEach((r, idx) => {
+            r.style.display = (idx >= startIdx && idx < endIdx) ? '' : 'none';
+        });
+
+        if (totalEl) totalEl.textContent = String(total);
+        if (fromEl) fromEl.textContent = String(startIdx + 1);
+        if (toEl) toEl.textContent = String(endIdx);
+        if (navEl) {
+            const isFirst = tpCreatePaginationState.page <= 1;
+            const isLast = tpCreatePaginationState.page >= totalPages;
+            navEl.innerHTML = `
+                <button type="button" class="tp-page-btn" ${isFirst ? 'disabled' : ''} onclick="tpCreateGoPage(1)" title="Trang đầu"><i class="bi bi-chevron-bar-left"></i></button>
+                <button type="button" class="tp-page-btn" ${isFirst ? 'disabled' : ''} onclick="tpCreateGoPage(${tpCreatePaginationState.page - 1})" title="Trang trước"><i class="bi bi-chevron-left"></i></button>
+                <button type="button" class="tp-page-btn" ${isLast ? 'disabled' : ''} onclick="tpCreateGoPage(${tpCreatePaginationState.page + 1})" title="Trang sau"><i class="bi bi-chevron-right"></i></button>
+                <button type="button" class="tp-page-btn" ${isLast ? 'disabled' : ''} onclick="tpCreateGoPage(${totalPages})" title="Trang cuối"><i class="bi bi-chevron-bar-right"></i></button>
+            `;
+        }
+    }
+
     document.addEventListener('DOMContentLoaded', async function() {
+        updateTpCreatePagination();
         renderServiceComboItems('');
         renderPlanComboOptions();
         renderCommonIcdChips();
@@ -4192,10 +4486,21 @@
         const urlParams = new URLSearchParams(window.location.search);
         const editPlanId = urlParams.get('planId');
         const mode = urlParams.get('mode');
+        const focusParam = urlParams.get('focus');
         const hasPreDiag = PRESELECTED_DIAG_ID && Number(PRESELECTED_DIAG_ID) > 0;
 
         if (editPlanId) {
             await openEditPlanWorkspace(editPlanId);
+        } else if (focusParam === 'today') {
+            const todayPlan = (Array.isArray(SERVER_TREATMENT_PLANS) ? SERVER_TREATMENT_PLANS : []).find(p =>
+                p && String(p.status || '').toUpperCase() !== 'CANCELLED'
+                && Number(p.visitId || 0) === Number(CURRENT_VISIT_ID || 0)
+            );
+            if (todayPlan && todayPlan.planId) {
+                await openEditPlanWorkspace(todayPlan.planId);
+            } else {
+                openCreatePlanWorkspace(hasPreDiag ? PRESELECTED_DIAG_ID : null);
+            }
         } else if (mode === 'create' || hasPreDiag) {
             openCreatePlanWorkspace(hasPreDiag ? PRESELECTED_DIAG_ID : null);
         } else {
@@ -4732,18 +5037,37 @@
                 var hasMoreRight = (nav.scrollWidth - nav.clientWidth - nav.scrollLeft) > 4;
                 container.classList.toggle('has-overflow-right', hasMoreRight);
             };
+            var scrollKey = 'cvdcms_subnav_scroll_' + (window.location.pathname.split('/')[3] || 'default');
+            try {
+                var savedLeft = sessionStorage.getItem(scrollKey);
+                if (savedLeft !== null && !isNaN(Number(savedLeft))) {
+                    nav.scrollLeft = Number(savedLeft);
+                }
+            } catch (e) {}
+            var persistScroll = function () {
+                try { sessionStorage.setItem(scrollKey, String(Math.round(nav.scrollLeft))); } catch (e) {}
+            };
             nav.addEventListener('wheel', function (e) {
                 if (nav.scrollWidth > nav.clientWidth && Math.abs(e.deltaY) >= Math.abs(e.deltaX)) {
                     nav.scrollLeft += e.deltaY;
                     e.preventDefault();
                     updateFade();
+                    persistScroll();
                 }
             }, { passive: false });
-            nav.addEventListener('scroll', updateFade, { passive: true });
+            nav.addEventListener('scroll', function () {
+                updateFade();
+                persistScroll();
+            }, { passive: true });
             window.addEventListener('resize', updateFade);
             var activeTab = nav.querySelector('.df-subnav-item.active');
-            if (activeTab && typeof activeTab.scrollIntoView === 'function') {
-                activeTab.scrollIntoView({ behavior: 'auto', inline: 'nearest', block: 'nearest' });
+            if (activeTab) {
+                var nRect = nav.getBoundingClientRect();
+                var tRect = activeTab.getBoundingClientRect();
+                if (tRect.left < nRect.left || tRect.right > nRect.right) {
+                    activeTab.scrollIntoView({ behavior: 'auto', inline: 'nearest', block: 'nearest' });
+                    persistScroll();
+                }
             }
             updateFade();
         }
@@ -4780,5 +5104,6 @@
     })();
 </script>
 
+<div th:if="${visit != null}" th:replace="~{doctor/fragments/doctor-handover-modal :: doctorHandoverModal}"></div>
 </body>
 </html>

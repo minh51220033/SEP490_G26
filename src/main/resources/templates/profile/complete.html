@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="vi" xmlns:th="http://www.thymeleaf.org">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -8,7 +9,7 @@
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 
@@ -22,6 +23,7 @@
             overflow-y: auto;
             padding: 32px 24px;
         }
+
         .onboarding-card {
             background: #ffffff;
             border-radius: 16px;
@@ -29,6 +31,7 @@
             box-shadow: 0 4px 16px rgba(15, 23, 42, 0.06);
             padding: 32px;
         }
+
         .profile-block {
             background: #f8fafc;
             border: 1.5px solid #e2e8f0;
@@ -37,250 +40,266 @@
             margin-bottom: 20px;
             transition: all 0.2s ease;
         }
+
         .profile-block:hover {
             border-color: #cbd5e1;
             box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
         }
+
         .cm-grid-2 {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
             gap: 16px;
         }
+
         @media (max-width: 768px) {
             .cm-grid-2 {
                 grid-template-columns: 1fr;
             }
+
             .onboarding-main {
                 padding: 16px 12px;
             }
+
             .onboarding-card {
                 padding: 20px 16px;
             }
         }
     </style>
 </head>
+
 <body>
 
-<div class="auth">
-    <aside th:replace="~{fragments/auth :: hero}"></aside>
+    <div class="auth">
+        <aside th:replace="~{fragments/auth :: hero}"></aside>
 
-    <main class="auth-main onboarding-main">
-        <div class="auth-main__mobile-brand mb-3">
-            <a th:replace="~{fragments/logo :: logo('dark')}"></a>
-        </div>
-
-        <section class="onboarding-card" aria-labelledby="onboarding-title">
-            <!-- 1. TIẾN TRÌNH ONBOARDING 3 BƯỚC -->
-            <div class="d-flex align-items-center justify-content-between mb-4 pb-3 border-bottom flex-wrap gap-2">
-                <div class="d-flex align-items-center gap-2">
-                    <span class="badge rounded-circle bg-success text-white d-inline-flex align-items-center justify-content-center" style="width: 28px; height: 28px;">
-                        <i class="bi bi-check-lg"></i>
-                    </span>
-                    <span class="small fw-semibold text-muted text-decoration-line-through">1. Tạo tài khoản</span>
-                </div>
-                <i class="bi bi-chevron-right text-muted opacity-50 d-none d-sm-inline"></i>
-                <div class="d-flex align-items-center gap-2">
-                    <span class="badge rounded-circle bg-primary text-white d-inline-flex align-items-center justify-content-center" style="width: 28px; height: 28px;">
-                        2
-                    </span>
-                    <span class="small fw-bold text-primary">2. Hồ sơ bệnh nhân</span>
-                </div>
-                <i class="bi bi-chevron-right text-muted opacity-50 d-none d-sm-inline"></i>
-                <div class="d-flex align-items-center gap-2">
-                    <span class="badge rounded-circle bg-light text-secondary border d-inline-flex align-items-center justify-content-center" style="width: 28px; height: 28px;">
-                        3
-                    </span>
-                    <span class="small text-muted">3. Đặt lịch khám</span>
-                </div>
+        <main class="auth-main onboarding-main">
+            <div class="auth-main__mobile-brand mb-3">
+                <a th:replace="~{fragments/logo :: logo('dark')}"></a>
             </div>
 
-            <!-- 2. TIÊU ĐỀ & CHÀO MỪNG -->
-            <div class="mb-4">
-                <h2 id="onboarding-title" class="fw-bold text-dark fs-4 mb-1">
-                    <i class="bi bi-person-vcard text-primary me-2"></i>Hoàn thiện hồ sơ bệnh nhân
-                </h2>
-                <p class="text-muted small mb-0">
-                    Chào mừng bạn đến với <strong>CV-DCMS</strong>! Vui lòng hoàn thiện hồ sơ bệnh nhân mặc định của bạn (và có thể thêm người thân nếu muốn) để bắt đầu đặt lịch khám.
-                </p>
-            </div>
-
-            <div th:if="${error != null}" class="alert alert-danger d-flex align-items-center gap-2 mb-3 shadow-sm rounded-3" role="alert">
-                <i class="bi bi-exclamation-triangle-fill fs-5"></i>
-                <span th:text="${error}">Đã xảy ra lỗi.</span>
-            </div>
-
-            <form th:action="@{/profile/complete}"
-                  method="post"
-                  enctype="multipart/form-data"
-                  id="completeForm">
-
-                <div id="profilesContainer">
-                    <div class="profile-block" data-index="0">
-                        <div class="d-flex align-items-center justify-content-between pb-2 mb-3 border-bottom">
-                            <h3 class="h6 fw-bold text-primary mb-0 profile-heading">
-                                <i class="bi bi-person-check-fill me-2"></i>Hồ sơ 1 (Hồ sơ mặc định của bạn)
-                            </h3>
-                            <button type="button"
-                                    class="btn btn-sm btn-outline-danger remove-profile-btn"
-                                    style="display:none;"
-                                    onclick="removeProfileBlock(this)">
-                                <i class="bi bi-trash me-1"></i>Xóa hồ sơ này
-                            </button>
-                        </div>
-
-                        <div class="cm-grid-2 mb-3">
-                            <div>
-                                <label class="form-label small fw-semibold text-dark">Họ và tên <span class="text-danger">*</span></label>
-                                <input type="text" name="profiles[0].fullName" class="form-control" maxlength="100" placeholder="Nguyễn Văn A" required>
-                            </div>
-                            <div>
-                                <label class="form-label small fw-semibold text-dark">Ngày sinh</label>
-                                <input type="date" name="profiles[0].dob" class="form-control">
-                            </div>
-                            <div>
-                                <label class="form-label small fw-semibold text-dark">Giới tính <span class="text-danger">*</span></label>
-                                <select name="profiles[0].gender" class="form-select" required>
-                                    <option value="">-- Chọn giới tính --</option>
-                                    <option value="Nam">Nam</option>
-                                    <option value="Nữ">Nữ</option>
-                                    <option value="Khác">Khác</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label class="form-label small fw-semibold text-dark">Cơ sở khám ưu tiên <span class="text-danger">*</span></label>
-                                <select name="profiles[0].branchId" class="form-select" required>
-                                    <option value="">-- Chọn cơ sở khám --</option>
-                                    <option th:each="b : ${branches}"
-                                            th:value="${b.branchId}"
-                                            th:text="${b.branchName}">
-                                    </option>
-                                </select>
-                            </div>
-                            <div style="grid-column: 1 / -1;">
-                                <label class="form-label small fw-semibold text-dark">Địa chỉ thường trú <span class="text-danger">*</span></label>
-                                <input type="text" name="profiles[0].address" class="form-control" maxlength="255" placeholder="Số nhà, đường, phường/xã, quận/huyện..." required>
-                            </div>
-                        </div>
-
-                        <div class="mb-3 p-3 bg-white rounded-3 border">
-                            <label class="form-label small fw-semibold text-dark mb-2">Tiền sử bệnh nền / Dị ứng thuốc <span class="text-danger">*</span></label>
-                            <div class="d-flex gap-4 mb-2">
-                                <label class="d-inline-flex align-items-center gap-2 cursor-pointer">
-                                    <input type="radio"
-                                           name="profiles[0].hasUnderlyingDisease"
-                                           value="false"
-                                           checked
-                                           onchange="toggleDiseaseField(this, false)">
-                                    <span class="small">Không có bệnh nền</span>
-                                </label>
-                                <label class="d-inline-flex align-items-center gap-2 cursor-pointer">
-                                    <input type="radio"
-                                           name="profiles[0].hasUnderlyingDisease"
-                                           value="true"
-                                           onchange="toggleDiseaseField(this, true)">
-                                    <span class="small text-danger fw-semibold">Có bệnh nền / Dị ứng</span>
-                                </label>
-                            </div>
-                            <div class="disease-details-wrap mt-2" style="display:none;">
-                                <label class="form-label small fw-semibold text-dark">Mô tả chi tiết bệnh nền / Dị ứng <span class="text-danger">*</span></label>
-                                <textarea name="profiles[0].underlyingDiseaseDetails"
-                                          rows="2"
-                                          maxlength="1000"
-                                          class="form-control"
-                                          placeholder="Nhập bệnh nền (tim mạch, huyết áp, tiểu đường...) hoặc dị ứng kháng sinh..."></textarea>
-                            </div>
-                        </div>
-
-                        <div>
-                            <label class="form-label small fw-semibold text-dark">Ảnh đại diện (Tùy chọn — JPG, PNG, WebP tối đa 5MB)</label>
-                            <input type="file" name="profiles[0].avatar" accept="image/jpeg,image/png,image/webp" class="form-control">
-                        </div>
+            <section class="onboarding-card" aria-labelledby="onboarding-title">
+                <!-- 1. TIẾN TRÌNH ONBOARDING 3 BƯỚC -->
+                <div class="d-flex align-items-center justify-content-between mb-4 pb-3 border-bottom flex-wrap gap-2">
+                    <div class="d-flex align-items-center gap-2">
+                        <span
+                            class="badge rounded-circle bg-success text-white d-inline-flex align-items-center justify-content-center"
+                            style="width: 28px; height: 28px;">
+                            <i class="bi bi-check-lg"></i>
+                        </span>
+                        <span class="small fw-semibold text-muted text-decoration-line-through">1. Tạo tài khoản</span>
+                    </div>
+                    <i class="bi bi-chevron-right text-muted opacity-50 d-none d-sm-inline"></i>
+                    <div class="d-flex align-items-center gap-2">
+                        <span
+                            class="badge rounded-circle bg-primary text-white d-inline-flex align-items-center justify-content-center"
+                            style="width: 28px; height: 28px;">
+                            2
+                        </span>
+                        <span class="small fw-bold text-primary">2. Hồ sơ bệnh nhân</span>
+                    </div>
+                    <i class="bi bi-chevron-right text-muted opacity-50 d-none d-sm-inline"></i>
+                    <div class="d-flex align-items-center gap-2">
+                        <span
+                            class="badge rounded-circle bg-light text-secondary border d-inline-flex align-items-center justify-content-center"
+                            style="width: 28px; height: 28px;">
+                            3
+                        </span>
+                        <span class="small text-muted">3. Đặt lịch khám</span>
                     </div>
                 </div>
 
-                <div class="d-flex align-items-center justify-content-between flex-wrap gap-3 mt-4 pt-2 border-top">
-                    <button type="button" class="btn btn-outline-primary fw-semibold d-inline-flex align-items-center gap-2 rounded-3" onclick="addProfileBlock()">
-                        <i class="bi bi-person-plus-fill"></i><span>Thêm hồ sơ người thân khác</span>
-                    </button>
-
-                    <button type="submit" class="btn btn-primary px-4 py-2 fw-bold d-inline-flex align-items-center gap-2 rounded-3 shadow-sm" style="background: linear-gradient(135deg, #0284c7, #1d4ed8); border: none;">
-                        <i class="bi bi-check2-circle"></i><span>Hoàn tất &amp; Bắt đầu sử dụng</span>
-                    </button>
+                <!-- 2. TIÊU ĐỀ & CHÀO MỪNG -->
+                <div class="mb-4">
+                    <h2 id="onboarding-title" class="fw-bold text-dark fs-4 mb-1">
+                        <i class="bi bi-person-vcard text-primary me-2"></i>Hoàn thiện hồ sơ bệnh nhân
+                    </h2>
+                    <p class="text-muted small mb-0">
+                        Chào mừng bạn đến với <strong>CV-DCMS</strong>! Vui lòng hoàn thiện hồ sơ bệnh nhân mặc định của
+                        bạn (và có thể thêm người thân nếu muốn) để bắt đầu đặt lịch khám.
+                    </p>
                 </div>
-            </form>
-        </section>
-    </main>
-</div>
 
-<script>
-    function toggleDiseaseField(radio, show) {
-        var card = radio.closest('.profile-block');
-        var wrap = card.querySelector('.disease-details-wrap');
-        var textarea = wrap.querySelector('textarea');
-        if (show) {
-            wrap.style.display = 'block';
-            textarea.required = true;
-        } else {
-            wrap.style.display = 'none';
-            textarea.required = false;
-            textarea.value = '';
+                <div th:if="${error != null}"
+                    class="alert alert-danger d-flex align-items-center gap-2 mb-3 shadow-sm rounded-3" role="alert">
+                    <i class="bi bi-exclamation-triangle-fill fs-5"></i>
+                    <span th:text="${error}">Đã xảy ra lỗi.</span>
+                </div>
+
+                <form th:action="@{/profile/complete}" method="post" enctype="multipart/form-data" id="completeForm">
+
+                    <div id="profilesContainer">
+                        <div class="profile-block" data-index="0">
+                            <div class="d-flex align-items-center justify-content-between pb-2 mb-3 border-bottom">
+                                <h3 class="h6 fw-bold text-primary mb-0 profile-heading">
+                                    <i class="bi bi-person-check-fill me-2"></i>Hồ sơ 1 (Hồ sơ mặc định của bạn)
+                                </h3>
+                                <button type="button" class="btn btn-sm btn-outline-danger remove-profile-btn"
+                                    style="display:none;" onclick="removeProfileBlock(this)">
+                                    <i class="bi bi-trash me-1"></i>Xóa hồ sơ này
+                                </button>
+                            </div>
+
+                            <div class="cm-grid-2 mb-3">
+                                <div>
+                                    <label class="form-label small fw-semibold text-dark">Họ và tên <span
+                                            class="text-danger">*</span></label>
+                                    <input type="text" name="profiles[0].fullName" class="form-control" maxlength="100"
+                                        placeholder="Nguyễn Văn A" required>
+                                </div>
+                                <div>
+                                    <label class="form-label small fw-semibold text-dark">Ngày sinh</label>
+                                    <input type="date" name="profiles[0].dob" class="form-control">
+                                </div>
+                                <div>
+                                    <label class="form-label small fw-semibold text-dark">Giới tính <span
+                                            class="text-danger">*</span></label>
+                                    <select name="profiles[0].gender" class="form-select" required>
+                                        <option value="">-- Chọn giới tính --</option>
+                                        <option value="Nam">Nam</option>
+                                        <option value="Nữ">Nữ</option>
+                                        <option value="Khác">Khác</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="form-label small fw-semibold text-dark">Cơ sở khám ưu tiên <span
+                                            class="text-danger">*</span></label>
+                                    <select name="profiles[0].branchId" class="form-select" required>
+                                        <option value="">-- Chọn cơ sở khám --</option>
+                                        <option th:each="b : ${branches}" th:value="${b.branchId}"
+                                            th:text="${b.branchName}">
+                                        </option>
+                                    </select>
+                                </div>
+                                <div style="grid-column: 1 / -1;">
+                                    <label class="form-label small fw-semibold text-dark">Địa chỉ thường trú <span
+                                            class="text-danger">*</span></label>
+                                    <input type="text" name="profiles[0].address" class="form-control" maxlength="255"
+                                        placeholder="Số nhà, đường, phường/xã, quận/huyện..." required>
+                                </div>
+                            </div>
+
+                            <div class="mb-3 p-3 bg-white rounded-3 border">
+                                <label class="form-label small fw-semibold text-dark mb-2">Tiền sử bệnh nền / Dị ứng
+                                    thuốc <span class="text-danger">*</span></label>
+                                <div class="d-flex gap-4 mb-2">
+                                    <label class="d-inline-flex align-items-center gap-2 cursor-pointer">
+                                        <input type="radio" name="profiles[0].hasUnderlyingDisease" value="false"
+                                            checked onchange="toggleDiseaseField(this, false)">
+                                        <span class="small">Không có bệnh nền</span>
+                                    </label>
+                                    <label class="d-inline-flex align-items-center gap-2 cursor-pointer">
+                                        <input type="radio" name="profiles[0].hasUnderlyingDisease" value="true"
+                                            onchange="toggleDiseaseField(this, true)">
+                                        <span class="small text-danger fw-semibold">Có bệnh nền / Dị ứng</span>
+                                    </label>
+                                </div>
+                                <div class="disease-details-wrap mt-2" style="display:none;">
+                                    <label class="form-label small fw-semibold text-dark">Mô tả chi tiết bệnh nền / Dị
+                                        ứng <span class="text-danger">*</span></label>
+                                    <textarea name="profiles[0].underlyingDiseaseDetails" rows="2" maxlength="1000"
+                                        class="form-control"
+                                        placeholder="Nhập bệnh nền (tim mạch, huyết áp, tiểu đường...) hoặc dị ứng kháng sinh..."></textarea>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="form-label small fw-semibold text-dark">Ảnh đại diện (Tùy chọn — JPG, PNG,
+                                    WebP tối đa 5MB)</label>
+                                <input type="file" name="profiles[0].avatar" accept="image/jpeg,image/png,image/webp"
+                                    class="form-control">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-3 mt-4 pt-2 border-top">
+                        <button type="button"
+                            class="btn btn-outline-primary fw-semibold d-inline-flex align-items-center gap-2 rounded-3"
+                            onclick="addProfileBlock()">
+                            <i class="bi bi-person-plus-fill"></i><span>Thêm hồ sơ người thân khác</span>
+                        </button>
+
+                        <button type="submit"
+                            class="btn btn-primary px-4 py-2 fw-bold d-inline-flex align-items-center gap-2 rounded-3 shadow-sm"
+                            style="background: linear-gradient(135deg, #0284c7, #1d4ed8); border: none;">
+                            <i class="bi bi-check2-circle"></i><span>Hoàn tất &amp; Bắt đầu sử dụng</span>
+                        </button>
+                    </div>
+                </form>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        function toggleDiseaseField(radio, show) {
+            var card = radio.closest('.profile-block');
+            var wrap = card.querySelector('.disease-details-wrap');
+            var textarea = wrap.querySelector('textarea');
+            if (show) {
+                wrap.style.display = 'block';
+                textarea.required = true;
+            } else {
+                wrap.style.display = 'none';
+                textarea.required = false;
+                textarea.value = '';
+            }
         }
-    }
 
-    function addProfileBlock() {
-        var container = document.getElementById('profilesContainer');
-        var blocks = container.querySelectorAll('.profile-block');
-        var first = blocks[0];
-        var clone = first.cloneNode(true);
+        function addProfileBlock() {
+            var container = document.getElementById('profilesContainer');
+            var blocks = container.querySelectorAll('.profile-block');
+            var first = blocks[0];
+            var clone = first.cloneNode(true);
 
-        clone.querySelectorAll('input[type="text"], input[type="date"], input[type="file"], textarea').forEach(function (el) {
-            el.value = '';
-            el.required = false;
-        });
-        clone.querySelectorAll('input[name$=".fullName"], input[name$=".address"], select').forEach(function (el) {
-            el.required = true;
-        });
-        clone.querySelectorAll('select').forEach(function (el) {
-            el.selectedIndex = 0;
-        });
-
-        var radios = clone.querySelectorAll('input[type="radio"]');
-        radios.forEach(function (r) {
-            r.checked = (r.value === 'false');
-        });
-        var wrap = clone.querySelector('.disease-details-wrap');
-        if (wrap) wrap.style.display = 'none';
-
-        container.appendChild(clone);
-        reindexBlocks();
-    }
-
-    function removeProfileBlock(btn) {
-        var container = document.getElementById('profilesContainer');
-        if (container.querySelectorAll('.profile-block').length <= 1) return;
-        btn.closest('.profile-block').remove();
-        reindexBlocks();
-    }
-
-    function reindexBlocks() {
-        var blocks = document.querySelectorAll('#profilesContainer .profile-block');
-        blocks.forEach(function (block, idx) {
-            block.setAttribute('data-index', idx);
-            var heading = block.querySelector('.profile-heading');
-            if (heading) {
-                heading.innerHTML = idx === 0
-                    ? '<i class="bi bi-person-check-fill me-2"></i>Hồ sơ 1 (Hồ sơ mặc định của bạn)'
-                    : '<i class="bi bi-person-plus-fill me-2"></i>Hồ sơ ' + (idx + 1) + ' (Người thân)';
-            }
-            var removeBtn = block.querySelector('.remove-profile-btn');
-            if (removeBtn) {
-                removeBtn.style.display = idx === 0 ? 'none' : 'inline-flex';
-            }
-            block.querySelectorAll('[name]').forEach(function (el) {
-                el.name = el.name.replace(/profiles\[\d+\]/, 'profiles[' + idx + ']');
+            clone.querySelectorAll('input[type="text"], input[type="date"], input[type="file"], textarea').forEach(function (el) {
+                el.value = '';
+                el.required = false;
             });
-        });
-    }
-</script>
+            clone.querySelectorAll('input[name$=".fullName"], input[name$=".address"], select').forEach(function (el) {
+                el.required = true;
+            });
+            clone.querySelectorAll('select').forEach(function (el) {
+                el.selectedIndex = 0;
+            });
+
+            var radios = clone.querySelectorAll('input[type="radio"]');
+            radios.forEach(function (r) {
+                r.checked = (r.value === 'false');
+            });
+            var wrap = clone.querySelector('.disease-details-wrap');
+            if (wrap) wrap.style.display = 'none';
+
+            container.appendChild(clone);
+            reindexBlocks();
+        }
+
+        function removeProfileBlock(btn) {
+            var container = document.getElementById('profilesContainer');
+            if (container.querySelectorAll('.profile-block').length <= 1) return;
+            btn.closest('.profile-block').remove();
+            reindexBlocks();
+        }
+
+        function reindexBlocks() {
+            var blocks = document.querySelectorAll('#profilesContainer .profile-block');
+            blocks.forEach(function (block, idx) {
+                block.setAttribute('data-index', idx);
+                var heading = block.querySelector('.profile-heading');
+                if (heading) {
+                    heading.innerHTML = idx === 0
+                        ? '<i class="bi bi-person-check-fill me-2"></i>Hồ sơ 1 (Hồ sơ mặc định của bạn)'
+                        : '<i class="bi bi-person-plus-fill me-2"></i>Hồ sơ ' + (idx + 1) + ' (Người thân)';
+                }
+                var removeBtn = block.querySelector('.remove-profile-btn');
+                if (removeBtn) {
+                    removeBtn.style.display = idx === 0 ? 'none' : 'inline-flex';
+                }
+                block.querySelectorAll('[name]').forEach(function (el) {
+                    el.name = el.name.replace(/profiles\[\d+\]/, 'profiles[' + idx + ']');
+                });
+            });
+        }
+    </script>
 </body>
+
 </html>

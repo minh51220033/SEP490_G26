@@ -20,6 +20,10 @@ import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 
+/**
+ * [Phân hệ]: Mẫu quy trình điều trị từng bước, 5 khung thao tác & Combo dịch vụ (Chương 7 - FT34/FT43/UC-13)
+ * [Vai trò]: Lớp triển khai dịch vụ lõi quản lý vòng đời mẫu quy trình/phiên bản, cấu hình trường tùy biến của 5 khung thao tác, Combo dịch vụ mẫu và toàn bộ luồng thực thi quy trình điều trị từng bước (khởi tạo, chuyển bước, thêm/xóa bước ad-hoc, đồng bộ KHDT & dịch vụ thực hiện).
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -71,12 +75,19 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private InvoiceItemRepository invoiceItemRepository;
 
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.cvdcms.service.DoctorClinicalCapabilityService capabilityService;
+
     private final Map<String, List<WorkflowStepDTO.CustomFieldDTO>> inMemoryFrameFields = new java.util.concurrent.ConcurrentHashMap<>();
 
     private static final DateTimeFormatter DT_FORMAT = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
     private static final Set<String> VALID_FRAME_KEYS = Set.of(
             "CLINICAL_EXAM", "XRAY", "ENDODONTICS", "PROCEDURE", "PROSTHETICS_LABO");
 
+    /**
+     * [Chức năng]: Lấy toàn bộ danh sách mẫu quy trình kỹ thuật sắp xếp mới nhất trước.
+     * [Mục đích]: Truy vấn `ClinicalWorkflowTemplateRepository` và ánh xạ sang `WorkflowTemplateResponseDTO` kèm phiên bản mới nhất và danh sách bước chuẩn.
+     */
     @Override
     @Transactional(readOnly = true)
     public List<WorkflowTemplateResponseDTO> getAllTemplates() {
@@ -84,6 +95,10 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
         return templates.stream().map(this::mapTemplateToDTO).collect(Collectors.toList());
     }
 
+    /**
+     * [Chức năng]: Lấy chi tiết một mẫu quy trình kỹ thuật theo `templateId`.
+     * [Mục đích]: Nạp bản ghi mẫu quy trình từ cơ sở dữ liệu (ném lỗi nếu không tồn tại) và ánh xạ sang DTO phục vụ màn xem/sửa.
+     */
     @Override
     @Transactional(readOnly = true)
     public WorkflowTemplateResponseDTO getTemplateById(Long templateId) {
@@ -93,6 +108,10 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
         return mapTemplateToDTO(template);
     }
 
+    /**
+     * [Chức năng]: Tra cứu mẫu quy trình đang hoạt động (`ACTIVE`) gắn với một `serviceId`.
+     * [Mục đích]: Phục vụ bàn khám và API kiểm tra dịch vụ đã được thiết lập quy trình kỹ thuật chuẩn hay chưa.
+     */
     @Override
     @Transactional(readOnly = true)
     public WorkflowTemplateResponseDTO getTemplateByServiceId(Long serviceId) {
@@ -103,6 +122,10 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
                 .orElse(null);
     }
 
+    /**
+     * [Chức năng]: Tạo mới hoặc cập nhật mẫu quy trình kỹ thuật kèm phiên bản và danh sách bước chuẩn.
+     * [Mục đích]: Validate tên, mã không trùng, `flowMode`, không đổi dịch vụ khi đã có execution và không trùng `stepCode`; khi phiên bản mới nhất đã `PUBLISHED` sẽ chuyển sang `RETIRED` và phát hành phiên bản mới để bảo toàn lịch sử các ca cũ.
+     */
     @Override
     @Transactional
     public WorkflowTemplateResponseDTO saveTemplate(WorkflowTemplateRequestDTO dto, Long userId) {
@@ -338,6 +361,10 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
         return mapTemplateToDTO(template);
     }
 
+    /**
+     * [Chức năng]: Xóa mẫu quy trình kỹ thuật cùng toàn bộ phiên bản và bước chuẩn trực thuộc.
+     * [Mục đích]: Chặn xóa nếu bất kỳ phiên bản nào đã phát sinh `WorkflowExecution` trong thực tế (yêu cầu chuyển trạng thái Ngừng áp dụng thay vì xóa).
+     */
     @Override
     @Transactional
     public void deleteTemplate(Long templateId) {
@@ -374,24 +401,40 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
         START, COMPLETE, PAUSE, RESUME, SKIP, SAVE_DRAFT
     }
 
+    /**
+     * [Chức năng]: Lấy tiến trình quy trình hiện có hoặc tự khởi tạo mới cho cặp lượt khám và dịch vụ ở chế độ không ném lỗi (`strict=false`).
+     * [Mục đích]: Trả về `null` nếu dịch vụ chưa có mẫu quy trình `ACTIVE`, dùng khi mở bàn khám kiểm tra tiến trình tự động.
+     */
     @Override
     @Transactional
     public WorkflowExecutionDTO getOrCreateExecution(Long visitId, Long serviceId, Long userId) {
         return createOrGetExecution(visitId, serviceId, null, null, userId, false);
     }
 
+    /**
+     * [Chức năng]: Khởi tạo (hoặc lấy lại) tiến trình quy trình cho dịch vụ độc lập trên lượt khám (`strict=true`).
+     * [Mục đích]: Ủy quyền cho `createOrGetExecution` và báo lỗi rõ ràng nếu dịch vụ chưa có mẫu quy trình hoạt động.
+     */
     @Override
     @Transactional
     public WorkflowExecutionDTO startExecution(Long visitId, Long serviceId, Long userId) {
         return createOrGetExecution(visitId, serviceId, null, null, userId, true);
     }
 
+    /**
+     * [Chức năng]: Khởi tạo (hoặc lấy lại) tiến trình quy trình gắn với một hạng mục Kế hoạch điều trị (`planItemId`).
+     * [Mục đích]: Liên kết tiến trình với `TreatmentPlanItem` để đồng bộ trạng thái và tự động tạo dịch vụ thực hiện khi hoàn tất.
+     */
     @Override
     @Transactional
     public WorkflowExecutionDTO startExecution(Long visitId, Long serviceId, Long planItemId, Long userId) {
         return createOrGetExecution(visitId, serviceId, planItemId, null, userId, true);
     }
 
+    /**
+     * [Chức năng]: Khởi tạo (hoặc lấy lại) tiến trình quy trình gắn đồng thời hạng mục và/hoặc giai đoạn Kế hoạch điều trị (`planStageId`).
+     * [Mục đích]: Hỗ trợ gom nhiều bước cùng dịch vụ trong một giai đoạn KHDT vào một tiến trình quy trình thống nhất, tránh nhân bản.
+     */
     @Override
     @Transactional
     public WorkflowExecutionDTO startExecution(Long visitId, Long serviceId, Long planItemId, Long planStageId,
@@ -399,11 +442,18 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
         return createOrGetExecution(visitId, serviceId, planItemId, planStageId, userId, true);
     }
 
+    /**
+     * [Hàm hỗ trợ]: Nạp chồng `createOrGetExecution` với số lượng khởi tạo mặc định (`initialQuantity = null`).
+     */
     private WorkflowExecutionDTO createOrGetExecution(Long visitId, Long serviceId, Long planItemId,
             Long planStageId, Long userId, boolean strict) {
         return createOrGetExecution(visitId, serviceId, planItemId, planStageId, userId, strict, null);
     }
 
+    /**
+     * [Chức năng]: Thực hiện lõi lấy lại hoặc khởi tạo mới một `WorkflowExecution` và toàn bộ các `WorkflowStepExecution` tương ứng.
+     * [Mục đích]: Khóa bi quan `visitRepo.lockById` tránh tạo trùng khi double-click, kiểm tra hợp lệ KHDT/khóa ca/năng lực bác sĩ, tái dùng tiến trình đã mở theo giai đoạn/hạng mục/bệnh nhân, tạo sẵn dữ liệu răng & số lượng vào bước đầu và ghi audit `WORKFLOW_CREATE`.
+     */
     private WorkflowExecutionDTO createOrGetExecution(Long visitId, Long serviceId, Long planItemId,
             Long planStageId, Long userId, boolean strict, Integer initialQuantity) {
         if (visitId == null || (serviceId == null && planItemId == null && planStageId == null)) {
@@ -480,6 +530,8 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
             }
         }
 
+        String lockReason = lockReason(visit);
+
         // 1. Ưu tiên tìm quy trình đang gắn cùng giai đoạn + dịch vụ (tránh nhân bản
         // khi 1 dịch vụ có nhiều bước trong giai đoạn)
         if (planStage != null && resolvedServiceId != null) {
@@ -487,20 +539,25 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
                     .findFirstByPlanStage_StageIdAndVersion_Template_Service_ServiceId(planStage.getStageId(),
                             resolvedServiceId);
             if (existingByStage.isPresent()) {
-                WorkflowExecution ex = reconcileOrphanedCompletedExecution(existingByStage.get(), visit);
-                ex = reconcileExecutionWithPlanItems(ex, visit);
+                WorkflowExecution ex = existingByStage.get();
+                if (lockReason == null) {
+                    ex = reconcileOrphanedCompletedExecution(ex, visit);
+                    ex = reconcileExecutionWithPlanItems(ex, visit);
+                }
                 return mapExecutionToDTO(ex, visit);
             }
             for (TreatmentPlanItem sib : stageServiceItems) {
                 Optional<WorkflowExecution> sibExec = executionRepo.findFirstByPlanItem_PlanItemId(sib.getPlanItemId());
                 if (sibExec.isPresent()) {
                     WorkflowExecution ex = sibExec.get();
-                    if (ex.getPlanStage() == null) {
-                        ex.setPlanStage(planStage);
-                        ex = executionRepo.save(ex);
+                    if (lockReason == null) {
+                        if (ex.getPlanStage() == null) {
+                            ex.setPlanStage(planStage);
+                            ex = executionRepo.save(ex);
+                        }
+                        ex = reconcileOrphanedCompletedExecution(ex, visit);
+                        ex = reconcileExecutionWithPlanItems(ex, visit);
                     }
-                    ex = reconcileOrphanedCompletedExecution(ex, visit);
-                    ex = reconcileExecutionWithPlanItems(ex, visit);
                     return mapExecutionToDTO(ex, visit);
                 }
             }
@@ -509,8 +566,11 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
         if (planItemId != null) {
             Optional<WorkflowExecution> existingByPlan = executionRepo.findFirstByPlanItem_PlanItemId(planItemId);
             if (existingByPlan.isPresent()) {
-                WorkflowExecution ex = reconcileOrphanedCompletedExecution(existingByPlan.get(), visit);
-                ex = reconcileExecutionWithPlanItems(ex, visit);
+                WorkflowExecution ex = existingByPlan.get();
+                if (lockReason == null) {
+                    ex = reconcileOrphanedCompletedExecution(ex, visit);
+                    ex = reconcileExecutionWithPlanItems(ex, visit);
+                }
                 return mapExecutionToDTO(ex, visit);
             }
         }
@@ -542,9 +602,15 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
             }
         }
 
-        String lockReason = lockReason(visit);
         if (lockReason != null) {
             throw new IllegalStateException(lockReason);
+        }
+
+        if (resolvedServiceId != null) {
+            var capCheck = checkServiceCapability(visit, resolvedServiceId, userId);
+            if (!capCheck.allowed()) {
+                throw new IllegalStateException(capCheck.message());
+            }
         }
 
         ClinicalWorkflowTemplate template = resolvedServiceId != null
@@ -625,6 +691,10 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
         return mapExecutionToDTO(execution, visit);
     }
 
+    /**
+     * [Chức năng]: Tổng hợp toàn cảnh tab Quy trình điều trị cho một lượt khám (`WorkflowVisitOverviewDTO`).
+     * [Mục đích]: Nạp các tiến trình gắn KHDT của ca khám hiện tại và các tiến trình làm dở từ buổi trước của cùng bệnh nhân, liệt kê các hạng mục KHDT chưa khởi tạo có mẫu quy trình hoạt động kèm kiểm tra năng lực bác sĩ và danh sách Combo khả dụng.
+     */
     @Override
     @Transactional(readOnly = true)
     public WorkflowVisitOverviewDTO getVisitOverview(Long visitId) {
@@ -632,14 +702,23 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy ca khám với ID: " + visitId));
         String lockReason = lockReason(visit);
 
-        List<WorkflowExecution> executions = new ArrayList<>(executionRepo.findByVisit_VisitId(visitId));
+        List<WorkflowExecution> executions = executionRepo.findByVisit_VisitId(visitId).stream()
+                .filter(e -> e.getPlanItem() != null || e.getPlanStage() != null)
+                .collect(Collectors.toCollection(ArrayList::new));
         Set<Long> seenExecIds = executions.stream()
                 .map(WorkflowExecution::getExecutionId)
                 .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
 
-        // Nạp thêm các quy trình đang làm dở từ buổi khám trước của cùng bệnh nhân
-        // (điều trị nhiều buổi / KHDT)
+        Long bookedServiceId = null;
+        if (doctorVisitAccess != null) {
+            Map<String, Object> booked = doctorVisitAccess.resolveBookedServiceSummary(visit);
+            if (booked != null && booked.get("serviceId") instanceof Number num) {
+                bookedServiceId = num.longValue();
+            }
+        }
+
+        // Nạp thêm các quy trình thuộc Kế hoạch điều trị đang làm dở từ buổi khám trước của cùng bệnh nhân
         Long profileId = visit.getPatientProfile() != null ? visit.getPatientProfile().getProfileId() : null;
         if (profileId != null) {
             List<WorkflowExecution> patientExecs = executionRepo
@@ -649,10 +728,14 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
                     if (pe.getExecutionId() != null && seenExecIds.contains(pe.getExecutionId())) {
                         continue;
                     }
+                    boolean hasPlanLink = pe.getPlanItem() != null || pe.getPlanStage() != null;
+                    boolean activeInCurrentVisit = hasStepActivityInVisit(pe, visitId);
+                    if (!hasPlanLink) {
+                        continue;
+                    }
                     if (pe.getStatus() == WorkflowExecutionStatus.IN_PROGRESS
                             || pe.getStatus() == WorkflowExecutionStatus.PAUSED
-                            || (pe.getStatus() == WorkflowExecutionStatus.COMPLETED
-                                    && hasStepActivityInVisit(pe, visitId))) {
+                            || (pe.getStatus() == WorkflowExecutionStatus.COMPLETED && activeInCurrentVisit)) {
                         executions.add(pe);
                         if (pe.getExecutionId() != null)
                             seenExecIds.add(pe.getExecutionId());
@@ -762,19 +845,28 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
                                         && !stage.getStageName().isBlank())
                                                 ? stage.getStageName() + " (" + openItems.size() + " bước)"
                                                 : rep.getStepName();
+                                var capOpt = checkServiceCapability(visit, sId, null);
                                 available.add(WorkflowVisitOverviewDTO.ServiceOption.builder()
                                         .serviceId(sId)
                                         .serviceCode(rep.getService().getServiceCode())
                                         .serviceName(rep.getService().getServiceName())
                                         .templateName(tpl.getTemplateName())
                                         .stepCount(stepCountByTplId.getOrDefault(tpl.getTemplateId(), 0))
+                                        .estimatedDurationMinutes(resolveServiceDuration(rep.getService()))
+                                        .allowSameVisit(!Boolean.FALSE.equals(rep.getService().getAllowSameVisit()))
+                                        .isParaclinical(Boolean.TRUE.equals(rep.getService().getIsParaclinical()))
                                         .suggested(true)
                                         .planItemId(rep.getPlanItemId())
                                         .planStageId(stage.getStageId())
+                                        .planStageOrder(stage.getStageOrder())
+                                        .planStageName(stage.getStageName())
                                         .planCode(plan.getPlanCode())
                                         .planName(plan.getPlanName())
                                         .stepName(displayStep)
                                         .toothNumbers(teeth)
+                                        .canPerform(capOpt.allowed())
+                                        .capabilityReason(capOpt.message())
+                                        .requiresHandover(!capOpt.allowed())
                                         .build());
                             }
                         }
@@ -782,21 +874,7 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
                 }
             }
 
-            // 2. Các dịch vụ độc lập có mẫu quy trình
-            for (ClinicalWorkflowTemplate t : activeTplByServiceId.values()) {
-                Long sId = t.getService().getServiceId();
-                if (startedStandaloneServiceIds.contains(sId)) {
-                    continue;
-                }
-                available.add(WorkflowVisitOverviewDTO.ServiceOption.builder()
-                        .serviceId(sId)
-                        .serviceCode(t.getService().getServiceCode())
-                        .serviceName(t.getService().getServiceName())
-                        .templateName(t.getTemplateName())
-                        .stepCount(stepCountByTplId.getOrDefault(t.getTemplateId(), 0))
-                        .suggested(performedServiceIds.contains(sId))
-                        .build());
-            }
+            // Thống nhất 1 luồng: tab Quy trình điều trị chỉ nạp các dịch vụ/hạng mục từ Kế hoạch điều trị
             available.sort(Comparator
                     .comparing((WorkflowVisitOverviewDTO.ServiceOption o) -> o.getPlanItemId() == null
                             && o.getPlanStageId() == null)
@@ -804,14 +882,18 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
                     .thenComparing(o -> o.getServiceName() == null ? "" : o.getServiceName()));
         }
 
-        Long bookedServiceId = null;
-        if (doctorVisitAccess != null) {
-            Map<String, Object> booked = doctorVisitAccess.resolveBookedServiceSummary(visit);
-            if (booked != null && booked.get("serviceId") instanceof Number num) {
-                bookedServiceId = num.longValue();
+        List<ServiceComboDTO> activeCombos = lockReason == null ? getAllCombos(true) : List.of();
+        if (!activeCombos.isEmpty()) {
+            for (ServiceComboDTO combo : activeCombos) {
+                if (combo.getItems() == null) continue;
+                for (ServiceComboDTO.ComboItemDTO ci : combo.getItems()) {
+                    if (ci.getServiceId() == null) continue;
+                    var capItem = checkServiceCapability(visit, ci.getServiceId(), null);
+                    ci.setCanPerform(capItem.allowed());
+                    ci.setCapabilityReason(capItem.message());
+                }
             }
         }
-        List<ServiceComboDTO> activeCombos = lockReason == null ? getAllCombos(true) : List.of();
         if (bookedServiceId != null && !activeCombos.isEmpty()) {
             final Long reqSrvId = bookedServiceId;
             activeCombos = activeCombos.stream()
@@ -830,6 +912,10 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
                 .build();
     }
 
+    /**
+     * [Chức năng]: Phiên bản nạp chồng rút gọn thực hiện thao tác trên bước quy trình không truyền `resultData` và `activeVisitId`.
+     * [Mục đích]: Ủy quyền cho hàm `performStepAction` 8 tham số để phục vụ các lời gọi ngắn gọn và tương thích ngược.
+     */
     @Override
     @Transactional
     public WorkflowExecutionDTO performStepAction(Long executionId, Long stepId, String action, String note,
@@ -837,6 +923,10 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
         return performStepAction(executionId, stepId, action, note, criteriaConfirmed, null, null, userId);
     }
 
+    /**
+     * [Chức năng]: Xử lý máy trạng thái thao tác trên bước hiện tại của quy trình (`START`, `SAVE_DRAFT`, `PAUSE`, `RESUME`, `SKIP`, `COMPLETE`).
+     * [Mục đích]: Khóa bi quan `executionRepo.findForUpdate`, kiểm tra khóa ca/EMR và năng lực bác sĩ, ép tuần tự đúng bước đầu tiên chưa xong, kiểm tra điều kiện hoàn tất/phê duyệt lâm sàng/Labo/Cận lâm sàng, gộp JSON `resultData` kèm snapshot buổi khám, đồng bộ KHDT & dịch vụ thực hiện và ghi audit log.
+     */
     @Override
     @Transactional
     public WorkflowExecutionDTO performStepAction(Long executionId, Long stepId, String action, String note,
@@ -859,6 +949,16 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
         String lockReason = lockReason(effectiveVisit);
         if (lockReason != null) {
             throw new IllegalStateException(lockReason);
+        }
+        Long execServiceId = execution.getVersion() != null && execution.getVersion().getTemplate() != null
+                && execution.getVersion().getTemplate().getService() != null
+                        ? execution.getVersion().getTemplate().getService().getServiceId()
+                        : null;
+        if (execServiceId != null) {
+            var capCheck = checkServiceCapability(effectiveVisit, execServiceId, userId);
+            if (!capCheck.allowed()) {
+                throw new IllegalStateException(capCheck.message());
+            }
         }
         execution = reconcileExecutionWithPlanItems(execution, effectiveVisit);
         if (execution.getStatus() == WorkflowExecutionStatus.COMPLETED) {
@@ -1041,6 +1141,10 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
         return mapExecutionToDTO(execution, effectiveVisit);
     }
 
+    /**
+     * [Chức năng]: Chèn thêm một bước phát sinh (ad-hoc) vào tiến trình quy trình đang điều trị mà không ảnh hưởng mẫu chuẩn.
+     * [Mục đích]: Khóa bản ghi `WorkflowExecution`, kiểm tra khóa ca và năng lực bác sĩ, tạo `ClinicalWorkflowStep` gắn `adhocExecutionId`, chèn sau bước chỉ định (không chèn trước bước đang chạy/tạm dừng), đánh lại `stepOrder` và ghi audit `WORKFLOW_ADHOC_ADD`.
+     */
     @Override
     @Transactional
     public WorkflowExecutionDTO addAdhocStep(Long executionId, String stepName, String frameKey, String stepType,
@@ -1055,6 +1159,16 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
         String lockReason = lockReason(effectiveVisit);
         if (lockReason != null) {
             throw new IllegalStateException(lockReason);
+        }
+        Long execServiceId = execution.getVersion() != null && execution.getVersion().getTemplate() != null
+                && execution.getVersion().getTemplate().getService() != null
+                        ? execution.getVersion().getTemplate().getService().getServiceId()
+                        : null;
+        if (execServiceId != null) {
+            var capCheck = checkServiceCapability(effectiveVisit, execServiceId, userId);
+            if (!capCheck.allowed()) {
+                throw new IllegalStateException(capCheck.message());
+            }
         }
         if (execution.getStatus() == WorkflowExecutionStatus.COMPLETED
                 || execution.getStatus() == WorkflowExecutionStatus.CANCELLED) {
@@ -1151,6 +1265,10 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
         return mapExecutionToDTO(execution, effectiveVisit);
     }
 
+    /**
+     * [Chức năng]: Xóa một bước phát sinh (ad-hoc) khỏi tiến trình quy trình.
+     * [Mục đích]: Khóa tiến trình, chặn xóa bước chuẩn của mẫu hoặc bước ad-hoc đã có tiến độ/dữ liệu lưu, xóa bản ghi thực thi cùng bước ad-hoc và đánh lại thứ tự các bước còn lại.
+     */
     @Override
     @Transactional
     public WorkflowExecutionDTO removeAdhocStep(Long executionId, Long stepId, Long activeVisitId, Long userId) {
@@ -1160,6 +1278,16 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
         String lockReason = lockReason(effectiveVisit);
         if (lockReason != null) {
             throw new IllegalStateException(lockReason);
+        }
+        Long execServiceId = execution.getVersion() != null && execution.getVersion().getTemplate() != null
+                && execution.getVersion().getTemplate().getService() != null
+                        ? execution.getVersion().getTemplate().getService().getServiceId()
+                        : null;
+        if (execServiceId != null) {
+            var capCheck = checkServiceCapability(effectiveVisit, execServiceId, userId);
+            if (!capCheck.allowed()) {
+                throw new IllegalStateException(capCheck.message());
+            }
         }
 
         List<WorkflowStepExecution> all = new ArrayList<>(
@@ -1196,6 +1324,10 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
         return mapExecutionToDTO(execution, effectiveVisit);
     }
 
+    /**
+     * [Chức năng]: Hủy xóa một tiến trình quy trình chưa bắt đầu thực hiện bất kỳ bước nào.
+     * [Mục đích]: Khóa tiến trình, kiểm tra `canDeleteExecution`, xóa toàn bộ `WorkflowStepExecution`/bước ad-hoc/execution, trả các `TreatmentPlanItem` liên kết từ `IN_PROGRESS` về `PLANNED` (nếu chưa có dịch vụ thực hiện) và ghi audit `WORKFLOW_DELETE`.
+     */
     @Override
     @Transactional
     public void deleteExecution(Long executionId, Long activeVisitId, Long userId) {
@@ -1205,6 +1337,16 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
         String lockReason = lockReason(effectiveVisit);
         if (lockReason != null) {
             throw new IllegalStateException(lockReason);
+        }
+        Long execServiceId = execution.getVersion() != null && execution.getVersion().getTemplate() != null
+                && execution.getVersion().getTemplate().getService() != null
+                        ? execution.getVersion().getTemplate().getService().getServiceId()
+                        : null;
+        if (execServiceId != null) {
+            var capCheck = checkServiceCapability(effectiveVisit, execServiceId, userId);
+            if (!capCheck.allowed()) {
+                throw new IllegalStateException(capCheck.message());
+            }
         }
 
         List<WorkflowStepExecution> all = stepExecutionRepo
@@ -1264,8 +1406,8 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
     }
 
     /**
-     * Giữ lại cho tương thích: ánh xạ trạng thái cũ sang thao tác mới và dùng chung
-     * luật nghiệp vụ FT43.
+     * [Chức năng]: Cập nhật trạng thái bước quy trình theo chuẩn API cũ (tương thích ngược).
+     * [Mục đích]: Ánh xạ chuỗi trạng thái (`IN_PROGRESS`/`COMPLETED`/`PAUSED`/`SKIPPED`) sang hành động FT43 tương ứng và ủy quyền cho `performStepAction`.
      */
     @Override
     @Transactional
@@ -1282,6 +1424,10 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
         return dto.getSteps().stream().filter(s -> stepId.equals(s.getStepId())).findFirst().orElse(null);
     }
 
+    /**
+     * [Chức năng]: Lấy chi tiết một tiến trình quy trình điều trị theo `executionId`.
+     * [Mục đích]: Tải bản ghi `WorkflowExecution` và ánh xạ đầy đủ các bước, tiến độ, quyền thao tác sang `WorkflowExecutionDTO`.
+     */
     @Override
     @Transactional(readOnly = true)
     public WorkflowExecutionDTO getExecutionDetail(Long executionId) {
@@ -1290,6 +1436,10 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
         return mapExecutionToDTO(execution);
     }
 
+    /**
+     * [Chức năng]: Lấy bảng theo dõi tiến độ các quy trình điều trị trong ngày theo tập chi nhánh.
+     * [Mục đích]: Truy vấn `executionRepo.findBoard` theo khoảng thời gian trong ngày `day` (mặc định hôm nay) và ánh xạ danh sách tiến trình sang DTO.
+     */
     @Override
     @Transactional(readOnly = true)
     public List<WorkflowExecutionDTO> getProgressBoard(Collection<Long> branchIds, LocalDate day) {
@@ -1301,6 +1451,10 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * [Chức năng]: Lấy lịch sử thao tác chi tiết của một tiến trình quy trình (SCR-43.4).
+     * [Mục đích]: Gộp nhật ký `SystemAuditLog` của bảng `workflow_executions` và toàn bộ `workflow_step_executions` thuộc tiến trình, sắp xếp mới nhất trước và chuyển đổi sang `WorkflowHistoryEntryDTO`.
+     */
     @Override
     @Transactional(readOnly = true)
     public List<WorkflowHistoryEntryDTO> getExecutionHistory(Long executionId) {
@@ -1343,6 +1497,9 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
     // Helper FT43
     // ---------------------------------------------------------------------
 
+    /**
+     * [Hàm hỗ trợ]: Lấy phiên bản `PUBLISHED` hiện hành của mẫu quy trình (dự phòng lấy phiên bản có số lớn nhất).
+     */
     private ClinicalWorkflowVersion resolveVersion(ClinicalWorkflowTemplate template) {
         return versionRepo
                 .findFirstByTemplate_TemplateIdAndStatus(template.getTemplateId(), WorkflowVersionStatus.PUBLISHED)
@@ -1351,6 +1508,9 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
                         .orElse(null));
     }
 
+    /**
+     * [Hàm hỗ trợ]: Lấy danh sách các bước chuẩn (không gồm bước ad-hoc) đang ở trạng thái `ACTIVE` của một phiên bản quy trình theo đúng thứ tự.
+     */
     private List<ClinicalWorkflowStep> activeSteps(ClinicalWorkflowVersion version) {
         return stepRepo.findByVersion_VersionIdOrderBySequenceOrderAsc(version.getVersionId()).stream()
                 .filter(s -> s.getAdhocExecutionId() == null)
@@ -1358,6 +1518,9 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * [Hàm hỗ trợ]: Tìm bước đầu tiên chưa ở trạng thái `COMPLETED` hoặc `SKIPPED` trong danh sách bước thực thi đã sắp thứ tự.
+     */
     private WorkflowStepExecution firstOpenStep(List<WorkflowStepExecution> ordered) {
         for (WorkflowStepExecution se : ordered) {
             if (se.getStatus() != WorkflowStepExecutionStatus.COMPLETED
@@ -1369,8 +1532,7 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
     }
 
     /**
-     * Ca khám đã chuyển thu ngân / hoàn tất / hủy hoặc đã khóa EMR thì khóa toàn bộ
-     * thao tác quy trình (BR-EMR-02).
+     * [Hàm hỗ trợ]: Kiểm tra ca khám có bị khóa thao tác quy trình hay không (do trạng thái `WAITING_PAYMENT`/`COMPLETED`/`CANCELLED` hoặc EMR đã khóa/ký số theo BR-EMR-02), trả về lý do khóa hoặc `null`.
      */
     private String lockReason(Visit visit) {
         if (visit != null && visit.getStatus() != null && LOCKED_VISIT_STATUSES.contains(visit.getStatus())) {
@@ -1389,18 +1551,23 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
         return null;
     }
 
+    /**
+     * [Hàm hỗ trợ]: Tra cứu hồ sơ nhân sự (`StaffProfile`) tương ứng với `userId`.
+     */
     private StaffProfile staffOf(Long userId) {
         return userId == null ? null : staffProfileRepo.findByUserUserId(userId).orElse(null);
     }
 
+    /**
+     * [Hàm hỗ trợ]: Kiểm tra người dùng có quyền phê duyệt chuyên môn bước quy trình (Admin hoặc có quyền `CLINICAL_DAILY_VISITS`).
+     */
     private boolean canApproveClinically(Long userId) {
         return userId != null && (userRepo.hasActiveAdminRole(userId)
                 || userRepo.hasActivePermission(userId, "CLINICAL_DAILY_VISITS"));
     }
 
     /**
-     * Kiểm tra bước Labo không được hoàn tất nếu đang có yêu cầu chỉnh sửa lại hoặc
-     * đơn Labo ở trạng thái Trả về (RETURNED).
+     * [Hàm hỗ trợ]: Chặn hoàn tất bước Labo nếu đang đánh dấu yêu cầu chỉnh sửa/làm lại (`requestLaboRework`) hoặc phiếu `LaboOrder` đang ở trạng thái `RETURNED`.
      */
     private void checkLaboReworkReady(ClinicalWorkflowStep step, WorkflowStepExecution target,
             Map<String, Object> incoming) {
@@ -1424,8 +1591,7 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
     }
 
     /**
-     * Bước cận lâm sàng kiểm tra chỉ định gắn trên bước (hoặc trên lượt khám / bệnh
-     * nhân nhiều buổi) đã có kết quả.
+     * [Hàm hỗ trợ]: Kiểm tra bước cận lâm sàng (`PARACLINICAL`) đã có đủ kết quả chỉ định gắn trực tiếp trên bước, trên lượt khám hoặc trên hồ sơ bệnh nhân trước khi cho phép `COMPLETE`.
      */
     private void checkParaclinicalReady(Visit effectiveVisit, Visit originVisit, ClinicalWorkflowStep step,
             WorkflowStepExecution target, Map<String, Object> incoming) {
@@ -1492,6 +1658,9 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
         }
     }
 
+    /**
+     * [Hàm hỗ trợ]: Chuyển đổi an toàn một giá trị động (`Number` hoặc `String`) sang `Long`, trả về `null` nếu không hợp lệ.
+     */
     private Long parseLongObj(Object val) {
         if (val == null)
             return null;
@@ -1505,6 +1674,26 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
         }
     }
 
+    /**
+     * [Hàm hỗ trợ]: Kiểm tra tiến trình quy trình đã có ít nhất một bước chuyển khỏi `PENDING` hoặc có dữ liệu đã lưu hay chưa.
+     */
+    private boolean hasStepProgress(WorkflowExecution ex) {
+        if (ex == null || ex.getExecutionId() == null) {
+            return false;
+        }
+        List<WorkflowStepExecution> stepExecs = stepExecutionRepo
+                .findByExecution_ExecutionIdOrderByStep_SequenceOrderAsc(ex.getExecutionId());
+        for (WorkflowStepExecution se : stepExecs) {
+            if (se.getStatus() != WorkflowStepExecutionStatus.PENDING || hasStepSavedContent(se)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * [Hàm hỗ trợ]: Kiểm tra tiến trình quy trình có ghi nhận snapshot thao tác (mảng `sessions` trong `resultData`) diễn ra trong lượt khám `visitId` hay không.
+     */
     private boolean hasStepActivityInVisit(WorkflowExecution ex, Long visitId) {
         if (ex == null || visitId == null)
             return false;
@@ -1529,7 +1718,7 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
     }
 
     /**
-     * Ghi nhật ký hoạt động (UC-25); lỗi ghi log không làm hỏng thao tác nghiệp vụ.
+     * [Hàm hỗ trợ]: Ghi nhật ký audit quy trình qua `SystemAuditLogService` (UC-25) và nuốt ngoại lệ ghi log để không làm gián đoạn luồng nghiệp vụ.
      */
     private void writeAudit(Long userId, Branch branch, String action, String table, Long entityId,
             Object oldVal, Object newVal) {
@@ -1541,6 +1730,9 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
         }
     }
 
+    /**
+     * [Hàm hỗ trợ]: Giải mã chuỗi JSON `resultData` thành `LinkedHashMap<String, Object>`, trả về map rỗng nếu chuỗi trống hoặc lỗi cú pháp.
+     */
     private Map<String, Object> parseJson(String json) {
         if (json == null || json.isBlank()) {
             return new LinkedHashMap<>();
@@ -1553,6 +1745,9 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
         }
     }
 
+    /**
+     * [Hàm hỗ trợ]: Tuần tự hóa đối tượng sang chuỗi JSON an toàn, ghi log cảnh báo và trả về `null` nếu thất bại.
+     */
     private String writeJsonQuietly(Object obj) {
         if (obj == null)
             return null;
@@ -1564,6 +1759,9 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
         }
     }
 
+    /**
+     * [Hàm hỗ trợ]: Suy luận mã khung thao tác hợp lệ trong 5 khung chuẩn (`CLINICAL_EXAM`, `XRAY`, `ENDODONTICS`, `PROCEDURE`, `PROSTHETICS_LABO`) từ khóa yêu cầu, loại bước, tên bước và mã quy trình.
+     */
     private String inferFrameKey(String requestedFrameKey, StepType stepType, String stepName, String templateCode) {
         if (requestedFrameKey != null && !requestedFrameKey.isBlank()) {
             String upper = requestedFrameKey.trim().toUpperCase(Locale.ROOT);
@@ -1589,6 +1787,9 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
         return "PROCEDURE";
     }
 
+    /**
+     * [Hàm hỗ trợ]: Chuẩn hóa (sinh ID mặc định, đặt kiểu `text`, cắt khoảng trắng) và tuần tự hóa danh sách trường tùy biến của bước sang JSON.
+     */
     private String serializeCustomFields(List<WorkflowStepDTO.CustomFieldDTO> list) {
         if (list == null || list.isEmpty()) {
             return null;
@@ -1610,6 +1811,9 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
         return writeJsonQuietly(clean);
     }
 
+    /**
+     * [Hàm hỗ trợ]: Giải mã chuỗi JSON cấu hình trường tùy biến thành danh sách `WorkflowStepDTO.CustomFieldDTO`.
+     */
     private List<WorkflowStepDTO.CustomFieldDTO> parseCustomFields(String json) {
         if (json == null || json.isBlank()) {
             return new ArrayList<>();
@@ -1622,6 +1826,9 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
         }
     }
 
+    /**
+     * [Hàm hỗ trợ]: Trả về số thứ tự hiển thị/thực thi hiệu lực của một bước (ưu tiên `stepOrder` riêng trên execution, dự phòng `sequenceOrder` của bước mẫu).
+     */
     private int effectiveStepOrder(WorkflowStepExecution se) {
         if (se == null)
             return 0;
@@ -1630,6 +1837,9 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
         return se.getStep() != null && se.getStep().getSequenceOrder() != null ? se.getStep().getSequenceOrder() : 0;
     }
 
+    /**
+     * [Hàm hỗ trợ]: Xác định ca khám hiệu lực cho thao tác (ca gốc hoặc ca tái khám `activeVisitId` nếu hợp lệ và khớp hồ sơ bệnh nhân).
+     */
     private Visit resolveEffectiveVisit(WorkflowExecution execution, Long activeVisitId) {
         Visit originVisit = execution.getVisit();
         if (activeVisitId == null || (originVisit != null && activeVisitId.equals(originVisit.getVisitId()))) {
@@ -1645,6 +1855,9 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
         return active;
     }
 
+    /**
+     * [Hàm hỗ trợ]: Kiểm tra một bước quy trình đã có thời gian bắt đầu, ghi chú hoặc dữ liệu nhập thực sự (bỏ qua dữ liệu `prefilled` tự điền răng/số lượng) hay chưa.
+     */
     private boolean hasStepSavedContent(WorkflowStepExecution se) {
         if (se == null)
             return false;
@@ -1671,6 +1884,9 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
         });
     }
 
+    /**
+     * [Hàm hỗ trợ]: Phát hiện tiến trình quy trình đã `COMPLETED` nhưng toàn bộ hạng mục KHDT liên kết lại đang ở `PLANNED` và chưa có dịch vụ thực hiện (trạng thái mồ côi do hủy dịch vụ).
+     */
     private boolean isOrphanedCompletedPlanExecution(WorkflowExecution execution) {
         if (execution == null || execution.getStatus() != WorkflowExecutionStatus.COMPLETED) {
             return false;
@@ -1715,6 +1931,9 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
                         it.getPlanItemId(), PerformedServiceStatus.CANCELLED));
     }
 
+    /**
+     * [Hàm hỗ trợ]: Phục hồi một tiến trình `COMPLETED` mồ côi về lại `IN_PROGRESS` và đặt lại các bước về `PENDING` để bác sĩ có thể thực hiện lại từ đầu trên ca khám hiện tại.
+     */
     private WorkflowExecution reconcileOrphanedCompletedExecution(WorkflowExecution execution, Visit visit) {
         if (!isOrphanedCompletedPlanExecution(execution)) {
             return execution;
@@ -1744,6 +1963,9 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
         return executionRepo.save(execution);
     }
 
+    /**
+     * [Hàm hỗ trợ]: Lấy danh sách các `TreatmentPlanItem` (chưa hủy) liên kết với tiến trình quy trình theo giai đoạn + dịch vụ hoặc theo hạng mục đơn lẻ.
+     */
     private List<TreatmentPlanItem> resolveExecutionLinkedPlanItems(WorkflowExecution execution) {
         if (execution == null || treatmentPlanItemRepo == null) {
             return List.of();
@@ -1776,6 +1998,9 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
         return linkedItems;
     }
 
+    /**
+     * [Hàm hỗ trợ]: Ánh xạ `stepExecutionId` của các bước chuẩn sang `TreatmentPlanItem` tương ứng (ưu tiên khớp tên bước chuẩn hóa, sau đó khớp theo chỉ số vị trí).
+     */
     private Map<Long, TreatmentPlanItem> mapPlanItemsToTemplateSteps(
             List<TreatmentPlanItem> linkedItems,
             List<WorkflowStepExecution> templateSteps) {
@@ -1853,6 +2078,9 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
         return mapping;
     }
 
+    /**
+     * [Hàm hỗ trợ]: Đối soát ngược tiến trình quy trình với các hạng mục KHDT đã được hoàn thành nhanh bên ngoài, tự đánh dấu `COMPLETED` các bước khớp và cập nhật `currentStep`/trạng thái `WorkflowExecution`.
+     */
     private WorkflowExecution reconcileExecutionWithPlanItems(WorkflowExecution execution, Visit visit) {
         if (execution == null || execution.getStatus() == WorkflowExecutionStatus.CANCELLED) {
             return execution;
@@ -1957,6 +2185,9 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
         return execution;
     }
 
+    /**
+     * [Hàm hỗ trợ]: Kiểm tra tiến trình quy trình có được phép hủy xóa hay không (chưa hoàn tất/hủy và mọi bước đều còn `PENDING` không có dữ liệu lưu).
+     */
     private boolean canDeleteExecution(WorkflowExecution execution, List<WorkflowStepExecution> steps) {
         if (execution == null || execution.getStatus() == WorkflowExecutionStatus.COMPLETED
                 || execution.getStatus() == WorkflowExecutionStatus.CANCELLED) {
@@ -1968,6 +2199,9 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
                 || hasStepSavedContent(se));
     }
 
+    /**
+     * [Hàm hỗ trợ]: Tách chuỗi ký hiệu răng (ví dụ `"R16, R17"` hoặc `"Toàn hàm"`) thành danh sách mã răng sạch không trùng lặp.
+     */
     private List<String> parseTeethTokens(String toothNumbers) {
         if (toothNumbers == null || toothNumbers.isBlank())
             return Collections.emptyList();
@@ -1990,6 +2224,9 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
         return tokens.stream().distinct().collect(Collectors.toList());
     }
 
+    /**
+     * [Hàm hỗ trợ]: Gộp dữ liệu biểu mẫu `incoming` mới gửi vào JSON `resultData` cũ của bước và nối thêm bản ghi `sessionSnapshot` vào mảng `sessions`.
+     */
     @SuppressWarnings("unchecked")
     private String mergeStepResultData(String existingJson, Map<String, Object> incoming,
             Map<String, Object> sessionSnapshot) {
@@ -2023,6 +2260,9 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
         return writeJsonQuietly(merged);
     }
 
+    /**
+     * [Hàm hỗ trợ]: Tạo đối tượng snapshot lịch sử buổi khám (`time`, `action`, `visitId`, `visitCode`, `staffName`, `note`, `values`) để lưu trong `resultData.sessions`.
+     */
     private Map<String, Object> buildSessionSnapshot(String action, Visit visit, String actorName,
             String note, Map<String, Object> incomingValues, LocalDateTime now) {
         Map<String, Object> snap = new LinkedHashMap<>();
@@ -2040,6 +2280,9 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
         return snap;
     }
 
+    /**
+     * [Hàm hỗ trợ]: Lấy `TreatmentPlan` cha của một `TreatmentPlanItem` (trực tiếp hoặc thông qua giai đoạn `stage`).
+     */
     private TreatmentPlan parentPlanOf(TreatmentPlanItem item) {
         if (item == null)
             return null;
@@ -2048,6 +2291,9 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
         return item.getStage() != null ? item.getStage().getPlan() : null;
     }
 
+    /**
+     * [Hàm hỗ trợ]: Chuyển trạng thái hạng mục KHDT liên kết từ `PLANNED` sang `IN_PROGRESS` và tính lại trạng thái giai đoạn/phác đồ khi quy trình bắt đầu chạy.
+     */
     private void syncLinkedPlanOnProgress(TreatmentPlanItem planItem) {
         if (planItem == null || treatmentPlanItemRepo == null)
             return;
@@ -2065,6 +2311,10 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
         }
     }
 
+    /**
+     * [Chức năng]: Đồng bộ tiến độ hoàn tất/bỏ qua của từng bước quy trình sang Kế hoạch điều trị và Dịch vụ thực hiện (`PerformedService`).
+     * [Mục đích]: Xử lý cả trường hợp giai đoạn KHDT gồm nhiều hạng mục cùng dịch vụ (khớp từng bước để ghi nhận hoặc hủy khi `SKIP`) lẫn trường hợp hạng mục đơn/dịch vụ độc lập khi hoàn tất toàn bộ quy trình.
+     */
     private void syncWorkflowStepProgress(WorkflowExecution execution,
             WorkflowStepExecution target,
             StepAction act,
@@ -2073,19 +2323,18 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
             Long userId,
             boolean finished,
             LocalDateTime now) {
-        try {
-            TreatmentPlanStage stage = execution.getPlanStage() != null
-                    ? execution.getPlanStage()
-                    : (execution.getPlanItem() != null ? execution.getPlanItem().getStage() : null);
-            com.cvdcms.entity.Service service = execution.getVersion().getTemplate().getService();
-            boolean targetIsAdhoc = target != null && target.getStep() != null
-                    && target.getStep().getAdhocExecutionId() != null;
-            List<WorkflowStepExecution> templateStepExecs = allSteps == null ? List.of()
-                    : allSteps.stream()
-                            .filter(s -> s.getStep() != null && s.getStep().getAdhocExecutionId() == null)
-                            .toList();
-            boolean anyTemplateStepCompleted = templateStepExecs.stream()
-                    .anyMatch(s -> s.getStatus() == WorkflowStepExecutionStatus.COMPLETED);
+        TreatmentPlanStage stage = execution.getPlanStage() != null
+                ? execution.getPlanStage()
+                : (execution.getPlanItem() != null ? execution.getPlanItem().getStage() : null);
+        com.cvdcms.entity.Service service = execution.getVersion().getTemplate().getService();
+        boolean targetIsAdhoc = target != null && target.getStep() != null
+                && target.getStep().getAdhocExecutionId() != null;
+        List<WorkflowStepExecution> templateStepExecs = allSteps == null ? List.of()
+                : allSteps.stream()
+                        .filter(s -> s.getStep() != null && s.getStep().getAdhocExecutionId() == null)
+                        .toList();
+        boolean anyTemplateStepCompleted = templateStepExecs.stream()
+                .anyMatch(s -> s.getStatus() == WorkflowStepExecutionStatus.COMPLETED);
 
             if (stage != null && service != null && treatmentPlanItemRepo != null) {
                 Long sId = service.getServiceId();
@@ -2163,12 +2412,11 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
             } else if (execution.getPlanItem() != null) {
                 syncLinkedPlanOnProgress(execution.getPlanItem());
             }
-        } catch (Exception ex) {
-            log.warn("Lỗi đồng bộ bước quy trình với KHDT cho execution {}: {}",
-                    execution.getExecutionId(), ex.getMessage());
-        }
     }
 
+    /**
+     * [Hàm hỗ trợ]: Ghi nhận hoàn tất một `TreatmentPlanItem`, tự động tái sử dụng bản ghi `PerformedService` CLS chưa gắn KHDT nếu có hoặc tạo mới qua `PerformedServiceService` (tính đơn giá 0đ cho phác đồ trả góp và tự nhân số lượng theo số răng).
+     */
     private void recordPlanItemAsPerformedOrCompleted(TreatmentPlanItem item,
             com.cvdcms.entity.Service service,
             WorkflowExecution execution,
@@ -2208,6 +2456,20 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
             }
 
             if (performedServiceService != null) {
+                com.cvdcms.entity.Service effService = item.getService() != null ? item.getService() : service;
+                String resolvedTeeth = (item.getToothNumbers() != null && !item.getToothNumbers().isBlank())
+                        ? item.getToothNumbers()
+                        : extractTeethFromSteps(allSteps);
+                if ((item.getToothNumbers() == null || item.getToothNumbers().isBlank()) && resolvedTeeth != null) {
+                    item.setToothNumbers(resolvedTeeth);
+                }
+                if (qty.compareTo(java.math.BigDecimal.ONE) <= 0 && isToothBasedService(effService)) {
+                    int teethCount = countSpecificTeeth(resolvedTeeth);
+                    if (teethCount > 1) {
+                        qty = java.math.BigDecimal.valueOf(teethCount);
+                        item.setQuantity(qty);
+                    }
+                }
                 String displayStep = (item.getStepName() != null && !item.getStepName().isBlank())
                         ? item.getStepName()
                         : (service != null ? service.getServiceName() : "Dịch vụ điều trị");
@@ -2215,7 +2477,7 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
                         .visitId(effectiveVisit.getVisitId())
                         .serviceId(item.getService().getServiceId())
                         .stepName(displayStep)
-                        .toothNumbers(item.getToothNumbers())
+                        .toothNumbers(resolvedTeeth)
                         .quantity(qty)
                         .unitPrice(unitPrice)
                         .discountAmount(java.math.BigDecimal.ZERO)
@@ -2226,6 +2488,9 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
                                 + execution.getVersion().getTemplate().getTemplateName())
                         .build();
                 performedServiceService.createPerformedService(req);
+                item.setStatus(TreatmentPlanItemStatus.COMPLETED);
+                item.setCompletedAt(now);
+                treatmentPlanItemRepo.save(item);
                 return;
             }
         }
@@ -2234,6 +2499,9 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
         treatmentPlanItemRepo.save(item);
     }
 
+    /**
+     * [Hàm hỗ trợ]: Khớp chặt bước quy trình `target` với một `TreatmentPlanItem` đang mở trong giai đoạn (chỉ khớp theo tên bước chuẩn hóa hoặc chỉ số 1-1 khi số lượng bước mẫu bằng số hạng mục).
+     */
     private TreatmentPlanItem matchStageItemForStepStrict(WorkflowStepExecution target,
             List<WorkflowStepExecution> templateSteps,
             List<TreatmentPlanItem> stageItems,
@@ -2258,6 +2526,9 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
         return null;
     }
 
+    /**
+     * [Hàm hỗ trợ]: Khớp bước quy trình `target` với một `TreatmentPlanItem` đang mở (ưu tiên `matchStageItemForStepStrict`, dự phòng theo vị trí hoặc phần tử mở đầu tiên).
+     */
     private TreatmentPlanItem matchStageItemForStep(WorkflowStepExecution target,
             List<WorkflowStepExecution> allSteps,
             List<TreatmentPlanItem> stageItems,
@@ -2275,6 +2546,9 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
         return openItems.get(0);
     }
 
+    /**
+     * [Hàm hỗ trợ]: Chuẩn hóa tên bước (bỏ dấu tiếng Việt, chuyển chữ thường, đổi `đ/Đ` thành `d`) để so khớp giữa bước quy trình mẫu và hạng mục KHDT.
+     */
     private String normalizePlanStepName(String s) {
         if (s == null)
             return "";
@@ -2284,6 +2558,10 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
                 .trim().toLowerCase(Locale.ROOT);
     }
 
+    /**
+     * [Chức năng]: Đồng bộ kết quả khi toàn bộ quy trình kết thúc sang hạng mục KHDT đơn lẻ hoặc sinh `PerformedService` độc lập.
+     * [Mục đích]: Nếu không có bước mẫu nào được `COMPLETE` thì hủy hạng mục KHDT (tránh tính tiền khi bỏ qua hết); ngược lại tái sử dụng `PerformedService` CLS hoặc tạo mới dịch vụ thực hiện, cập nhật trạng thái KHDT và tính lại trạng thái giai đoạn/phác đồ.
+     */
     private void syncCompletedWorkflowToPlanAndService(WorkflowExecution execution,
             List<WorkflowStepExecution> allSteps,
             boolean anyTemplateStepCompleted,
@@ -2339,6 +2617,20 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
                         }
 
                         if (performedServiceService != null) {
+                            com.cvdcms.entity.Service effService = item.getService() != null ? item.getService() : service;
+                            String resolvedTeeth = (item.getToothNumbers() != null && !item.getToothNumbers().isBlank())
+                                    ? item.getToothNumbers()
+                                    : extractTeethFromSteps(allSteps);
+                            if ((item.getToothNumbers() == null || item.getToothNumbers().isBlank()) && resolvedTeeth != null) {
+                                item.setToothNumbers(resolvedTeeth);
+                            }
+                            if (qty.compareTo(java.math.BigDecimal.ONE) <= 0 && isToothBasedService(effService)) {
+                                int teethCount = countSpecificTeeth(resolvedTeeth);
+                                if (teethCount > 1) {
+                                    qty = java.math.BigDecimal.valueOf(teethCount);
+                                    item.setQuantity(qty);
+                                }
+                            }
                             String displayStep = item.getStepName() != null && !item.getStepName().isBlank()
                                     ? item.getStepName()
                                     : (item.getService() != null ? item.getService().getServiceName()
@@ -2347,7 +2639,7 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
                                     .visitId(effectiveVisit.getVisitId())
                                     .serviceId(item.getService().getServiceId())
                                     .stepName(displayStep)
-                                    .toothNumbers(item.getToothNumbers())
+                                    .toothNumbers(resolvedTeeth)
                                     .quantity(qty)
                                     .unitPrice(unitPrice)
                                     .discountAmount(java.math.BigDecimal.ZERO)
@@ -2358,6 +2650,10 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
                                             + execution.getVersion().getTemplate().getTemplateName())
                                     .build();
                             performedServiceService.createPerformedService(req);
+                            item.setStatus(TreatmentPlanItemStatus.COMPLETED);
+                            item.setCompletedAt(LocalDateTime.now());
+                            treatmentPlanItemRepo.save(item);
+                            recalculateStageAndPlanStatus(item);
                             return;
                         }
                     }
@@ -2378,13 +2674,15 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
                         service.getServiceId())) {
                     return;
                 }
-                java.math.BigDecimal qty = resolveStandaloneQuantity(allSteps);
+                String resolvedTeeth = extractTeethFromSteps(allSteps);
+                java.math.BigDecimal qty = resolveStandaloneQuantity(allSteps, service, resolvedTeeth);
                 java.math.BigDecimal basePrice = service.getBasePrice() != null ? service.getBasePrice()
                         : java.math.BigDecimal.ZERO;
                 PerformedServiceRequestDTO req = PerformedServiceRequestDTO.builder()
                         .visitId(effectiveVisit.getVisitId())
                         .serviceId(service.getServiceId())
                         .stepName(service.getServiceName())
+                        .toothNumbers(resolvedTeeth)
                         .quantity(qty)
                         .unitPrice(basePrice)
                         .discountAmount(java.math.BigDecimal.ZERO)
@@ -2401,6 +2699,9 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
         }
     }
 
+    /**
+     * [Hàm hỗ trợ]: Tìm bản ghi `PerformedService` cận lâm sàng cùng dịch vụ đã phát sinh trong ca nhưng chưa gắn `planItem` và chưa xuất hóa đơn để tái sử dụng, tránh tính tiền hai lần.
+     */
     private PerformedService findExistingUnlinkedParaclinicalPerformedService(
             Visit effectiveVisit, WorkflowExecution execution, List<WorkflowStepExecution> allSteps, Long serviceId) {
         if (serviceId == null)
@@ -2441,6 +2742,9 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
         return null;
     }
 
+    /**
+     * [Hàm hỗ trợ]: Xác minh một `PerformedService` thỏa điều kiện tái sử dụng (không hủy, chưa gắn `planItem`, khớp `serviceId` và chưa nằm trên hóa đơn hợp lệ).
+     */
     private PerformedService checkReusableUnlinkedPs(PerformedService ps, Long serviceId) {
         if (ps == null || ps.getStatus() == PerformedServiceStatus.CANCELLED)
             return null;
@@ -2455,6 +2759,9 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
         return ps;
     }
 
+    /**
+     * [Hàm hỗ trợ]: Kiểm tra lượt khám hiện tại hoặc chỉ định CLS trong các bước đã có `PerformedService` đang hoạt động cho `serviceId` nhằm tránh tạo trùng dịch vụ độc lập.
+     */
     private boolean hasAnyActivePerformedServiceForWorkflow(
             Visit effectiveVisit, WorkflowExecution execution, List<WorkflowStepExecution> allSteps, Long serviceId) {
         if (effectiveVisit != null && effectiveVisit.getVisitId() != null) {
@@ -2484,7 +2791,99 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
         return false;
     }
 
-    private java.math.BigDecimal resolveStandaloneQuantity(List<WorkflowStepExecution> allSteps) {
+    /**
+     * [Hàm hỗ trợ]: Kiểm tra dịch vụ có tính đơn vị theo từng răng hay không (yêu cầu răng và đơn vị không phải lần/gói/hàm/liệu trình/ca).
+     */
+    private boolean isToothBasedService(com.cvdcms.entity.Service service) {
+        if (service == null || Boolean.FALSE.equals(service.getRequiresTooth())) {
+            return false;
+        }
+        String u = service.getUnit() != null ? service.getUnit().trim().toLowerCase(Locale.ROOT) : "";
+        return !(u.contains("lần") || u.contains("gói") || u.contains("hàm")
+                || u.contains("liệu trình") || u.contains("ca"));
+    }
+
+    /**
+     * [Hàm hỗ trợ]: Trích xuất và ghép chuỗi danh sách răng đã chọn từ `resultData.teeth` trên toàn bộ các bước của tiến trình.
+     */
+    private String extractTeethFromSteps(List<WorkflowStepExecution> allSteps) {
+        if (allSteps == null || allSteps.isEmpty()) {
+            return null;
+        }
+        Set<String> specificTeeth = new LinkedHashSet<>();
+        boolean sawFullJaw = false;
+        for (WorkflowStepExecution se : allSteps) {
+            Map<String, Object> data = parseJson(se.getResultData());
+            Object rawTeeth = data.get("teeth");
+            if (rawTeeth instanceof Collection<?> col) {
+                for (Object item : col) {
+                    if (item == null) continue;
+                    String token = normalizeSingleToothToken(item.toString());
+                    if (token == null) continue;
+                    if ("Toàn hàm".equalsIgnoreCase(token)) {
+                        sawFullJaw = true;
+                    } else {
+                        specificTeeth.add(token);
+                    }
+                }
+            } else if (rawTeeth != null && !rawTeeth.toString().isBlank()) {
+                for (String part : rawTeeth.toString().split("[,;]+")) {
+                    String token = normalizeSingleToothToken(part);
+                    if (token == null) continue;
+                    if ("Toàn hàm".equalsIgnoreCase(token)) {
+                        sawFullJaw = true;
+                    } else {
+                        specificTeeth.add(token);
+                    }
+                }
+            }
+        }
+        if (!specificTeeth.isEmpty()) {
+            return String.join(", ", specificTeeth);
+        }
+        return sawFullJaw ? "Toàn hàm" : null;
+    }
+
+    /**
+     * [Hàm hỗ trợ]: Chuẩn hóa một mã răng đơn lẻ (bỏ tiền tố `R`/`R-`, chuẩn hóa chuỗi `"Toàn hàm"`).
+     */
+    private String normalizeSingleToothToken(String raw) {
+        if (raw == null) return null;
+        String t = raw.trim();
+        if (t.isEmpty()) return null;
+        if (t.equalsIgnoreCase("toàn hàm") || t.equalsIgnoreCase("toan ham")) {
+            return "Toàn hàm";
+        }
+        if ((t.startsWith("R-") || t.startsWith("r-")) && t.length() > 2) {
+            t = t.substring(2).trim();
+        } else if ((t.startsWith("R") || t.startsWith("r")) && t.length() == 3 && Character.isDigit(t.charAt(1))) {
+            t = t.substring(1);
+        }
+        return t.isEmpty() ? null : t;
+    }
+
+    /**
+     * [Hàm hỗ trợ]: Đếm số lượng mã răng cụ thể (không trùng lặp và loại trừ `"Toàn hàm"`) trong chuỗi răng.
+     */
+    private int countSpecificTeeth(String teethStr) {
+        if (teethStr == null || teethStr.isBlank()) return 0;
+        Set<String> set = new LinkedHashSet<>();
+        for (String part : teethStr.split("[,;]+")) {
+            String tok = normalizeSingleToothToken(part);
+            if (tok != null && !"Toàn hàm".equalsIgnoreCase(tok)) {
+                set.add(tok);
+            }
+        }
+        return set.size();
+    }
+
+    /**
+     * [Hàm hỗ trợ]: Xác định số lượng dịch vụ cho quy trình độc lập (ưu tiên `serviceQuantity` đã lưu trong bước, sau đó đếm số răng nếu tính theo răng, mặc định 1).
+     */
+    private java.math.BigDecimal resolveStandaloneQuantity(
+            List<WorkflowStepExecution> allSteps,
+            com.cvdcms.entity.Service service,
+            String resolvedTeeth) {
         if (allSteps != null) {
             for (WorkflowStepExecution se : allSteps) {
                 Map<String, Object> data = parseJson(se.getResultData());
@@ -2494,9 +2893,18 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
                 }
             }
         }
+        if (isToothBasedService(service)) {
+            int toothCount = countSpecificTeeth(resolvedTeeth);
+            if (toothCount > 1) {
+                return java.math.BigDecimal.valueOf(toothCount);
+            }
+        }
         return java.math.BigDecimal.ONE;
     }
 
+    /**
+     * [Hàm hỗ trợ]: Tính toán lại và lưu trạng thái của `TreatmentPlanStage` và `TreatmentPlan` cha dựa trên trạng thái tổng hợp của các hạng mục/giai đoạn con.
+     */
     private void recalculateStageAndPlanStatus(TreatmentPlanItem item) {
         if (item == null || treatmentPlanStageRepo == null || treatmentPlanRepo == null)
             return;
@@ -2553,6 +2961,9 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
         }
     }
 
+    /**
+     * [Hàm hỗ trợ]: Xác định `staffId` bác sĩ thực hiện thủ thuật khi đồng bộ quy trình (ưu tiên `DoctorVisitAccess.resolveActingDoctor`, dự phòng `userId` rồi bác sĩ chính của ca).
+     */
     private Long resolveActingDoctorId(Visit visit, Long userId) {
         if (visit == null)
             return null;
@@ -2573,10 +2984,16 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
         return visit.getPrimaryDoctor() != null ? visit.getPrimaryDoctor().getStaffId() : null;
     }
 
+    /**
+     * [Hàm hỗ trợ]: Chuyển đối tượng bất kỳ sang chuỗi an toàn (`null` giữ nguyên `null`).
+     */
     private String asText(Object value) {
         return value == null ? null : String.valueOf(value);
     }
 
+    /**
+     * [Hàm hỗ trợ]: Đổi mã hành động audit quy trình (`WORKFLOW_*`) sang nhãn tiếng Việt hiển thị trên lịch sử SCR-43.4.
+     */
     private String actionLabel(String action) {
         if (action == null)
             return "";
@@ -2595,7 +3012,25 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
         };
     }
 
-    // Helper mapping
+    /**
+     * [Hàm hỗ trợ]: Lấy thời lượng ước tính (phút) của dịch vụ từ `estimatedDurationMinutes`/`procedureDurationMinutes`, mặc định 30 phút.
+     */
+    private int resolveServiceDuration(com.cvdcms.entity.Service s) {
+        if (s == null) {
+            return 30;
+        }
+        if (s.getEstimatedDurationMinutes() != null && s.getEstimatedDurationMinutes() > 0) {
+            return s.getEstimatedDurationMinutes();
+        }
+        if (s.getProcedureDurationMinutes() != null && s.getProcedureDurationMinutes() > 0) {
+            return s.getProcedureDurationMinutes();
+        }
+        return 30;
+    }
+
+    /**
+     * [Hàm hỗ trợ]: Ánh xạ thực thể `ClinicalWorkflowTemplate` kèm phiên bản mới nhất và các bước chuẩn sang `WorkflowTemplateResponseDTO`.
+     */
     private WorkflowTemplateResponseDTO mapTemplateToDTO(ClinicalWorkflowTemplate t) {
         WorkflowTemplateResponseDTO.WorkflowTemplateResponseDTOBuilder builder = WorkflowTemplateResponseDTO.builder()
                 .templateId(t.getTemplateId())
@@ -2609,7 +3044,9 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
         if (t.getService() != null) {
             builder.serviceId(t.getService().getServiceId())
                     .serviceCode(t.getService().getServiceCode())
-                    .serviceName(t.getService().getServiceName());
+                    .serviceName(t.getService().getServiceName())
+                    .serviceDurationMinutes(resolveServiceDuration(t.getService()))
+                    .allowSameVisit(!Boolean.FALSE.equals(t.getService().getAllowSameVisit()));
         }
 
         ClinicalWorkflowVersion version = versionRepo
@@ -2625,6 +3062,12 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
                     .findByVersion_VersionIdOrderBySequenceOrderAsc(version.getVersionId())
                     .stream().filter(s -> s.getAdhocExecutionId() == null).toList();
             builder.stepCount(steps.size());
+            int totalStepDur = steps.stream()
+                    .mapToInt(s -> (s.getEstimatedDurationMinutes() != null && s.getEstimatedDurationMinutes() > 0)
+                            ? s.getEstimatedDurationMinutes()
+                            : 10)
+                    .sum();
+            builder.totalStepDurationMinutes(totalStepDur);
 
             List<WorkflowStepDTO> stepDTOs = steps.stream().map(s -> WorkflowStepDTO.builder()
                     .stepId(s.getStepId())
@@ -2654,10 +3097,16 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
         return builder.build();
     }
 
+    /**
+     * [Hàm hỗ trợ]: Nạp chồng `mapExecutionToDTO` dùng ca khám gốc của tiến trình.
+     */
     private WorkflowExecutionDTO mapExecutionToDTO(WorkflowExecution execution) {
         return mapExecutionToDTO(execution, execution.getVisit());
     }
 
+    /**
+     * [Hàm hỗ trợ]: Ánh xạ `WorkflowExecution` và các bước thực thi sang `WorkflowExecutionDTO` theo ngữ cảnh `viewVisit` (tính tiến độ %, gộp trường tùy biến 5 khung, xác định `allowedActions`, năng lực bác sĩ và cờ chỉ đọc do bác sĩ khác thực hiện).
+     */
     private WorkflowExecutionDTO mapExecutionToDTO(WorkflowExecution execution, Visit viewVisit) {
         ClinicalWorkflowVersion version = execution.getVersion();
         ClinicalWorkflowTemplate template = version.getTemplate();
@@ -2713,8 +3162,17 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
             }
         }
 
+        Long execServiceId = template != null && template.getService() != null
+                ? template.getService().getServiceId()
+                : null;
+        var capExec = checkServiceCapability(effectiveVisit, execServiceId, null);
+        Long currentDoctorId = effectiveVisit != null && effectiveVisit.getPrimaryDoctor() != null
+                ? effectiveVisit.getPrimaryDoctor().getStaffId()
+                : null;
+
         String lockReason = lockReason(effectiveVisit);
         boolean actionable = lockReason == null
+                && capExec.allowed()
                 && (effectiveExecStatus == WorkflowExecutionStatus.IN_PROGRESS
                         || effectiveExecStatus == WorkflowExecutionStatus.PAUSED);
         boolean interruptible = version.getFlowMode() == FlowMode.INTERRUPTIBLE;
@@ -2776,6 +3234,12 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
                             ? "Đã hoàn thành nhanh từ Kế hoạch điều trị"
                             : null);
 
+            Long stepStaffId = se.getAssignedStaff() != null ? se.getAssignedStaff().getStaffId() : null;
+            boolean readOnlyOther = (st == WorkflowStepExecutionStatus.COMPLETED || st == WorkflowStepExecutionStatus.SKIPPED)
+                    && stepStaffId != null
+                    && currentDoctorId != null
+                    && !Objects.equals(stepStaffId, currentDoctorId);
+
             stepDTOs.add(WorkflowStepDTO.builder()
                     .stepId(step.getStepId())
                     .sequenceOrder(orderNum)
@@ -2799,6 +3263,8 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
                     .resultNote(effResultNote)
                     .resultData(parsedData)
                     .staffName(se.getAssignedStaff() != null ? se.getAssignedStaff().getFullName() : null)
+                    .assignedStaffId(stepStaffId)
+                    .readOnlyByOtherDoctor(readOnlyOther)
                     .allowedActions(actions)
                     .build());
         }
@@ -2860,21 +3326,50 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
                 .lockedReason(lockReason)
                 .planItemId(planItem != null ? planItem.getPlanItemId() : null)
                 .planStageId(planStage != null ? planStage.getStageId() : null)
+                .planStageOrder(planStage != null ? planStage.getStageOrder() : null)
+                .planStageName(planStage != null ? planStage.getStageName() : null)
                 .planCode(parentPlan != null ? parentPlan.getPlanCode() : null)
                 .planName(parentPlan != null ? parentPlan.getPlanName() : null)
                 .toothNumbers(toothNumbers)
                 .continuedFromOtherVisit(continued)
                 .canDelete(lockReason == null && canDeleteExecution(execution, stepExecutions))
+                .canCurrentDoctorPerform(capExec.allowed())
+                .capabilityReason(capExec.message())
+                .requiresHandover(!capExec.allowed())
                 .startedAt(execution.getStartedAt() != null ? execution.getStartedAt().format(DT_FORMAT) : null)
                 .completedAt(execution.getCompletedAt() != null ? execution.getCompletedAt().format(DT_FORMAT) : null)
                 .steps(stepDTOs)
                 .build();
     }
 
+    /**
+     * [Hàm hỗ trợ]: Kiểm tra năng lực bác sĩ và phòng khám cho `serviceId` qua `DoctorClinicalCapabilityService` (bỏ qua dịch vụ cận lâm sàng/Labo).
+     */
+    private com.cvdcms.service.DoctorClinicalCapabilityService.CapabilityCheckResult checkServiceCapability(
+            Visit visit, Long serviceId, Long actorUserId) {
+        if (capabilityService == null || visit == null || serviceId == null) {
+            return com.cvdcms.service.DoctorClinicalCapabilityService.CapabilityCheckResult.ok();
+        }
+        if (capabilityService.isParaclinicalOrLabService(serviceId)) {
+            return com.cvdcms.service.DoctorClinicalCapabilityService.CapabilityCheckResult.ok();
+        }
+        boolean isAdmin = actorUserId != null && userRepo != null && userRepo.hasActiveAdminRole(actorUserId);
+        Long branchId = visit.getBranch() != null ? visit.getBranch().getBranchId() : null;
+        StaffProfile actorDoc = (!isAdmin && actorUserId != null) ? staffOf(actorUserId) : null;
+        Long doctorId = actorDoc != null
+                ? actorDoc.getStaffId()
+                : (visit.getPrimaryDoctor() != null ? visit.getPrimaryDoctor().getStaffId() : null);
+        return capabilityService.checkDoctorAndRoomCapability(branchId, doctorId, visit.getRoomId(), serviceId);
+    }
+
     // =========================================================================
     // Tầng 1 · Combo dịch vụ mẫu (Tham khảo VTTech Dental)
     // =========================================================================
 
+    /**
+     * [Chức năng]: Lấy danh sách Combo dịch vụ mẫu (toàn bộ hoặc chỉ `ACTIVE`).
+     * [Mục đích]: Truy vấn `ServiceComboRepository`, đối chiếu mẫu quy trình `ACTIVE` của từng dịch vụ thành phần để gắn số bước/tên mẫu và ánh xạ sang `ServiceComboDTO`.
+     */
     @Override
     @Transactional(readOnly = true)
     public List<ServiceComboDTO> getAllCombos(boolean activeOnly) {
@@ -2901,6 +3396,10 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
                 .toList();
     }
 
+    /**
+     * [Chức năng]: Tạo mới hoặc cập nhật một Combo dịch vụ mẫu cùng danh sách dịch vụ thành phần.
+     * [Mục đích]: Kiểm tra mã/tên Combo không rỗng, không trùng mã, có ít nhất 1 dịch vụ hợp lệ, lưu `ServiceCombo`/`ServiceComboItem` và ghi audit `COMBO_SAVE`.
+     */
     @Override
     @Transactional
     public ServiceComboDTO saveCombo(Map<String, Object> payload, Long userId) {
@@ -2985,6 +3484,10 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
                 .orElseGet(() -> mapComboToDTO(saved, Map.of(), Map.of()));
     }
 
+    /**
+     * [Chức năng]: Xóa một Combo dịch vụ mẫu theo `comboId`.
+     * [Mục đích]: Kiểm tra tồn tại và xóa bản ghi `ServiceCombo` (cùng các item con) khỏi `ServiceComboRepository`.
+     */
     @Override
     @Transactional
     public void deleteCombo(Long comboId) {
@@ -2995,9 +3498,23 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
         serviceComboRepo.delete(combo);
     }
 
+    /**
+     * [Chức năng]: Phiên bản nạp chồng áp dụng Combo dịch vụ vào ca khám không có danh sách dịch vụ dời buổi sau.
+     * [Mục đích]: Ủy quyền cho hàm `startComboExecution` 4 tham số với `deferredServiceIds = Set.of()`.
+     */
     @Override
     @Transactional
     public Map<String, Object> startComboExecution(Long visitId, Long comboId, Long userId) {
+        return startComboExecution(visitId, comboId, userId, Set.of());
+    }
+
+    /**
+     * [Chức năng]: Áp dụng Combo dịch vụ mẫu vào bàn quy trình của lượt khám, tách phần làm ngay và phần dời sang Kế hoạch điều trị.
+     * [Mục đích]: Kiểm tra khóa ca và Combo đang `ACTIVE`; với từng dịch vụ theo thứ tự, khởi tạo `WorkflowExecution` nếu đủ điều kiện và năng lực bác sĩ, gom dịch vụ vượt ngưỡng hoặc cần bàn giao chuyên môn để lưu tự động vào KHDT qua `persistDeferredComboItemsToPlan`.
+     */
+    @Override
+    @Transactional
+    public Map<String, Object> startComboExecution(Long visitId, Long comboId, Long userId, Set<Long> deferredServiceIds) {
         if (serviceComboRepo == null) {
             throw new IllegalStateException("Chức năng Combo dịch vụ chưa sẵn sàng.");
         }
@@ -3015,6 +3532,10 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
 
         List<WorkflowExecutionDTO> started = new ArrayList<>();
         List<String> skipped = new ArrayList<>();
+        List<String> deferred = new ArrayList<>();
+        List<Map<String, Object>> handoverRequiredServices = new ArrayList<>();
+        List<ServiceComboItem> deferredItems = new ArrayList<>();
+        Set<Long> deferredIds = deferredServiceIds != null ? deferredServiceIds : Set.of();
         List<ServiceComboItem> orderedItems = combo.getItems().stream()
                 .sorted(Comparator.comparingInt(ci -> ci.getSequenceOrder() != null ? ci.getSequenceOrder() : 999))
                 .toList();
@@ -3022,18 +3543,39 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
         for (ServiceComboItem item : orderedItems) {
             if (item.getService() == null)
                 continue;
+            Long svcId = item.getService().getServiceId();
+            if (deferredIds.contains(svcId)) {
+                deferred.add(item.getService().getServiceName());
+                deferredItems.add(item);
+                continue;
+            }
+            var capCheck = checkServiceCapability(visit, svcId, userId);
+            if (!capCheck.allowed()) {
+                deferred.add(item.getService().getServiceName() + " (Cần BS chuyên môn)");
+                deferredItems.add(item);
+                Map<String, Object> ho = new LinkedHashMap<>();
+                ho.put("serviceId", svcId);
+                ho.put("serviceName", item.getService().getServiceName());
+                ho.put("reason", capCheck.message());
+                handoverRequiredServices.add(ho);
+                continue;
+            }
             WorkflowExecutionDTO dto = createOrGetExecution(
-                    visitId, item.getService().getServiceId(), null, null, userId, false, item.getDefaultQuantity());
+                    visitId, svcId, null, null, userId, false, item.getDefaultQuantity());
             if (dto != null) {
                 started.add(dto);
             } else {
                 skipped.add(item.getService().getServiceName());
             }
         }
-        if (started.isEmpty() && !skipped.isEmpty()) {
+        if (started.isEmpty() && !skipped.isEmpty() && deferred.isEmpty()) {
             throw new IllegalStateException(
                     "Các dịch vụ trong Combo chưa có mẫu quy trình hoạt động: " + String.join(", ", skipped));
         }
+
+        TreatmentPlan savedDeferredPlan = deferredItems.isEmpty()
+                ? null
+                : persistDeferredComboItemsToPlan(visit, combo, deferredItems, userId);
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("comboId", combo.getComboId());
@@ -3042,13 +3584,150 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
         result.put("startedCount", started.size());
         result.put("executions", started);
         result.put("skippedServices", skipped);
+        result.put("deferredServices", deferred);
+        result.put("handoverRequiredServices", handoverRequiredServices);
+        if (savedDeferredPlan != null) {
+            result.put("deferredPlanId", savedDeferredPlan.getPlanId());
+            result.put("deferredPlanCode", savedDeferredPlan.getPlanCode());
+        }
         return result;
     }
 
+    /**
+     * [Hàm hỗ trợ]: Tự động lưu các dịch vụ trong Combo bị dời buổi sau (hoặc cần bác sĩ chuyên môn) vào một giai đoạn hẹn tiếp theo trong Kế hoạch điều trị đang mở hoặc KHDT mới tạo.
+     */
+    private TreatmentPlan persistDeferredComboItemsToPlan(Visit visit,
+            ServiceCombo combo,
+            List<ServiceComboItem> deferredItems,
+            Long userId) {
+        if (treatmentPlanRepo == null || visit == null || visit.getPatientProfile() == null
+                || deferredItems == null || deferredItems.isEmpty()) {
+            return null;
+        }
+        PatientProfile patient = visit.getPatientProfile();
+        Branch branch = visit.getBranch() != null ? visit.getBranch() : patient.getPreferredBranch();
+        if (branch == null && branchRepo != null) {
+            branch = branchRepo.findAll().stream().findFirst().orElse(null);
+        }
+        StaffProfile doctor = staffOf(userId);
+        if (doctor == null) {
+            doctor = visit.getPrimaryDoctor();
+        }
+        if (doctor == null && staffProfileRepo != null) {
+            doctor = staffProfileRepo.findAll().stream().findFirst().orElse(null);
+        }
+        if (branch == null || doctor == null) {
+            return null;
+        }
+
+        List<TreatmentPlan> existingPlans = treatmentPlanRepo.findByProfileIdWithDetails(patient.getProfileId());
+        TreatmentPlan plan = existingPlans == null ? null : existingPlans.stream()
+                .filter(p -> (p.getStatus() == TreatmentPlanStatus.IN_PROGRESS
+                        || p.getStatus() == TreatmentPlanStatus.ACCEPTED)
+                        && !Boolean.TRUE.equals(p.getIsInstallment())
+                        && (p.getTotalPaidAmount() == null || p.getTotalPaidAmount().compareTo(java.math.BigDecimal.ZERO) <= 0)
+                        && ((p.getVisit() != null && Objects.equals(visit.getVisitId(), p.getVisit().getVisitId()))
+                                || !Boolean.TRUE.equals(p.getSentToAccounting())))
+                .min(Comparator
+                        .comparing((TreatmentPlan p) -> !(p.getVisit() != null && Objects.equals(visit.getVisitId(), p.getVisit().getVisitId())))
+                        .thenComparingInt(p -> p.getStatus() == TreatmentPlanStatus.IN_PROGRESS ? 0 : 1))
+                .orElse(null);
+
+        if (plan == null) {
+            plan = new TreatmentPlan();
+            plan.setPlanCode("KHDT" + (System.currentTimeMillis() % 100000000));
+            plan.setPatientProfile(patient);
+            plan.setBranch(branch);
+            plan.setVisit(visit);
+            plan.setDoctor(doctor);
+            String rawPlanName = "Kế hoạch điều trị: " + combo.getComboName();
+            plan.setPlanName(rawPlanName.length() > 150 ? rawPlanName.substring(0, 150) : rawPlanName);
+            plan.setStatus(TreatmentPlanStatus.IN_PROGRESS);
+            plan.setStartDate(LocalDate.now());
+            plan.setExpectedEndDate(LocalDate.now().plusDays(14));
+            plan.setNotes("Tự động lưu dịch vụ hẹn buổi sau từ Combo " + combo.getComboCode());
+            plan.setTotalEstimatedCost(java.math.BigDecimal.ZERO);
+            plan.setFinalEstimatedCost(java.math.BigDecimal.ZERO);
+            plan.setTotalPaidAmount(java.math.BigDecimal.ZERO);
+        }
+
+        Set<Long> existingOpenServiceIds = new HashSet<>();
+        if (plan.getStages() != null) {
+            for (TreatmentPlanStage st : plan.getStages()) {
+                if (st.getItems() == null) continue;
+                for (TreatmentPlanItem it : st.getItems()) {
+                    if (it.getService() != null && it.getService().getServiceId() != null
+                            && (it.getStatus() == TreatmentPlanItemStatus.PLANNED
+                                    || it.getStatus() == TreatmentPlanItemStatus.IN_PROGRESS)) {
+                        existingOpenServiceIds.add(it.getService().getServiceId());
+                    }
+                }
+            }
+        }
+
+        List<ServiceComboItem> toInsert = deferredItems.stream()
+                .filter(ci -> ci.getService() != null
+                        && ci.getService().getServiceId() != null
+                        && !existingOpenServiceIds.contains(ci.getService().getServiceId()))
+                .toList();
+
+        if (toInsert.isEmpty()) {
+            return plan.getPlanId() != null ? plan : null;
+        }
+
+        if (plan.getStages() == null) {
+            plan.setStages(new ArrayList<>());
+        }
+        int nextStageOrder = plan.getStages().stream()
+                .mapToInt(s -> s.getStageOrder() != null ? s.getStageOrder() : 0)
+                .max()
+                .orElse(0) + 1;
+
+        TreatmentPlanStage stage = new TreatmentPlanStage();
+        stage.setPlan(plan);
+        stage.setStageOrder(nextStageOrder);
+        String rawStageName = "Giai đoạn " + nextStageOrder + ": Hẹn buổi tiếp theo (" + combo.getComboName() + ")";
+        stage.setStageName(rawStageName.length() > 150 ? rawStageName.substring(0, 150) : rawStageName);
+        stage.setDescription("Tự động lưu dịch vụ vượt ngưỡng thời gian trong ca từ Combo " + combo.getComboCode());
+        stage.setStatus(TreatmentPlanStageStatus.PENDING);
+        stage.setExpectedEndDate(LocalDate.now().plusDays(7));
+        stage.setItems(new ArrayList<>());
+
+        java.math.BigDecimal addedCost = java.math.BigDecimal.ZERO;
+        for (ServiceComboItem ci : toInsert) {
+            com.cvdcms.entity.Service srv = ci.getService();
+            int qtyInt = Math.max(1, ci.getDefaultQuantity() != null ? ci.getDefaultQuantity() : 1);
+            java.math.BigDecimal qty = java.math.BigDecimal.valueOf(qtyInt);
+            java.math.BigDecimal price = srv.getBasePrice() != null ? srv.getBasePrice() : java.math.BigDecimal.ZERO;
+
+            TreatmentPlanItem item = new TreatmentPlanItem();
+            item.setStage(stage);
+            item.setPlan(plan);
+            item.setService(srv);
+            item.setStepName(srv.getServiceName());
+            item.setQuantity(qty);
+            item.setEstimatedPrice(price);
+            item.setStatus(TreatmentPlanItemStatus.PLANNED);
+            stage.getItems().add(item);
+            addedCost = addedCost.add(price.multiply(qty));
+        }
+
+        plan.getStages().add(stage);
+        java.math.BigDecimal curTotal = plan.getTotalEstimatedCost() != null ? plan.getTotalEstimatedCost() : java.math.BigDecimal.ZERO;
+        java.math.BigDecimal curFinal = plan.getFinalEstimatedCost() != null ? plan.getFinalEstimatedCost() : java.math.BigDecimal.ZERO;
+        plan.setTotalEstimatedCost(curTotal.add(addedCost));
+        plan.setFinalEstimatedCost(curFinal.add(addedCost));
+        return treatmentPlanRepo.save(plan);
+    }
+
+    /**
+     * [Hàm hỗ trợ]: Ánh xạ thực thể `ServiceCombo` cùng danh sách item thành phần, tổng đơn giá, tổng thời lượng và thông tin quy trình liên kết sang `ServiceComboDTO`.
+     */
     private ServiceComboDTO mapComboToDTO(ServiceCombo c,
             Map<Long, ClinicalWorkflowTemplate> activeTplByService,
             Map<Long, Integer> stepCountByTpl) {
         java.math.BigDecimal totalBasePrice = java.math.BigDecimal.ZERO;
+        int totalDurationMinutes = 0;
         List<ServiceComboDTO.ComboItemDTO> itemDTOs = new ArrayList<>();
         List<ServiceComboItem> ordered = c.getItems() == null ? List.of()
                 : c.getItems().stream()
@@ -3059,6 +3738,8 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
             if (s == null)
                 continue;
             int qty = ci.getDefaultQuantity() != null ? ci.getDefaultQuantity() : 1;
+            int srvDur = resolveServiceDuration(s);
+            totalDurationMinutes += srvDur * Math.max(1, qty);
             java.math.BigDecimal price = s.getBasePrice() != null ? s.getBasePrice() : java.math.BigDecimal.ZERO;
             totalBasePrice = totalBasePrice.add(price.multiply(java.math.BigDecimal.valueOf(qty)));
             ClinicalWorkflowTemplate tpl = activeTplByService.get(s.getServiceId());
@@ -3075,6 +3756,8 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
                     .workflowTemplateId(tpl != null ? tpl.getTemplateId() : null)
                     .workflowTemplateName(tpl != null ? tpl.getTemplateName() : null)
                     .workflowStepCount(tpl != null ? stepCountByTpl.getOrDefault(tpl.getTemplateId(), 0) : 0)
+                    .estimatedDurationMinutes(srvDur)
+                    .allowSameVisit(!Boolean.FALSE.equals(s.getAllowSameVisit()))
                     .build());
         }
         return ServiceComboDTO.builder()
@@ -3084,11 +3767,16 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
                 .description(c.getDescription())
                 .status(c.getStatus())
                 .totalBasePrice(totalBasePrice)
+                .totalDurationMinutes(totalDurationMinutes)
                 .serviceCount(itemDTOs.size())
                 .items(itemDTOs)
                 .build();
     }
 
+    /**
+     * [Chức năng]: Đọc cấu hình trường dữ liệu tùy biến của toàn bộ 5 khung thao tác lâm sàng.
+     * [Mục đích]: Truy vấn bảng `clinical_workflow_frame_fields` qua `JdbcTemplate` (hoặc bộ nhớ tạm khi test) và trả về map theo 5 `VALID_FRAME_KEYS`.
+     */
     @Override
     public Map<String, List<WorkflowStepDTO.CustomFieldDTO>> getAllFrameCustomFields() {
         Map<String, List<WorkflowStepDTO.CustomFieldDTO>> result = new LinkedHashMap<>();
@@ -3122,6 +3810,10 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
         return result;
     }
 
+    /**
+     * [Chức năng]: Lưu danh sách trường dữ liệu tùy biến mặc định cho một khung thao tác trong 5 khung chuẩn.
+     * [Mục đích]: Chuẩn hóa `frameKey`, làm sạch danh sách trường qua `sanitizeFrameFields`, đảm bảo bảng `clinical_workflow_frame_fields` tồn tại và thực hiện upsert qua `JdbcTemplate` cùng cập nhật cache bộ nhớ.
+     */
     @Override
     @Transactional
     public List<WorkflowStepDTO.CustomFieldDTO> saveFrameCustomFields(String frameKey,
@@ -3146,6 +3838,9 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
         return sanitized;
     }
 
+    /**
+     * [Hàm hỗ trợ]: Tạo bảng `clinical_workflow_frame_fields` bằng câu lệnh DDL `CREATE TABLE IF NOT EXISTS` nếu chưa có trong cơ sở dữ liệu.
+     */
     private void ensureFrameConfigTable() {
         if (jdbcTemplate == null)
             return;
@@ -3158,6 +3853,9 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
                 """);
     }
 
+    /**
+     * [Hàm hỗ trợ]: Chuẩn hóa mã khung thao tác sang chữ hoa và xác thực phải thuộc tập 5 khung chuẩn `VALID_FRAME_KEYS`.
+     */
     private String normalizeFrameKey(String frameKey) {
         String normalized = frameKey == null ? "" : frameKey.trim().toUpperCase(Locale.ROOT);
         if (!VALID_FRAME_KEYS.contains(normalized)) {
@@ -3166,6 +3864,9 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
         return normalized;
     }
 
+    /**
+     * [Hàm hỗ trợ]: Làm sạch và chuẩn hóa danh sách trường tùy biến của khung (loại trường rỗng nhãn, giới hạn kiểu `text`/`textarea`/`select`, sinh ID duy nhất và lọc tùy chọn).
+     */
     private List<WorkflowStepDTO.CustomFieldDTO> sanitizeFrameFields(String frameKey,
             List<WorkflowStepDTO.CustomFieldDTO> rawFields) {
         List<WorkflowStepDTO.CustomFieldDTO> cleaned = new ArrayList<>();
@@ -3207,6 +3908,9 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
         return cleaned;
     }
 
+    /**
+     * [Hàm hỗ trợ]: Gộp danh sách trường tùy biến riêng của bước với trường mặc định của khung thao tác (ưu tiên trường đã định nghĩa trên bước để bảo toàn ID dữ liệu lịch sử và khử trùng theo ID/nhãn).
+     */
     private List<WorkflowStepDTO.CustomFieldDTO> mergeFrameCustomFields(
             List<WorkflowStepDTO.CustomFieldDTO> frameDefaults,
             List<WorkflowStepDTO.CustomFieldDTO> stepFields) {
