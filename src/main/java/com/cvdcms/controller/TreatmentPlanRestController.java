@@ -21,6 +21,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * [Phân hệ]: Kế hoạch điều trị & Thu theo đợt (Treatment Plans & Installments)
+ * [Vai trò]: REST Controller cung cấp API quản lý vòng đời kế hoạch điều trị (tạo, sửa, xóa, đổi trạng thái, bàn giao kế toán), thực hiện bước thủ thuật trong ca khám và quản lý lịch trả góp/thu tiền theo đợt, nhắc lịch thu tiền.
+ */
 @Slf4j
 @RestController
 @RequestMapping("/api/doctor/treatment-plans")
@@ -39,19 +43,26 @@ public class TreatmentPlanRestController {
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private com.cvdcms.repository.EmrRecordRepository emrRecordRepository;
 
+    /**
+     * [Hàm hỗ trợ]: Lấy HttpSession hiện tại từ RequestContextHolder nếu đang nằm trong ngữ cảnh HTTP request.
+     */
     private jakarta.servlet.http.HttpSession currentHttpSession() {
         var attrs = org.springframework.web.context.request.RequestContextHolder.getRequestAttributes();
         return attrs instanceof org.springframework.web.context.request.ServletRequestAttributes sra
                 ? sra.getRequest().getSession(false) : null;
     }
 
+    /**
+     * [Hàm hỗ trợ]: Kiểm tra lời gọi hiện tại có đang chạy trong ngữ cảnh HTTP Servlet Request hay không (phân biệt với unit test gọi trực tiếp).
+     */
     private boolean isHttpRequestActive() {
         return org.springframework.web.context.request.RequestContextHolder.getRequestAttributes()
                 instanceof org.springframework.web.context.request.ServletRequestAttributes;
     }
 
     /**
-     * Lấy danh sách kế hoạch điều trị theo hồ sơ bệnh nhân
+     * [Chức năng]: Lấy danh sách kế hoạch điều trị theo mã hồ sơ bệnh nhân (GET /api/doctor/treatment-plans).
+     * [Mục đích]: Kiểm tra quyền đọc hồ sơ bệnh nhân qua DoctorVisitAccess.requirePatientRead rồi gọi TreatmentPlanService.getPlansByPatientId trả về danh sách phác đồ kèm giai đoạn, thủ thuật và đợt thanh toán.
      */
     @GetMapping
     public ResponseEntity<List<TreatmentPlanResponseDTO>> getPlansByPatient(@RequestParam Long patientId) {
@@ -63,7 +74,8 @@ public class TreatmentPlanRestController {
     }
 
     /**
-     * Lấy chi tiết một kế hoạch điều trị
+     * [Chức năng]: Lấy thông tin chi tiết một kế hoạch điều trị theo ID (GET /api/doctor/treatment-plans/{id}).
+     * [Mục đích]: Kiểm tra quyền đọc phác đồ qua DoctorVisitAccess.requireTreatmentPlanRead và gọi TreatmentPlanService.getPlanById trả về chi tiết tiến độ và lịch thanh toán.
      */
     @GetMapping("/{id}")
     public ResponseEntity<TreatmentPlanResponseDTO> getPlanById(@PathVariable Long id) {
@@ -75,7 +87,8 @@ public class TreatmentPlanRestController {
     }
 
     /**
-     * Tạo mới kế hoạch điều trị (SCR-15.2)
+     * [Chức năng]: Tạo mới kế hoạch điều trị cho bệnh nhân trong lượt khám đang phục vụ (POST /api/doctor/treatment-plans - SCR-15.2).
+     * [Mục đích]: Bắt buộc có visitId đang ở trạng thái khám lâm sàng hợp lệ, kiểm tra quyền chi nhánh và điều kiện bao gồm dịch vụ đặt trước, sau đó gọi TreatmentPlanService.createPlan để lưu phác đồ (tự động đánh dấu bàn giao kế toán) và trả về HTTP 201.
      */
     @PostMapping
     public ResponseEntity<?> createPlan(@RequestBody TreatmentPlanRequestDTO request) {
@@ -127,7 +140,8 @@ public class TreatmentPlanRestController {
     }
 
     /**
-     * Cập nhật trạng thái kế hoạch điều trị
+     * [Chức năng]: Cập nhật trạng thái của kế hoạch điều trị (PUT /api/doctor/treatment-plans/{id}/status).
+     * [Mục đích]: Kiểm tra quyền ghi kế hoạch qua DoctorVisitAccess.requireTreatmentPlanWrite, gọi TreatmentPlanService.updatePlanStatus chuyển trạng thái (DRAFT, PROPOSED, ACCEPTED, IN_PROGRESS, COMPLETED, CANCELLED).
      */
     @PutMapping("/{id}/status")
     public ResponseEntity<?> updateStatus(@PathVariable Long id, @RequestParam String status) {
@@ -150,7 +164,8 @@ public class TreatmentPlanRestController {
     }
 
     /**
-     * Cập nhật nội dung, dịch vụ, giai đoạn và lộ trình chia đợt của kế hoạch điều trị
+     * [Chức năng]: Cập nhật nội dung, danh sách dịch vụ, giai đoạn và lộ trình chia đợt của kế hoạch điều trị (PUT /api/doctor/treatment-plans/{id}).
+     * [Mục đích]: Kiểm tra quyền chỉnh sửa kế hoạch và phạm vi chi nhánh, gọi TreatmentPlanService.updatePlan để đối soát các bước đã khóa/thực hiện và giữ nguyên lộ trình thanh toán nếu đã phát sinh thu tiền.
      */
     @PutMapping("/{id}")
     public ResponseEntity<?> updatePlan(@PathVariable Long id, @RequestBody TreatmentPlanRequestDTO request) {
@@ -183,7 +198,8 @@ public class TreatmentPlanRestController {
     }
 
     /**
-     * Chuyển kế hoạch điều trị sang bộ phận Kế toán xử lý
+     * [Chức năng]: Bàn giao kế hoạch điều trị sang bộ phận Kế toán/Thu ngân xử lý thu tiền (POST /api/doctor/treatment-plans/{id}/handover-accounting).
+     * [Mục đích]: Kiểm tra quyền ghi trên phác đồ qua DoctorVisitAccess.requireTreatmentPlanWrite, gọi TreatmentPlanService.handoverToAccounting đánh dấu cờ sentToAccounting = true và lưu mốc thời gian bàn giao để hiển thị trên màn hình thu ngân/kế toán.
      */
     @PostMapping("/{id}/handover-accounting")
     public ResponseEntity<?> handoverToAccounting(@PathVariable Long id) {
@@ -212,7 +228,8 @@ public class TreatmentPlanRestController {
     }
 
     /**
-     * Cập nhật trạng thái giai đoạn điều trị (SCR-15.3 - Ghi nhận now() và tiến độ)
+     * [Chức năng]: Cập nhật trạng thái một giai đoạn trong kế hoạch điều trị (PUT /api/doctor/treatment-plans/stages/{stageId}/status - SCR-15.3).
+     * [Mục đích]: Kiểm tra quyền thao tác giai đoạn qua DoctorVisitAccess.requireTreatmentStage, gọi TreatmentPlanService.updateStageStatus cập nhật mốc hoàn thành, đồng bộ các bước thủ thuật con, tiến độ phác đồ và quy trình lâm sàng.
      */
     @PutMapping("/stages/{stageId}/status")
     public ResponseEntity<?> updateStageStatus(@PathVariable Long stageId, @RequestParam String status) {
@@ -236,7 +253,8 @@ public class TreatmentPlanRestController {
     }
 
     /**
-     * Cập nhật trạng thái từng thủ thuật / dịch vụ trong giai đoạn (Ghi nhận now())
+     * [Chức năng]: Cập nhật trạng thái từng bước thủ thuật/dịch vụ trong giai đoạn điều trị (PUT /api/doctor/treatment-plans/items/{itemId}/status).
+     * [Mục đích]: Kiểm tra quyền thao tác trên bước kế hoạch qua DoctorVisitAccess.requireTreatmentPlanItem, gọi TreatmentPlanService.updateItemStatus cập nhật trạng thái thủ thuật, hoàn tác dịch vụ thực hiện nếu đưa về PLANNED/CANCELLED và đồng bộ tiến độ toàn kế hoạch.
      */
     @PutMapping("/items/{itemId}/status")
     public ResponseEntity<?> updateItemStatus(@PathVariable Long itemId, @RequestParam String status) {
@@ -260,7 +278,8 @@ public class TreatmentPlanRestController {
     }
 
     /**
-     * Bác sĩ bấm "Thực hiện trong ca này" từ Kế hoạch điều trị (FT15 -> FT16)
+     * [Chức năng]: Thực hiện một bước thủ thuật từ Kế hoạch điều trị ngay trong ca khám hiện tại (POST /api/doctor/treatment-plans/items/{itemId}/execute-in-visit - FT15 sang FT16).
+     * [Mục đích]: Xác thực quyền bác sĩ/ca khám đang mở, kiểm tra trạng thái bước phác đồ chưa hủy/chưa hoàn thành/chưa ghi nhận trùng, kiểm tra khớp bệnh nhân và khóa bất biến EMR (BR-EMR-02), định giá 0 đ nếu thuộc phác đồ trả góp theo đợt (tránh thu trùng) hoặc lấy đơn giá dự kiến nếu đơn lẻ, tạo PerformedService qua PerformedServiceService và đồng bộ tiến độ kế hoạch.
      */
     @PostMapping("/items/{itemId}/execute-in-visit")
     public ResponseEntity<?> executeItemInVisit(
@@ -449,7 +468,8 @@ public class TreatmentPlanRestController {
     }
 
     /**
-     * Xóa kế hoạch điều trị
+     * [Chức năng]: Xóa kế hoạch điều trị (DELETE /api/doctor/treatment-plans/{id}).
+     * [Mục đích]: Kiểm tra quyền ghi kế hoạch qua DoctorVisitAccess.requireTreatmentPlanWrite, gọi TreatmentPlanService.deletePlan để kiểm tra ràng buộc chưa thanh toán/chưa xuất hóa đơn, gỡ liên kết dịch vụ/quy trình và xóa phác đồ.
      */
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deletePlan(@PathVariable Long id) {
@@ -471,7 +491,8 @@ public class TreatmentPlanRestController {
     }
 
     /**
-     * Lấy danh sách các đợt thanh toán của kế hoạch điều trị
+     * [Chức năng]: Lấy danh sách các đợt thanh toán trả góp của một kế hoạch điều trị (GET /api/doctor/treatment-plans/{id}/installments).
+     * [Mục đích]: Kiểm tra quyền đọc phác đồ và gọi TreatmentPlanService.getPlanInstallments để hiển thị lịch thu theo đợt, số tiền dự kiến, đã thu và còn lại.
      */
     @GetMapping("/{id}/installments")
     public ResponseEntity<List<TreatmentPlanInstallmentDTO>> getInstallments(@PathVariable Long id) {
@@ -482,7 +503,8 @@ public class TreatmentPlanRestController {
     }
 
     /**
-     * Cập nhật/thiết lập lộ trình chia đợt thanh toán (Installments Schedule)
+     * [Chức năng]: Thiết lập hoặc cập nhật lịch chia đợt thanh toán (lịch trả góp) cho kế hoạch điều trị (POST /api/doctor/treatment-plans/{id}/installments).
+     * [Mục đích]: Kiểm tra quyền thao tác tài chính phác đồ qua DoctorVisitAccess.requireTreatmentPlanFinanceWrite, gọi TreatmentPlanService.saveInstallments để lưu lịch các đợt khi kế hoạch chưa phát sinh thanh toán và bảo đảm tổng tiền các đợt không vượt chi phí phác đồ.
      */
     @PostMapping("/{id}/installments")
     public ResponseEntity<?> saveInstallments(
@@ -507,7 +529,8 @@ public class TreatmentPlanRestController {
     }
 
     /**
-     * Ghi nhận thanh toán đợt linh hoạt (Không fix cứng số tiền - Chuẩn DentalSoft)
+     * [Chức năng]: Ghi nhận giao dịch thu tiền theo đợt linh hoạt cho kế hoạch điều trị trả góp (POST /api/doctor/treatment-plans/{id}/installments/pay).
+     * [Mục đích]: Xác thực người thu ngân từ HttpSession (trả 401 nếu chưa đăng nhập), gọi TreatmentPlanService.recordInstallmentPayment để kiểm tra quyền PAYMENT_COLLECT, hạch toán bảng Payment (hỗ trợ tiền mặt/chuyển khoản/POS/ví cọc), phân bổ tự động số tiền thu vào các đợt trả góp và cập nhật tổng đã thu; trả về HTTP 403 nếu không đủ quyền.
      */
     @PostMapping("/{id}/installments/pay")
     public ResponseEntity<?> recordInstallmentPayment(
@@ -543,7 +566,8 @@ public class TreatmentPlanRestController {
     }
 
     /**
-     * Lễ tân đánh dấu đã nhắc bệnh nhân chuẩn bị tiền đợt tới
+     * [Chức năng]: Đánh dấu đã liên hệ nhắc lịch thanh toán đợt tới cho bệnh nhân (POST /api/doctor/treatment-plans/installments/{installmentId}/remind).
+     * [Mục đích]: Kiểm tra quyền thao tác trên đợt thanh toán qua DoctorVisitAccess.requireTreatmentInstallment, gọi TreatmentPlanService.markReminderSent lưu trạng thái đã nhắc, thời điểm nhắc và ghi chú trao đổi của lễ tân.
      */
     @PostMapping("/installments/{installmentId}/remind")
     public ResponseEntity<?> markReminderSent(
@@ -569,7 +593,8 @@ public class TreatmentPlanRestController {
     }
 
     /**
-     * Danh sách các đợt thanh toán sắp tới hạn dành cho Lễ tân theo dõi và nhắc hẹn
+     * [Chức năng]: Tra cứu danh sách phân trang các đợt thanh toán sắp tới hạn hoặc quá hạn (GET /api/doctor/treatment-plans/installments/upcoming).
+     * [Mục đích]: Hỗ trợ lễ tân/thu ngân theo dõi và nhắc hẹn thu tiền theo đợt; tự động ràng buộc phạm vi chi nhánh được phép truy cập của nhân sự hiện tại, lọc theo khoảng ngày dự kiến, trạng thái đợt và từ khóa qua TreatmentPlanService.searchUpcomingInstallments.
      */
     @GetMapping("/installments/upcoming")
     public ResponseEntity<?> getUpcomingInstallments(

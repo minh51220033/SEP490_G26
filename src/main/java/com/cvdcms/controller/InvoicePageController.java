@@ -35,6 +35,10 @@ import com.cvdcms.entity.enums.PrescriptionStatus;
 import com.cvdcms.repository.PrescriptionRepository;
 import com.cvdcms.repository.TreatmentPlanRepository;
 
+/**
+ * [Phân hệ]: Thanh toán & Hóa đơn (Giao diện Web MVC)
+ * [Vai trò]: Controller điều phối toàn bộ các trang Thymeleaf dưới tiền tố `/invoices`, bao gồm tra cứu danh sách & tổng hợp công nợ hóa đơn, lập hóa đơn dịch vụ/hỗn hợp, tách lập hóa đơn thuốc riêng từ đơn thuốc, ghi nhận lựa chọn mua thuốc (tại phòng khám/tự mua ngoài), xem chi tiết, in hóa đơn (A4/A5/POS), điều chỉnh và hủy hóa đơn kèm kiểm soát phân quyền theo chi nhánh.
+ */
 @Controller
 @RequestMapping("/invoices")
 public class InvoicePageController {
@@ -87,6 +91,9 @@ public class InvoicePageController {
         this.treatmentPlanRepository = treatmentPlanRepository;
     }
 
+    /**
+     * [Hàm hỗ trợ]: Nạp thông tin người dùng đăng nhập từ `HttpSession` và đánh dấu menu `activeMenu = "invoices"` vào `Model` cho layout sidebar.
+     */
     private void populateUserAndSidebar(Model model, HttpSession session) {
         model.addAttribute("activeMenu", "invoices");
         if (session != null) {
@@ -96,6 +103,9 @@ public class InvoicePageController {
         }
     }
 
+    /**
+     * [Hàm hỗ trợ]: Lấy `userId` của nhân viên đang đăng nhập từ `HttpSession`; ném `AccessDeniedException` nếu phiên chưa đăng nhập.
+     */
     private Long getCurrentUserId(HttpSession session) {
         if (session != null && session.getAttribute("loggedInUser") instanceof User u && u.getUserId() != null) {
             return u.getUserId();
@@ -103,10 +113,16 @@ public class InvoicePageController {
         throw new AccessDeniedException("Chưa đăng nhập. Vui lòng đăng nhập để tiếp tục.");
     }
 
+    /**
+     * [Hàm hỗ trợ]: Kiểm tra người dùng có vai trò Admin đang hoạt động (được phép xem/thao tác dữ liệu toàn hệ thống đa chi nhánh) hay không qua `UserRepository.hasActiveAdminRole`.
+     */
     private boolean isFinanceAdminOrAccountant(Long userId) {
         return userId != null && userRepository.hasActiveAdminRole(userId);
     }
 
+    /**
+     * [Hàm hỗ trợ]: Trả về danh sách chi nhánh mà người dùng được phép xem; Admin thấy toàn bộ chi nhánh, nhân viên thường lấy theo `StaffBranchAssignment` đang `ACTIVE` (hoặc fallback về chi nhánh mặc định trên `User`).
+     */
     private List<Branch> resolveAllowedBranches(Long userId) {
         if (isFinanceAdminOrAccountant(userId)) {
             return branchRepository.findAll();
@@ -124,6 +140,9 @@ public class InvoicePageController {
         return branchRepository.findAllById(branchIds);
     }
 
+    /**
+     * [Hàm hỗ trợ]: Xác thực và chuẩn hóa `branchId` theo phạm vi phân công chi nhánh của nhân viên; chặn truy cập chi nhánh ngoài quyền bằng `AccessDeniedException` và tự động ép về chi nhánh phân công đầu tiên nếu nhân viên thường không truyền `branchId`.
+     */
     private Long resolveBranchId(Long requestedBranchId, Long userId) {
         if (isFinanceAdminOrAccountant(userId)) {
             return requestedBranchId;
@@ -148,6 +167,10 @@ public class InvoicePageController {
         return requestedBranchId;
     }
 
+    /**
+     * [Chức năng]: Trang `GET /invoices` hiển thị danh sách hóa đơn phân trang kèm bộ lọc chi nhánh, trạng thái thanh toán, trạng thái hóa đơn, từ khóa và khoảng ngày phát hành (`finance/invoices/list`).
+     * [Mục đích]: Phục vụ thu ngân/kế toán tra cứu và đối soát hóa đơn theo quyền chi nhánh (`resolveBranchId`); gọi `InvoiceService.getInvoices` sắp xếp giảm dần theo `issuedAt`, đồng thời gọi `InvoiceRepository.sumFilteredInvoices` để tính tổng tiền hóa đơn, tổng đã thu và tổng công nợ còn lại khớp đúng bộ lọc đang áp dụng.
+     */
     @GetMapping
     public String listInvoices(
             @RequestParam(required = false) Long branchId,
@@ -248,6 +271,9 @@ public class InvoicePageController {
         return "finance/invoices/list";
     }
 
+    /**
+     * [Hàm hỗ trợ]: Làm sạch tham số `returnUrl` để chống lỗi Open Redirect, chỉ chấp nhận đường dẫn tương đối nội bộ bắt đầu bằng `/` (không bắt đầu bằng `//` và không chứa `\`).
+     */
     private String sanitizeReturnUrl(String returnUrl) {
         if (returnUrl == null || returnUrl.isBlank()) {
             return null;
@@ -259,6 +285,10 @@ public class InvoicePageController {
         return null;
     }
 
+    /**
+     * [Chức năng]: Trang `GET /invoices/create` hiển thị biểu mẫu lập hóa đơn mới (`finance/invoices/create`) theo `visitId`, `profileId` hoặc chọn từ danh sách lượt khám đang chờ thanh toán.
+     * [Mục đích]: Nạp danh sách lượt khám trạng thái `WAITING_PAYMENT` trong chi nhánh phụ trách, dịch vụ đã hoàn thành chưa lập hóa đơn (`getUnbilledPerformedServices`), đơn thuốc bác sĩ đã bàn giao (`getHandedOverPrescriptions`), ví điểm Loyalty, khuyến mãi/voucher khả dụng và kế hoạch điều trị tham khảo (tự động gắn lượt khám `WAITING_PAYMENT` đầu tiên nếu chỉ truyền `profileId`).
+     */
     @GetMapping("/create")
     public String createInvoiceForm(
             @RequestParam(required = false) Long visitId,
@@ -352,6 +382,10 @@ public class InvoicePageController {
         return "finance/invoices/create";
     }
 
+    /**
+     * [Chức năng]: Xử lý `POST /invoices/create` để phát hành hóa đơn mới (hóa đơn dịch vụ, hóa đơn hỗn hợp dịch vụ + thuốc, hoặc tự động rẽ nhánh tách lập hóa đơn thuốc riêng).
+     * [Mục đích]: Khi request không gắn `visitId`, không có dịch vụ nhưng có chọn mua thuốc tại phòng khám (`buyMedicineAtClinic = true` kèm `prescriptionId` và `medicineItems`), tự chuyển đổi sang `MedicineInvoiceCreateRequestDTO` và gọi `InvoiceService.createMedicineInvoice`; ngược lại gọi `InvoiceService.createInvoice`. Thành công chuyển hướng tới `/invoices/{id}`, thất bại quay lại `/invoices/create` kèm thông báo lỗi.
+     */
     @PostMapping("/create")
     public String saveInvoice(
             @ModelAttribute InvoiceCreateRequestDTO request,
@@ -405,6 +439,10 @@ public class InvoicePageController {
         }
     }
 
+    /**
+     * [Chức năng]: Trang `GET /invoices/create-medicine` hiển thị biểu mẫu tách lập hóa đơn thuốc riêng từ một đơn thuốc bác sĩ đã kê (`finance/invoices/create-medicine`).
+     * [Mục đích]: Tải chi tiết đơn thuốc theo `prescriptionId`, kiểm tra quyền chi nhánh (`resolveBranchId`) và chặn lập hóa đơn nếu đơn thuốc đã bị hủy (`CANCELLED`) hoặc đã mua đủ toàn bộ tại phòng khám (`CLINIC_PURCHASE_COMPLETED`).
+     */
     @GetMapping("/create-medicine")
     public String createMedicineInvoiceForm(
             @RequestParam Long prescriptionId,
@@ -441,6 +479,10 @@ public class InvoicePageController {
         return "finance/invoices/create-medicine";
     }
 
+    /**
+     * [Chức năng]: Xử lý `POST /invoices/create-medicine` để phát hành hóa đơn thuốc độc lập (`InvoiceType.MEDICINE`) và xuất kho thuốc theo đơn.
+     * [Mục đích]: Gọi `InvoiceService.createMedicineInvoice` với `cashierUserId` từ session; thành công chuyển hướng sang trang chi tiết `/invoices/{id}` kèm thông báo, thất bại chuyển hướng về `/invoices/create-medicine` kèm `prescriptionId` và thông báo lỗi.
+     */
     @PostMapping("/create-medicine")
     public String saveMedicineInvoice(
             @ModelAttribute MedicineInvoiceCreateRequestDTO request,
@@ -469,6 +511,10 @@ public class InvoicePageController {
         }
     }
 
+    /**
+     * [Chức năng]: Xử lý `POST /invoices/prescriptions/{id}/choice` để lưu lựa chọn mua thuốc của bệnh nhân đối với một đơn thuốc (`EXTERNAL` tự mua ngoài hoặc `CLINIC` mua tại phòng khám).
+     * [Mục đích]: Gọi `InvoiceService.recordPrescriptionChoice` để cập nhật trạng thái và ghi chú lựa chọn đơn thuốc, sau đó quay lại `/invoices/create` giữ nguyên ngữ cảnh `visitId` / `profileId` / `returnUrl`.
+     */
     @PostMapping("/prescriptions/{id}/choice")
     public String updatePrescriptionChoice(
             @PathVariable Long id,
@@ -500,6 +546,10 @@ public class InvoicePageController {
         return "redirect:/invoices/create";
     }
 
+    /**
+     * [Chức năng]: Trang `GET /invoices/{id}` hiển thị chi tiết hóa đơn cùng lịch sử thanh toán, hoàn tiền, phân bổ thanh toán theo từng dòng và nhật ký kiểm toán (`finance/invoices/detail`).
+     * [Mục đích]: Tải đầy đủ hóa đơn (`InvoiceService.getInvoiceWithDetails`), xác thực quyền chi nhánh (`resolveBranchId`), nạp `payments`, `refunds`, `auditLogs` và danh sách phân bổ công nợ chi tiết từ `PaymentAllocationService` (nếu có).
+     */
     @GetMapping("/{id}")
     public String invoiceDetail(
             @PathVariable Long id,
@@ -538,6 +588,10 @@ public class InvoicePageController {
         return "finance/invoices/detail";
     }
 
+    /**
+     * [Chức năng]: Trang `GET /invoices/{id}/print` hiển thị bản in hóa đơn theo khổ giấy yêu cầu (`A4`, `A5` hoặc `POS`) trên view `finance/invoices/print`.
+     * [Mục đích]: Tải chi tiết hóa đơn, kiểm tra quyền chi nhánh của nhân viên, nạp lịch sử thanh toán (`PaymentService.getPaymentsByInvoiceId`) và dữ liệu phân bổ thanh toán theo dòng (`PaymentAllocationService`) để render mẫu in chứng từ cho bệnh nhân.
+     */
     @GetMapping("/{id}/print")
     public String printInvoice(
             @PathVariable Long id,
@@ -568,6 +622,10 @@ public class InvoicePageController {
         return "finance/invoices/print";
     }
 
+    /**
+     * [Chức năng]: Trang `GET /invoices/{id}/adjust` hiển thị biểu mẫu điều chỉnh hóa đơn (giảm giá, phụ thu, lý do điều chỉnh) kèm lịch sử kiểm toán (`finance/invoices/adjust`).
+     * [Mục đích]: Cho phép kế toán/thu ngân có quyền tại chi nhánh mở màn hình điều chỉnh số tiền hóa đơn sau khi đã phát hành, nạp chi tiết hóa đơn và danh sách `InvoiceAuditLog` để đối chiếu.
+     */
     @GetMapping("/{id}/adjust")
     public String adjustInvoiceForm(
             @PathVariable Long id,
@@ -589,6 +647,10 @@ public class InvoicePageController {
         return "finance/invoices/adjust";
     }
 
+    /**
+     * [Chức năng]: Xử lý `POST /invoices/{id}/adjust` để lưu thông tin điều chỉnh giảm giá/phụ thu/tổng tiền hóa đơn.
+     * [Mục đích]: Ủy quyền cho `InvoiceService.adjustInvoice` với `staffUserId` từ session; thành công chuyển hướng về trang chi tiết `/invoices/{id}`, thất bại quay lại `/invoices/{id}/adjust` kèm thông báo lỗi nghiệp vụ.
+     */
     @PostMapping("/{id}/adjust")
     public String saveAdjustment(
             @PathVariable Long id,
@@ -607,6 +669,10 @@ public class InvoicePageController {
         }
     }
 
+    /**
+     * [Chức năng]: Xử lý `POST /invoices/{id}/cancel` để hủy hóa đơn kèm lý do hủy bắt buộc.
+     * [Mục đích]: Ủy quyền cho `InvoiceService.cancelInvoice` với `staffUserId` từ session (chỉ hủy được khi chưa phát sinh thanh toán và tự động hoàn nguyên điểm/voucher/lượt khuyến mãi), sau đó chuyển hướng về `/invoices/{id}` kèm thông báo kết quả.
+     */
     @PostMapping("/{id}/cancel")
     public String cancelInvoice(
             @PathVariable Long id,

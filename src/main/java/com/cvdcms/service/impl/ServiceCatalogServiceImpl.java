@@ -35,6 +35,10 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.safety.Safelist;
 
+/**
+ * [Phân hệ]: Danh mục dịch vụ & Nhóm dịch vụ
+ * [Vai trò]: Service triển khai toàn bộ nghiệp vụ quản lý nhóm dịch vụ, dịch vụ/sản phẩm, cấu hình kỹ thuật cận lâm sàng, làm sạch nội dung mô tả HTML, quản lý ảnh và tra cứu bảng giá công khai.
+ */
 @org.springframework.stereotype.Service
 @Transactional(readOnly = true)
 public class ServiceCatalogServiceImpl
@@ -60,23 +64,39 @@ public class ServiceCatalogServiceImpl
     // 1. NHÓM DANH MỤC DỊCH VỤ
     // =====================================================
 
+    /**
+     * [Chức năng]: Lấy toàn bộ danh sách nhóm dịch vụ trong hệ thống sắp xếp theo thứ tự hiển thị và tên nhóm tăng dần.
+     * [Mục đích]: Cung cấp dữ liệu cho trang quản trị danh sách nhóm dịch vụ và bộ lọc quản trị.
+     */
     @Override
     public List<ServiceCategory> getAllCategories() {
         return categoryRepository
                 .findAllByOrderByDisplayOrderAscCategoryNameAsc();
     }
 
+    /**
+     * [Chức năng]: Lấy danh sách các nhóm dịch vụ đang hoạt động (isActive = true) sắp xếp theo thứ tự hiển thị và tên tăng dần.
+     * [Mục đích]: Phục vụ form tạo mới dịch vụ và hiển thị danh mục lọc trên cổng tra cứu dịch vụ công khai.
+     */
     @Override
     public List<ServiceCategory> getActiveCategories() {
         return categoryRepository
                 .findByIsActiveTrueOrderByDisplayOrderAscCategoryNameAsc();
     }
 
+    /**
+     * [Chức năng]: Tra cứu thông tin chi tiết một nhóm dịch vụ theo ID.
+     * [Mục đích]: Ủy quyền cho requireCategory để kiểm tra ID hợp lệ và ném ngoại lệ nếu không tìm thấy nhóm.
+     */
     @Override
     public ServiceCategory getCategoryById(Long categoryId) {
         return requireCategory(categoryId);
     }
 
+    /**
+     * [Chức năng]: Tạo mới một nhóm dịch vụ và lưu vào bảng danh mục nhóm dịch vụ.
+     * [Mục đích]: Xác thực DTO đầu vào, chuẩn hóa mã nhóm viết hoa, kiểm tra không trùng mã (không phân biệt hoa thường) rồi lưu bản ghi mới.
+     */
     @Override
     @Transactional
     public void createCategory(ServiceCategoryDTO dto) {
@@ -103,6 +123,10 @@ public class ServiceCatalogServiceImpl
         categoryRepository.save(category);
     }
 
+    /**
+     * [Chức năng]: Cập nhật thông tin của một nhóm dịch vụ hiện có theo ID.
+     * [Mục đích]: Kiểm tra hợp lệ DTO, chống trùng mã với nhóm khác và chặn đổi loại nhóm (categoryType) nếu nhóm đang chứa dịch vụ con để bảo toàn tính nhất quán dữ liệu.
+     */
     @Override
     @Transactional
     public void updateCategory(
@@ -155,6 +179,10 @@ public class ServiceCatalogServiceImpl
         categoryRepository.save(category);
     }
 
+    /**
+     * [Chức năng]: Đảo trạng thái kích hoạt (bật/tắt) của một nhóm dịch vụ theo ID.
+     * [Mục đích]: Cho phép quản trị viên ngừng sử dụng hoặc kích hoạt lại nhóm dịch vụ mà không làm mất lịch sử dịch vụ liên quan.
+     */
     @Override
     @Transactional
     public void toggleCategoryStatus(Long categoryId) {
@@ -167,6 +195,10 @@ public class ServiceCatalogServiceImpl
         categoryRepository.save(category);
     }
 
+    /**
+     * [Chức năng]: Xóa vĩnh viễn một nhóm dịch vụ theo ID khi chưa có dịch vụ con và chưa bị tham chiếu.
+     * [Mục đích]: Khóa bản ghi qua findForDeletion, chặn xóa nếu tồn tại dịch vụ thuộc nhóm hoặc có lỗi ràng buộc khóa ngoại (DataIntegrityViolationException).
+     */
     @Override
     @Transactional
     public void deleteCategory(Long categoryId) {
@@ -201,12 +233,20 @@ public class ServiceCatalogServiceImpl
     // 2. TRA CỨU DỊCH VỤ
     // =====================================================
 
+    /**
+     * [Chức năng]: Lấy toàn bộ danh sách dịch vụ và sản phẩm trong hệ thống sắp xếp theo tên tăng dần.
+     * [Mục đích]: Cung cấp dữ liệu tổng hợp thống kê số lượng dịch vụ, sản phẩm và trạng thái trên trang quản trị danh mục.
+     */
     @Override
     public List<Service> getAllServices() {
         return serviceRepository
                 .findAllByOrderByServiceNameAsc();
     }
 
+    /**
+     * [Chức năng]: Lấy danh sách dịch vụ thuộc một nhóm dịch vụ cụ thể sắp xếp theo tên tăng dần.
+     * [Mục đích]: Kiểm tra nhóm tồn tại qua requireCategory trước khi truy vấn danh sách dịch vụ con của nhóm đó.
+     */
     @Override
     public List<Service> getServicesByCategory(Long categoryId) {
         requireCategory(categoryId);
@@ -217,11 +257,19 @@ public class ServiceCatalogServiceImpl
                 );
     }
 
+    /**
+     * [Chức năng]: Tra cứu thực thể dịch vụ theo ID.
+     * [Mục đích]: Ủy quyền cho requireService để kiểm tra ID hợp lệ và ném ngoại lệ khi không tồn tại bản ghi.
+     */
     @Override
     public Service getServiceById(Long serviceId) {
         return requireService(serviceId);
     }
 
+    /**
+     * [Chức năng]: Lấy dữ liệu dịch vụ hiện tại và ánh xạ sang ServiceUpdateDTO để đổ lên biểu mẫu chỉnh sửa.
+     * [Mục đích]: Nạp đầy đủ thông tin giá, thời lượng 3 pha, cấu hình ghế/phòng, ảnh đại diện và làm sạch HTML mô tả trước khi hiển thị form sửa.
+     */
     @Override
     public ServiceUpdateDTO getServiceUpdateForm(Long serviceId) {
         Service service = requireService(serviceId);
@@ -257,6 +305,10 @@ public class ServiceCatalogServiceImpl
     // 3. THÊM DỊCH VỤ
     // =====================================================
 
+    /**
+     * [Chức năng]: Tạo mới một dịch vụ hoặc sản phẩm vào danh mục dịch vụ.
+     * [Mục đích]: Kiểm tra validation DTO, chống trùng mã dịch vụ, xác minh nhóm cha đang hoạt động và khớp loại dịch vụ, áp dụng thời lượng 3 pha, làm sạch HTML mô tả và xác thực tệp ảnh đại diện trước khi lưu.
+     */
     @Override
     @Transactional
     public void createService(ServiceCreateDTO dto) {
@@ -330,6 +382,10 @@ public class ServiceCatalogServiceImpl
     // 4. SỬA DỊCH VỤ VÀ GIÁ
     // =====================================================
 
+    /**
+     * [Chức năng]: Cập nhật thông tin, đơn giá, thời lượng và hình ảnh của một dịch vụ hiện có (giữ nguyên mã dịch vụ và cấu hình kỹ thuật).
+     * [Mục đích]: Xác thực nhóm danh mục khớp loại dịch vụ, không cho kích hoạt hoặc chuyển dịch vụ vào nhóm đã tắt, chặn chuyển khỏi loại cận lâm sàng khi còn mẫu kết quả JSON, làm sạch HTML mô tả và dọn tệp ảnh cũ không còn dùng.
+     */
     @Override
     @Transactional
     public void updateService(
@@ -433,6 +489,10 @@ public class ServiceCatalogServiceImpl
     // 5. BẬT / TẮT DỊCH VỤ
     // =====================================================
 
+    /**
+     * [Chức năng]: Chuyển đổi trạng thái dịch vụ giữa ACTIVE và INACTIVE.
+     * [Mục đích]: Khi kích hoạt lại dịch vụ, kiểm tra nhóm cha phải đang hoạt động trước khi chuyển sang ACTIVE và lưu thay đổi.
+     */
     @Override
     @Transactional
     public void toggleServiceStatus(Long serviceId) {
@@ -455,6 +515,10 @@ public class ServiceCatalogServiceImpl
         serviceRepository.save(service);
     }
 
+    /**
+     * [Chức năng]: Xóa vĩnh viễn một dịch vụ theo ID khi chưa phát sinh tham chiếu trong lịch hẹn, điều trị, hóa đơn hoặc cấu hình liên quan.
+     * [Mục đích]: Khóa bản ghi qua findForDeletion, kiểm tra hasUsageReferences, xóa bản ghi khỏi cơ sở dữ liệu và dọn tệp ảnh đại diện không còn sử dụng.
+     */
     @Override
     @Transactional
     public void deleteService(Long serviceId) {
@@ -495,6 +559,10 @@ public class ServiceCatalogServiceImpl
     // 6. CẤU HÌNH KẾT QUẢ VÀ YÊU CẦU KỸ THUẬT
     // =====================================================
 
+    /**
+     * [Chức năng]: Lấy cấu hình mẫu kết quả cận lâm sàng (JSON) và yêu cầu kỹ thuật của một dịch vụ.
+     * [Mục đích]: Cung cấp dữ liệu ServiceTechnicalConfigDTO cho màn hình thiết lập cấu hình kỹ thuật dịch vụ.
+     */
     @Override
     public ServiceTechnicalConfigDTO getServiceTechnicalConfig(
             Long serviceId
@@ -515,6 +583,10 @@ public class ServiceCatalogServiceImpl
         return dto;
     }
 
+    /**
+     * [Chức năng]: Lưu cập nhật mẫu kết quả cận lâm sàng (JSON) và yêu cầu kỹ thuật cho dịch vụ mà không ảnh hưởng đến giá hay trạng thái.
+     * [Mục đích]: Xác thực cấu trúc JSON của resultTemplateJson qua validateResultTemplateJson và đảm bảo chỉ cho phép gán mẫu kết quả cho dịch vụ thuộc nhóm cận lâm sàng (LAB, XRAY).
+     */
     @Override
     @Transactional
     public void updateServiceTechnicalConfig(
@@ -549,6 +621,10 @@ public class ServiceCatalogServiceImpl
     // =====================================================
     // 7. BẢNG GIÁ CÔNG KHAI
 
+    /**
+     * [Chức năng]: Lấy chi tiết một dịch vụ công khai theo ID cho cổng bệnh nhân.
+     * [Mục đích]: Chỉ trả về dịch vụ khi tồn tại, có trạng thái ACTIVE và thuộc nhóm dịch vụ đang hoạt động; ngược lại ném IllegalArgumentException.
+     */
     @Override
     public Service getPublicServiceById(Long serviceId) {
         if (serviceId == null || serviceId <= 0) {
@@ -565,6 +641,10 @@ public class ServiceCatalogServiceImpl
     }
     // =====================================================
 
+    /**
+     * [Chức năng]: Lấy toàn bộ danh sách dịch vụ đang hoạt động thuộc các nhóm đang mở cho bảng giá công khai.
+     * [Mục đích]: Cung cấp danh mục dịch vụ công khai mặc định sắp xếp theo tên tăng dần.
+     */
     @Override
     public List<Service> getPublicServices() {
         return serviceRepository
@@ -573,6 +653,10 @@ public class ServiceCatalogServiceImpl
                 );
     }
 
+    /**
+     * [Chức năng]: Lấy danh sách dịch vụ công khai đang hoạt động có lọc theo nhóm dịch vụ và loại dịch vụ.
+     * [Mục đích]: Hỗ trợ lọc bảng giá công khai khi người dùng chọn nhóm hoặc loại dịch vụ cụ thể.
+     */
     @Override
     public List<Service> getPublicServices(
             Long categoryId,
@@ -586,6 +670,10 @@ public class ServiceCatalogServiceImpl
                 );
     }
 
+    /**
+     * [Chức năng]: Tìm kiếm danh sách dịch vụ công khai theo nhóm dịch vụ, loại dịch vụ và từ khóa.
+     * [Mục đích]: Chuẩn hóa và thoát ký tự đại diện SQL (!, %, _) trên từ khóa trước khi truy vấn ServiceRepository.searchPublicServices cho cổng tra cứu bệnh nhân.
+     */
     @Override
     public List<Service> getPublicServices(
             Long categoryId,
@@ -611,6 +699,9 @@ public class ServiceCatalogServiceImpl
     // 8. CÁC HÀM KIỂM TRA DÙNG CHUNG
     // =====================================================
 
+    /**
+     * [Hàm hỗ trợ]: Kiểm tra ID nhóm dịch vụ hợp lệ (> 0) và truy vấn bản ghi ServiceCategory từ cơ sở dữ liệu, ném IllegalArgumentException nếu không tồn tại.
+     */
     private ServiceCategory requireCategory(Long categoryId) {
         if (categoryId == null || categoryId <= 0) {
             throw new IllegalArgumentException(
@@ -626,6 +717,9 @@ public class ServiceCatalogServiceImpl
                 );
     }
 
+    /**
+     * [Hàm hỗ trợ]: Kiểm tra ID dịch vụ hợp lệ (> 0) và truy vấn bản ghi Service từ cơ sở dữ liệu, ném IllegalArgumentException nếu không tồn tại.
+     */
     private Service requireService(Long serviceId) {
         if (serviceId == null || serviceId <= 0) {
             throw new IllegalArgumentException(
@@ -641,6 +735,9 @@ public class ServiceCatalogServiceImpl
                 );
     }
 
+    /**
+     * [Hàm hỗ trợ]: Thực thi Bean Validation (Jakarta Validator) cho DTO đầu vào và ném IllegalArgumentException với thông báo lỗi đầu tiên nếu vi phạm.
+     */
     private void validateInput(Object dto) {
         if (dto == null) {
             throw new IllegalArgumentException(
@@ -658,6 +755,9 @@ public class ServiceCatalogServiceImpl
         }
     }
 
+    /**
+     * [Hàm hỗ trợ]: Kiểm tra và gán thời lượng 3 pha (chuẩn bị, thực hiện, bàn giao) cùng tổng thời lượng giữ phòng (5-240 phút) cho thực thể Service.
+     */
     private void applyThreePhaseDurations(
             Service service,
             Integer reqPrep,
@@ -691,6 +791,9 @@ public class ServiceCatalogServiceImpl
         }
     }
 
+    /**
+     * [Hàm hỗ trợ]: Xác thực giá trị thời lượng dự kiến (5-240 phút), sử dụng giá trị fallback hoặc mặc định 30 phút nếu đầu vào null.
+     */
     private int validDuration(Integer requested, Integer fallback) {
         int value = requested == null ? (fallback == null ? 30 : fallback) : requested;
         if (value < 5 || value > 240) {
@@ -699,6 +802,9 @@ public class ServiceCatalogServiceImpl
         return value;
     }
 
+    /**
+     * [Hàm hỗ trợ]: Đảm bảo loại dịch vụ (serviceType) khớp hoàn toàn với loại của nhóm danh mục (categoryType).
+     */
     private void validateCategoryType(
             ServiceCategory category,
             ServiceType serviceType
@@ -710,11 +816,17 @@ public class ServiceCatalogServiceImpl
         }
     }
 
+    /**
+     * [Hàm hỗ trợ]: Kiểm tra loại dịch vụ có thuộc nhóm cận lâm sàng (LAB hoặc XRAY) hay không.
+     */
     private boolean isParaclinicalType(ServiceType serviceType) {
         return serviceType == ServiceType.LAB
                 || serviceType == ServiceType.XRAY;
     }
 
+    /**
+     * [Hàm hỗ trợ]: Phân tích và xác thực cấu trúc JSON mẫu kết quả cận lâm sàng (mảng parameters, mã key không trùng khớp regex, label, type hợp lệ, required, unit và referenceRange).
+     */
     private String validateResultTemplateJson(String value) {
         String json = blankToNull(value);
 
@@ -801,16 +913,25 @@ public class ServiceCatalogServiceImpl
         return parameters.isEmpty() ? null : json;
     }
 
+    /**
+     * [Hàm hỗ trợ]: Chuẩn hóa chuỗi mã nghiệp vụ bằng cách cắt khoảng trắng hai đầu và chuyển sang chữ in hoa.
+     */
     private String normalizeCode(String value) {
         return value.trim().toUpperCase(Locale.ROOT);
     }
 
+    /**
+     * [Hàm hỗ trợ]: Chuyển chuỗi null hoặc chỉ chứa khoảng trắng về null, ngược lại trả về chuỗi đã trim.
+     */
     private String blankToNull(String value) {
         return value == null || value.isBlank()
                 ? null
                 : value.trim();
     }
 
+    /**
+     * [Hàm hỗ trợ]: Làm sạch nội dung HTML mô tả dịch vụ bằng Jsoup Safelist, loại bỏ thuộc tính style/href/src chứa mã độc XSS trước khi lưu hoặc hiển thị.
+     */
     private String sanitizeDescription(String value) {
         if (value == null || value.isBlank()) {
             return null;
@@ -860,6 +981,9 @@ public class ServiceCatalogServiceImpl
         return doc.body().html();
     }
 
+    /**
+     * [Hàm hỗ trợ]: Xác thực đường dẫn ảnh dịch vụ (/uploads/...), chống path traversal, kiểm tra phần mở rộng hợp lệ và xác minh tệp ảnh vật lý thực sự tồn tại trên đĩa.
+     */
     private String validateAndNormalizeImageUrl(String rawImageUrl) {
         String trimmed = blankToNull(rawImageUrl);
         if (trimmed == null) {
@@ -884,6 +1008,9 @@ public class ServiceCatalogServiceImpl
         return trimmed;
     }
 
+    /**
+     * [Hàm hỗ trợ]: Xóa tệp ảnh cũ trong thư mục uploads/services khi dịch vụ đổi ảnh hoặc bị xóa nếu không còn dịch vụ nào khác tham chiếu đến đường dẫn đó.
+     */
     private void cleanupUnusedServiceImage(String oldImageUrl, Long excludeServiceId) {
         if (oldImageUrl == null || !oldImageUrl.startsWith("/uploads/services/") || oldImageUrl.contains("..")) {
             return;
@@ -908,24 +1035,40 @@ public class ServiceCatalogServiceImpl
 
 
 
+    /**
+     * [Chức năng]: Tìm kiếm nhóm dịch vụ trong khu vực quản trị theo từ khóa và trạng thái hoạt động.
+     * [Mục đích]: Làm sạch từ khóa và truy vấn ServiceCategoryRepository.searchAdminCategories phục vụ tra cứu nhóm dịch vụ.
+     */
     @Override
     public List<ServiceCategory> searchCategories(String keyword, Boolean isActive) {
         String cleanKeyword = (keyword != null && !keyword.trim().isEmpty()) ? keyword.trim() : null;
         return categoryRepository.searchAdminCategories(cleanKeyword, isActive);
     }
 
+    /**
+     * [Chức năng]: Tìm kiếm nhóm dịch vụ trong khu vực quản trị theo từ khóa, loại nhóm dịch vụ và trạng thái hoạt động.
+     * [Mục đích]: Phục vụ màn hình quản lý nhóm dịch vụ có bộ lọc mở rộng theo ServiceType.
+     */
     @Override
     public List<ServiceCategory> searchCategories(String keyword, ServiceType categoryType, Boolean isActive) {
         String cleanKeyword = (keyword != null && !keyword.trim().isEmpty()) ? keyword.trim() : null;
         return categoryRepository.searchAdminCategoriesByType(cleanKeyword, categoryType, isActive);
     }
 
+    /**
+     * [Chức năng]: Tìm kiếm dịch vụ quản trị theo từ khóa, nhóm dịch vụ và trạng thái.
+     * [Mục đích]: Làm sạch từ khóa và gọi ServiceRepository.searchAdminServices trả về danh sách kết quả khớp bộ lọc cơ bản.
+     */
     @Override
     public List<Service> searchServices(String keyword, Long categoryId, ServiceStatus status) {
         String cleanKeyword = (keyword != null && !keyword.trim().isEmpty()) ? keyword.trim() : null;
         return serviceRepository.searchAdminServices(cleanKeyword, categoryId, status);
     }
 
+    /**
+     * [Chức năng]: Tìm kiếm dịch vụ quản trị theo bộ lọc nâng cao gồm từ khóa, nhóm dịch vụ, trạng thái, loại dịch vụ và phân loại dịch vụ/sản phẩm (itemKind).
+     * [Mục đích]: Phục vụ trang danh sách quản trị /admin/services với đầy đủ tiêu chí lọc trước khi phân trang.
+     */
     @Override
     public List<Service> searchServices(String keyword, Long categoryId, ServiceStatus status, ServiceType serviceType, String itemKind) {
         String cleanKeyword = (keyword != null && !keyword.trim().isEmpty()) ? keyword.trim() : null;
@@ -933,6 +1076,10 @@ public class ServiceCatalogServiceImpl
         return serviceRepository.searchAdminServicesWithFilters(cleanKeyword, categoryId, status, serviceType, cleanItemKind);
     }
 
+    /**
+     * [Chức năng]: Tìm kiếm dịch vụ quản trị có hỗ trợ phân trang (Pageable) theo từ khóa, nhóm dịch vụ và trạng thái.
+     * [Mục đích]: Cung cấp kết quả dạng Page<Service> trực tiếp từ ServiceRepository.searchAdminServices cho các luồng phân trang ở tầng database.
+     */
     @Override
     public org.springframework.data.domain.Page<Service> searchServices(String keyword, Long categoryId, ServiceStatus status, org.springframework.data.domain.Pageable pageable) {
         String cleanKeyword = (keyword != null && !keyword.trim().isEmpty()) ? keyword.trim() : null;

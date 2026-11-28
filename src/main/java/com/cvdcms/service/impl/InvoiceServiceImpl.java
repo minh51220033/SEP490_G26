@@ -23,6 +23,10 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 
+/**
+ * [Phân hệ]: Thanh toán & Hóa đơn (Nghiệp vụ lõi)
+ * [Vai trò]: Cài đặt toàn bộ nghiệp vụ vòng đời hóa đơn: lập hóa đơn dịch vụ/hỗn hợp gắn lượt khám, tách lập hóa đơn thuốc độc lập kèm xuất kho FEFO, tính tạm tính và xác thực chính sách ưu đãi (hạng thẻ thành viên, khuyến mãi, voucher, điểm Loyalty), chốt quyền lợi ưu đãi khi thanh toán đủ, điều chỉnh phụ thu/giảm giá & phân bổ lại công nợ từng dòng, hủy hóa đơn an toàn kèm hoàn nguyên quyền lợi, tự động hoàn tất lượt khám và thống kê chỉ số tài chính.
+ */
 @Slf4j
 @Service
 @Transactional
@@ -60,10 +64,16 @@ public class InvoiceServiceImpl implements InvoiceService {
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private com.cvdcms.service.AppointmentLifecycleService appointmentLifecycleService;
 
+    /**
+     * [Hàm hỗ trợ]: Tiêm phụ thuộc tùy chọn `AppointmentLifecycleService` (phục vụ kiểm thử hoặc liên kết hoàn tất lịch hẹn khi ca khám kết thúc).
+     */
     public void setAppointmentLifecycleService(com.cvdcms.service.AppointmentLifecycleService appointmentLifecycleService) {
         this.appointmentLifecycleService = appointmentLifecycleService;
     }
 
+    /**
+     * [Hàm hỗ trợ]: Tiêm phụ thuộc tùy chọn `MembershipTierRepository` (phục vụ tra cứu giá trị quy đổi điểm mặc định và kiểm thử đơn vị).
+     */
     public void setMembershipTierRepository(MembershipTierRepository membershipTierRepository) {
         this.membershipTierRepository = membershipTierRepository;
     }
@@ -119,9 +129,8 @@ public class InvoiceServiceImpl implements InvoiceService {
     }
 
     /**
-     * Lấy hồ sơ nhân sự hợp lệ của người đăng nhập.
-     * Kiểm tra trạng thái hoạt động của User, StaffProfile và phân công chi nhánh (đối với non-admin).
-     * Tuyệt đối không lấy nhân viên đầu tiên, không tạo dummy profile.
+     * [Chức năng]: Xác thực danh tính và lấy hồ sơ nhân sự (`StaffProfile`) hợp lệ của người thực hiện nghiệp vụ tại chi nhánh `branchId`.
+     * [Mục đích]: Kiểm tra `User` tồn tại, đang bật (`isActive = true`, `status = ACTIVE`), đã liên kết `StaffProfile` ở trạng thái `StaffStatus.ACTIVE`; nếu không phải Admin thì bắt buộc có phân công `AssignmentStatus.ACTIVE` tại `branchId` trong `StaffBranchAssignment` (hoặc khớp chi nhánh mặc định trên `User` khi chưa có bản ghi phân công).
      */
     private StaffProfile getValidStaffProfile(Long userId, Long branchId) {
         if (userId == null) {
@@ -156,6 +165,10 @@ public class InvoiceServiceImpl implements InvoiceService {
         return staff;
     }
 
+    /**
+     * [Chức năng]: Phát hành hóa đơn dịch vụ (`SERVICE`), hóa đơn thuốc (`MEDICINE`) hoặc hóa đơn hỗn hợp (`MIXED`) gắn với một lượt khám đang chờ thanh toán.
+     * [Mục đích]: Khóa bi quan (pessimistic lock) lần lượt trên `Visit` (`lockById`, bắt buộc `WAITING_PAYMENT`), từng `PerformedService` (`findByIdForUpdate`, bắt buộc `COMPLETED`, không thuộc kế hoạch trả góp và chưa xuất hóa đơn chưa hủy), `Prescription`/`PrescriptionItem` (`findByIdForUpdate`), `BranchInventory` & `MaterialBatch` (trừ kho theo FEFO và tạo `StockIssue` nếu đơn thuốc chưa trừ kho từ lúc bác sĩ kê). Tính ưu đãi qua `calculateAndValidateBenefits(..., acquireLocks = true)` CHỈ trên phần dịch vụ (tiền thuốc cộng nguyên giá), khởi tạo công nợ chi tiết từng dòng (`PaymentAllocationService`), lưu chữ ký số, chốt quyền lợi & tự hoàn tất lượt khám nếu tổng tiền bằng 0 (`PAID`), và ghi `InvoiceAuditLog` (`CREATE`).
+     */
     @Override
     public Invoice createInvoice(InvoiceCreateRequestDTO request, Long cashierUserId) {
         if (request == null || request.getVisitId() == null) {
@@ -586,6 +599,10 @@ public class InvoiceServiceImpl implements InvoiceService {
         return saved;
     }
 
+    /**
+     * [Chức năng]: Tính toán tạm tính (preview, chỉ đọc `readOnly = true`) tổng tiền dịch vụ, tiền thuốc, các khoản giảm giá (hạng thành viên, khuyến mãi/voucher, thủ công, điểm Loyalty), số điểm tối đa được dùng và điểm dự kiến tích lũy.
+     * [Mục đích]: Phục vụ API `/api/invoices/preview` cho thu ngân xem trước số tiền thực thu mà không giữ khóa DB (`acquireLocks = false`) và không ghi thay đổi vào cơ sở dữ liệu; tính ưu đãi qua `calculateAndValidateBenefits` trên phần dịch vụ rồi cộng thêm tiền thuốc theo đơn giá chuẩn (`resolveMedicineSalePrice`).
+     */
     @Override
     @Transactional(readOnly = true)
     public InvoiceCalculationPreviewDTO calculatePreview(InvoiceCreateRequestDTO request) {
@@ -722,6 +739,10 @@ public class InvoiceServiceImpl implements InvoiceService {
         return preview;
     }
 
+    /**
+     * [Chức năng]: Tra cứu danh sách hóa đơn có phân trang theo bộ lọc chi nhánh, trạng thái thanh toán, trạng thái hóa đơn, từ khóa và khoảng thời gian phát hành.
+     * [Mục đích]: Cung cấp dữ liệu trang danh sách hóa đơn thông qua `InvoiceRepository.findFilteredInvoices` ở chế độ giao dịch chỉ đọc.
+     */
     @Override
     @Transactional(readOnly = true)
     public Page<Invoice> getInvoices(
@@ -736,6 +757,10 @@ public class InvoiceServiceImpl implements InvoiceService {
         return invoiceRepository.findFilteredInvoices(branchId, paymentStatus, status, startDate, endDate, keyword, pageable);
     }
 
+    /**
+     * [Chức năng]: Lấy thông tin hóa đơn cơ bản theo `invoiceId`; ném `IllegalArgumentException` nếu không tồn tại.
+     * [Mục đích]: Dùng cho các luồng cần đọc nhanh trạng thái/số dư hóa đơn sau khi thanh toán hoặc xử lý nghiệp vụ.
+     */
     @Override
     @Transactional(readOnly = true)
     public Invoice getInvoiceById(Long invoiceId) {
@@ -743,6 +768,10 @@ public class InvoiceServiceImpl implements InvoiceService {
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy hóa đơn ID: " + invoiceId));
     }
 
+    /**
+     * [Chức năng]: Tải đầy đủ hóa đơn kèm các quan hệ chi tiết (`items`, dịch vụ, thủ thuật thực hiện, giai đoạn kế hoạch điều trị, lô thuốc) theo `invoiceId`.
+     * [Mục đích]: Phục vụ màn hình xem chi tiết, in hóa đơn và điều chỉnh hóa đơn; chủ động nạp sẵn (initialize) các liên kết lazy bên trong transaction chỉ đọc để tránh `LazyInitializationException` khi render Thymeleaf.
+     */
     @Override
     @Transactional(readOnly = true)
     public Invoice getInvoiceWithDetails(Long invoiceId) {
@@ -767,6 +796,10 @@ public class InvoiceServiceImpl implements InvoiceService {
         return invoice;
     }
 
+    /**
+     * [Chức năng]: Điều chỉnh hóa đơn đã phát hành (cập nhật giảm giá, phụ thu, mô tả phụ thu hoặc ủy quyền hủy nếu `cancelInvoice = true`), đồng bộ lại công nợ từng dòng chi tiết và ghi nhật ký kiểm toán `ADJUST`.
+     * [Mục đích]: Khóa bi quan hóa đơn (`findByIdForUpdate`), chặn hóa đơn đã `CANCELLED`, xác thực lý do bắt buộc (<= 500 ký tự), kiểm tra tổng giảm giá (`discount + promoDiscount + pointDiscount`) không vượt tổng tiền dịch vụ, và tổng tiền mới không nhỏ hơn số tiền đã thanh toán (`oldPaid`, tránh âm nợ). Tự động phân bổ lại giảm giá theo tỷ lệ cho các dòng `SERVICE` (giữ nguyên dòng `MEDICINE` giảm = 0), chia lại `paidAmount`/`remainingDebt` lần lượt cho từng `InvoiceItem` và phần phụ thu, chốt ưu đãi & thử hoàn tất lượt khám nếu trạng thái trở thành `PAID`.
+     */
     @Override
     public Invoice adjustInvoice(Long invoiceId, InvoiceAdjustmentRequestDTO request, Long staffUserId) {
         if (request == null || request.getReason() == null || request.getReason().trim().isEmpty()) {
@@ -954,6 +987,9 @@ public class InvoiceServiceImpl implements InvoiceService {
         return saved;
     }
 
+    /**
+     * [Hàm hỗ trợ]: Kiểm tra giá trị tiền điều chỉnh phải nằm trong khoảng `[0, 9.999.999.999.999,99]` và có tối đa 2 chữ số thập phân (chuẩn hóa `scale = 2` với `RoundingMode.UNNECESSARY`).
+     */
     private BigDecimal validateAdjustmentMoney(BigDecimal value, String fieldName) {
         if (value == null || value.signum() < 0
                 || value.compareTo(new BigDecimal("9999999999999.99")) > 0) {
@@ -966,6 +1002,10 @@ public class InvoiceServiceImpl implements InvoiceService {
         }
     }
 
+    /**
+     * [Chức năng]: Kiểm tra điều kiện và tự động chuyển trạng thái lượt khám từ `WAITING_PAYMENT` sang `COMPLETED` (kèm hoàn tất lịch hẹn liên quan) khi mọi nghĩa vụ thanh toán của ca khám đã xong.
+     * [Mục đích]: Được gọi ngay khi hóa đơn đạt `PAID` (lập hóa đơn 0 đồng hoặc điều chỉnh xong công nợ); chỉ đóng ca khám khi không còn hóa đơn nào khác của cùng `visitId` còn công nợ (`remainingDebt > 0`, chưa hủy) và không còn dịch vụ lâm sàng chưa lập hóa đơn (`getUnbilledPerformedServices` rỗng), đồng thời gọi `AppointmentLifecycleService.completeByVisit`.
+     */
     private void tryCompleteVisitIfEligible(Invoice invoice, Long actorUserId) {
         if (invoice == null || invoice.getVisit() == null) {
             return;
@@ -1002,6 +1042,10 @@ public class InvoiceServiceImpl implements InvoiceService {
     }
 
 
+    /**
+     * [Chức năng]: Hủy chứng từ hóa đơn (chuyển `status` và `paymentStatus` sang `CANCELLED`), hoàn nguyên điểm Loyalty, voucher và lượt khuyến mãi một cách an toàn (idempotent), đồng thời ghi `InvoiceAuditLog` (`CANCEL`).
+     * [Mục đích]: Khóa bi quan hóa đơn (`findByIdForUpdate`), chặn hủy nếu đã phát sinh thanh toán (`paidAmount > 0`, yêu cầu hoàn tiền toàn bộ trước), kiểm tra quyền nhân sự chi nhánh. Nếu điểm/voucher/khuyến mãi đã từng được chốt trước đó thì khóa bi quan ví điểm/voucher/khuyến mãi để hoàn trả đúng 1 lần (kiểm tra cờ `ADJUST` / `VOUCHER_APPLIED` / `PROMOTION_REVERTED` và hạn dùng voucher). Với hóa đơn thuốc (`MEDICINE`/`MIXED`), cố ý BẢO TOÀN `boughtQuantity` và tồn kho vật lý (không tự nhập kho lại) để tránh sai lệch đơn thuốc lâm sàng.
+     */
     @Override
     public Invoice cancelInvoice(Long invoiceId, String reason, Long staffUserId) {
         if (reason == null || reason.trim().isEmpty()) {
@@ -1143,12 +1187,20 @@ public class InvoiceServiceImpl implements InvoiceService {
         return saved;
     }
 
+    /**
+     * [Chức năng]: Lấy toàn bộ lịch sử kiểm toán (`InvoiceAuditLog`) kèm thông tin nhân viên thực hiện của một hóa đơn theo `invoiceId`.
+     * [Mục đích]: Hiển thị dấu vết các thao tác `CREATE`, `CREATE_MEDICINE`, `ADJUST`, `CANCEL`, `VOUCHER_APPLIED`, `PROMOTION_APPLIED`, `PROMOTION_REVERTED` trên màn hình chi tiết và điều chỉnh hóa đơn.
+     */
     @Override
     @Transactional(readOnly = true)
     public List<InvoiceAuditLog> getInvoiceAuditLogs(Long invoiceId) {
         return invoiceAuditLogRepository.findByInvoiceIdWithStaff(invoiceId);
     }
 
+    /**
+     * [Chức năng]: Tổng hợp các chỉ số tài chính trong khoảng thời gian `[startDate, endDate]` theo chi nhánh (`branchId`): tổng giá trị hóa đơn phát hành, thực thu ròng, tổng công nợ, tổng hoàn tiền và số lượng hóa đơn.
+     * [Mục đích]: Cung cấp số liệu báo cáo/dashboard tài chính; tính `todayTotalCollected = sumRealRevenue - sumRefundAmount` (giữ nguyên giá trị âm nếu hoàn tiền vượt thực thu trong kỳ).
+     */
     @Override
     @Transactional(readOnly = true)
     public FinancialMetricsDTO getFinancialMetrics(Long branchId, LocalDateTime startDate, LocalDateTime endDate) {
@@ -1167,6 +1219,10 @@ public class InvoiceServiceImpl implements InvoiceService {
         return metrics;
     }
 
+    /**
+     * [Chức năng]: Lấy danh sách các dịch vụ lâm sàng (`PerformedService`) của lượt khám `visitId` đủ điều kiện nhưng chưa được lập hóa đơn còn hiệu lực.
+     * [Mục đích]: Tự động đồng bộ chỉ định cận lâm sàng sang `PerformedService` qua `ParaclinicalOrderService` trước khi lọc giữ các dịch vụ đã `COMPLETED`, bước kế hoạch điều trị (nếu có) đã `COMPLETED`, KHÔNG thuộc kế hoạch trả góp (`!isInstallmentPlanService`) và chưa nằm trong danh sách `billedIds` chưa hủy.
+     */
     @Override
     @Transactional
     public List<PerformedService> getUnbilledPerformedServices(Long visitId) {
@@ -1193,6 +1249,9 @@ public class InvoiceServiceImpl implements InvoiceService {
                 .toList();
     }
 
+    /**
+     * [Hàm hỗ trợ]: Kiểm tra một `PerformedService` có thuộc kế hoạch điều trị trả góp theo đợt (`TreatmentPlan.isInstallment == true`) hay không để chặn lập hóa đơn lẻ.
+     */
     private boolean isInstallmentPlanService(PerformedService ps) {
         return ps != null
                 && ps.getPlanItem() != null
@@ -1200,6 +1259,10 @@ public class InvoiceServiceImpl implements InvoiceService {
                 && Boolean.TRUE.equals(ps.getPlanItem().getPlan().getIsInstallment());
     }
 
+    /**
+     * [Chức năng]: Chốt thực tế các quyền lợi ưu đãi gắn trên hóa đơn gồm: chuyển trạng thái Voucher sang `USED`, tăng `usedCount` của chương trình khuyến mãi và trừ điểm Loyalty trong ví bệnh nhân (ghi giao dịch `REDEEM`).
+     * [Mục đích]: Được gọi đúng thời điểm hóa đơn hoàn tất thanh toán (`PAID`) hoặc được PaymentService gọi khi chốt thanh toán; sử dụng khóa bi quan (`findByIdForUpdate` / `findByProfileIdForUpdate`) kết hợp kiểm tra log `VOUCHER_APPLIED`, `PROMOTION_APPLIED` và `PointTransactionType.REDEEM` để đảm bảo mỗi quyền lợi chỉ bị tiêu thụ đúng 1 lần (idempotent) và chặn vượt `usageLimit` hoặc âm ví điểm.
+     */
     @Override
     public void finalizeInvoiceBenefits(Invoice invoice) {
         if (invoice == null || invoice.getStatus() == InvoiceStatus.CANCELLED) {
@@ -1298,6 +1361,10 @@ public class InvoiceServiceImpl implements InvoiceService {
         }
     }
 
+    /**
+     * [Phân hệ]: Thanh toán & Hóa đơn (Đối tượng kết quả nội bộ)
+     * [Vai trò]: Lưu trữ trung gian toàn bộ kết quả tách bạch các khoản giảm trừ ưu đãi (chiết khấu hạng thẻ, khuyến mãi/voucher, giảm giá thủ công, quy đổi điểm Loyalty), tổng giảm giá và số tiền dịch vụ thực thu (`netAmount`).
+     */
     private static class BenefitCalculationResult {
         BigDecimal memberDiscount = BigDecimal.ZERO;
         Promotion promotion = null;
@@ -1311,6 +1378,9 @@ public class InvoiceServiceImpl implements InvoiceService {
         BigDecimal netAmount = BigDecimal.ZERO;
     }
 
+    /**
+     * [Hàm hỗ trợ]: Xác định đơn giá quy đổi 1 điểm Loyalty ra tiền (VNĐ) theo hạng thành viên đang hoạt động của bệnh nhân; nếu chưa có hạng thì lấy từ hạng hoạt động thấp nhất trong `MembershipTierRepository`, mặc định fallback `10.00` đ/điểm.
+     */
     private BigDecimal resolvePointValue(PatientProfile patient) {
         if (patient != null && patient.getMembershipTier() != null
                 && Boolean.TRUE.equals(patient.getMembershipTier().getIsActive())
@@ -1329,6 +1399,9 @@ public class InvoiceServiceImpl implements InvoiceService {
         return new BigDecimal("10.00");
     }
 
+    /**
+     * [Hàm hỗ trợ]: Gọi rút gọn `calculateAndValidateBenefits` ở chế độ không khóa bản ghi (`acquireLocks = false`), phục vụ tính tạm tính (preview).
+     */
     private BenefitCalculationResult calculateAndValidateBenefits(
             BigDecimal totalServiceAmount,
             PatientProfile patient,
@@ -1344,6 +1417,10 @@ public class InvoiceServiceImpl implements InvoiceService {
                 promotionId, voucherId, pointsToRedeem, manualDiscountRequested, false);
     }
 
+    /**
+     * [Chức năng]: Kiểm tra điều kiện hợp lệ và tính thứ tự trừ ưu đãi trên tổng tiền dịch vụ (`totalServiceAmount`): Chiết khấu hạng thẻ thành viên -> Khuyến mãi chung HOẶC Voucher -> Giảm giá thủ công -> Quy đổi điểm Loyalty.
+     * [Mục đích]: Đảm bảo chính sách không cộng dồn đồng thời `Promotion` và `Voucher`; khi `acquireLocks = true` (lúc phát hành hóa đơn thật) sẽ khóa bi quan (`findByIdForUpdate` / `findByProfileIdForUpdate`) lên `Promotion`, `PatientVoucher` và `PatientLoyaltyWallet` để chống vượt lượt dùng hoặc chi tiêu trùng điểm đang treo ở hóa đơn chờ thanh toán (`sumPendingPointsRedeemedByProfileId`), đồng thời tự động chặn số tiền giảm không vượt quá số tiền còn lại (`remaining`).
+     */
     private BenefitCalculationResult calculateAndValidateBenefits(
             BigDecimal totalServiceAmount,
             PatientProfile patient,
@@ -1473,6 +1550,10 @@ public class InvoiceServiceImpl implements InvoiceService {
         return result;
     }
 
+    /**
+     * [Chức năng]: Kiểm tra đầy đủ điều kiện áp dụng của một chương trình khuyến mãi (`Promotion`) cho hóa đơn hiện tại.
+     * [Mục đích]: Xác thực cấu hình giảm giá (`PromotionServiceImpl.validatePromotionDiscountConfig`), trạng thái đang bật (`isActive`), thời gian hiệu lực (`startDate`/`endDate`), phạm vi chi nhánh (`branch`), giới hạn lượt dùng bao gồm cả hóa đơn đang chờ thanh toán (`usedCount + countPendingInvoicesByPromotionId < usageLimit`), giá trị dịch vụ tối thiểu (`minBillAmount`), hạng thẻ tối thiểu (`applicableTier`) và dịch vụ bắt buộc (`applicableService`).
+     */
     private void validatePromotionEligibility(
             Promotion promo,
             PatientProfile patient,
@@ -1525,10 +1606,17 @@ public class InvoiceServiceImpl implements InvoiceService {
         }
     }
 
+    /**
+     * [Hàm hỗ trợ]: Tính số tiền giảm giá có giới hạn trần của chương trình khuyến mãi trên `totalServiceAmount` thông qua `PromotionServiceImpl.computeBoundedDiscount`.
+     */
     private BigDecimal calculatePromoDiscount(Promotion promo, BigDecimal totalServiceAmount) {
         return PromotionServiceImpl.computeBoundedDiscount(promo, totalServiceAmount);
     }
 
+    /**
+     * [Chức năng]: Tách lập hóa đơn thuốc độc lập (`InvoiceType.MEDICINE`, mã `HDT...`) từ một đơn thuốc bác sĩ đã kê, kèm xuất kho theo lô FEFO (nếu chưa trừ kho lúc kê đơn) và cập nhật tiến độ mua thuốc trên đơn.
+     * [Mục đích]: Khóa bi quan `Prescription` (`findByIdForUpdate`), kiểm tra đơn không ở trạng thái `CANCELLED`/`EXTERNAL_PURCHASE`/`CLINIC_PURCHASE_COMPLETED` và ca khám liên quan đã được bác sĩ bàn giao (không còn ở trạng thái lâm sàng hoặc hủy). Sắp xếp `prescriptionItemId` tăng dần trước khi khóa bi quan từng `PrescriptionItem` để triệt tiêu deadlock; kiểm tra liên kết `Medication` -> `Material`, tương thích đơn vị tính, khóa tồn kho `BranchInventory` và các lô còn hạn `MaterialBatch` theo FEFO để tạo dòng hóa đơn & phiếu xuất kho `StockIssue` (nếu `alreadyDeductedOnPrescribe = true` thì không trừ kho lần 2). Cập nhật trạng thái đơn sang `CLINIC_PURCHASE_COMPLETED` hoặc `CLINIC_PURCHASE_PARTIAL`, không áp ưu đãi dịch vụ cho thuốc, khởi tạo phân bổ công nợ và ghi `InvoiceAuditLog` (`CREATE_MEDICINE`).
+     */
     @Override
     public Invoice createMedicineInvoice(com.cvdcms.DTO.MedicineInvoiceCreateRequestDTO request, Long cashierUserId) {
         if (request == null || request.getPrescriptionId() == null) {
@@ -1830,6 +1918,10 @@ public class InvoiceServiceImpl implements InvoiceService {
         return saved;
     }
 
+    /**
+     * [Chức năng]: Ghi nhận lựa chọn hình thức mua thuốc của bệnh nhân (`EXTERNAL` tự mua ngoài hoặc `CLINIC` mua tại phòng khám) cho một đơn thuốc.
+     * [Mục đích]: Khóa bi quan đơn thuốc (`findByIdForUpdate`), chặn thay đổi nếu đơn đã `CANCELLED`, xác thực nhân viên chi nhánh (`getValidStaffProfile`). Nếu chọn `EXTERNAL` (và chưa mua đủ 100%) thì chuyển sang `PrescriptionStatus.EXTERNAL_PURCHASE`; nếu chọn `CLINIC` thì tự tính trạng thái tương ứng với số lượng đã mua (`CLINIC_PURCHASE_COMPLETED`, `CLINIC_PURCHASE_PARTIAL` hoặc `PENDING`) và lưu người/thời điểm xử lý.
+     */
     @Override
     public void recordPrescriptionChoice(Long prescriptionId, String choice, String note, Long cashierUserId) {
         if (prescriptionId == null) {
@@ -1876,7 +1968,9 @@ public class InvoiceServiceImpl implements InvoiceService {
         prescriptionRepository.save(prescription);
     }
 
-    /** Lấy giá bán thuốc chuẩn nhất: ưu tiên giá danh mục hiện hành (Medication.salePrice), sau đó đơn giá lưu trên đơn thuốc. */
+    /**
+     * [Hàm hỗ trợ]: Xác định đơn giá bán thuốc chuẩn từ cơ sở dữ liệu (không tin giá từ client): ưu tiên `Medication.salePrice` hiện hành trong danh mục dược phẩm, sau đó mới dùng `PrescriptionItem.unitPrice`; ném `IllegalStateException` nếu thuốc chưa có giá bán hợp lệ (> 0).
+     */
     private BigDecimal resolveMedicineSalePrice(PrescriptionItem item) {
         if (item == null) {
             throw new IllegalArgumentException("Dòng thuốc không hợp lệ.");
@@ -1892,6 +1986,10 @@ public class InvoiceServiceImpl implements InvoiceService {
         throw new IllegalStateException("Thuốc '" + item.getDrugName() + "' chưa có giá bán hợp lệ trong cấu hình danh mục. Không thể phát hành hóa đơn.");
     }
 
+    /**
+     * [Chức năng]: Truy vấn danh sách đơn thuốc đã được bác sĩ bàn giao (chưa bị hủy và chưa mua đủ tại phòng khám) theo `visitId`, `profileId` hoặc `branchId` và chuyển đổi sang `PrescriptionResponseDTO`.
+     * [Mục đích]: Cung cấp dữ liệu đơn thuốc khả dụng cho màn hình lập hóa đơn; chỉ giữ các đơn không có ca khám hoặc ca khám đã rời giai đoạn lâm sàng (chỉ nhận `WAITING_PAYMENT`/`COMPLETED`, loại trừ `IN_EXAM`, `WAITING`, `WAITING_PARACLINICAL`, `WAITING_RESULT`, `IN_TREATMENT`, `CANCELLED`), đồng thời tính sẵn số lượng đã mua, còn lại và thành tiền từng dòng thuốc.
+     */
     @Override
     @Transactional(readOnly = true)
     public List<com.cvdcms.DTO.PrescriptionResponseDTO> getHandedOverPrescriptions(Long branchId, Long visitId, Long profileId) {
@@ -1992,6 +2090,9 @@ public class InvoiceServiceImpl implements InvoiceService {
         }).toList();
     }
 
+    /**
+     * [Hàm hỗ trợ]: Trả về đơn giá ước tính dự phòng theo từ khóa tên thuốc nha khoa phổ biến (hiện chỉ giữ nội bộ để tham khảo, không dùng để áp giá bán thực tế trên hóa đơn).
+     */
     private BigDecimal getEstimatedPriceForDrug(String drugName) {
         if (drugName == null || drugName.trim().isEmpty()) {
             return BigDecimal.valueOf(5000);

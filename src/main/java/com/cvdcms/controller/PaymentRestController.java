@@ -20,6 +20,10 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * [Phân hệ]: Thanh toán, Ví tạm ứng, Hoàn tiền & Phân bổ thanh toán (REST API)
+ * [Vai trò]: REST Controller (`/api/payments`) xử lý các yêu cầu AJAX nạp cọc tạm ứng, hoàn tiền, xem trước phân bổ FIFO từng dòng hóa đơn và tra cứu lịch sử phân bổ thanh toán.
+ */
 @RestController
 @RequestMapping("/api/payments")
 public class PaymentRestController {
@@ -37,6 +41,9 @@ public class PaymentRestController {
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private com.cvdcms.repository.StaffBranchAssignmentRepository staffBranchAssignmentRepository;
 
+    /**
+     * [Hàm hỗ trợ]: Khởi tạo REST controller thanh toán với các service thanh toán, hoàn tiền và phân bổ thanh toán.
+     */
     public PaymentRestController(
             PaymentService paymentService,
             RefundService refundService,
@@ -47,12 +54,18 @@ public class PaymentRestController {
         this.paymentAllocationService = paymentAllocationService;
     }
 
+    /**
+     * [Hàm hỗ trợ]: Ngoại lệ nội bộ đánh dấu yêu cầu API chưa đăng nhập để trả về mã HTTP 401.
+     */
     private static final class UnauthenticatedException extends RuntimeException {
         UnauthenticatedException(String message) {
             super(message);
         }
     }
 
+    /**
+     * [Hàm hỗ trợ]: Lấy `userId` của nhân sự đang đăng nhập từ `HttpSession` hoặc ném `UnauthenticatedException` (HTTP 401).
+     */
     private Long getCurrentUserId(HttpSession session) {
         if (session != null && session.getAttribute("loggedInUser") instanceof User u && u.getUserId() != null) {
             return u.getUserId();
@@ -60,6 +73,9 @@ public class PaymentRestController {
         throw new UnauthenticatedException("Chưa đăng nhập. Vui lòng đăng nhập để tiếp tục.");
     }
 
+    /**
+     * [Hàm hỗ trợ]: Kiểm tra người dùng hiện tại có quyền truy cập dữ liệu tại `branchId` hay không (Admin hoặc nhân sự có phân công `ACTIVE` / chi nhánh gốc tương ứng).
+     */
     private void verifyBranchAccess(Long userId, Long branchId) {
         if (branchId == null || userRepository == null || staffBranchAssignmentRepository == null) {
             return;
@@ -81,6 +97,9 @@ public class PaymentRestController {
         }
     }
 
+    /**
+     * [Hàm hỗ trợ]: Tải hóa đơn theo `invoiceId` và kiểm tra quyền truy cập chi nhánh phát hành hóa đơn đó.
+     */
     private void verifyInvoiceBranchAccess(Long userId, Long invoiceId) {
         if (invoiceId == null || invoiceRepository == null) {
             return;
@@ -92,6 +111,9 @@ public class PaymentRestController {
         }
     }
 
+    /**
+     * [Hàm hỗ trợ]: Tải phiếu thu theo `paymentId` và kiểm tra quyền truy cập chi nhánh của phiếu thu đó.
+     */
     private void verifyPaymentBranchAccess(Long userId, Long paymentId) {
         if (paymentId == null || paymentRepository == null) {
             return;
@@ -103,6 +125,10 @@ public class PaymentRestController {
         }
     }
 
+    /**
+     * [Chức năng]: Tiếp nhận nạp tiền tạm ứng vào ví cọc bệnh nhân qua API (`POST /api/payments/deposit`).
+     * [Mục đích]: Xác thực thu ngân đăng nhập, ủy quyền cho `paymentService.processAdvanceDeposit` để cộng số dư ví tạm ứng và tích điểm ngay, sau đó trả mã phiếu `TU...` cùng số dư ví mới nhất (HTTP 401/403/400 nếu lỗi).
+     */
     @PostMapping("/deposit")
     public ResponseEntity<?> deposit(@RequestBody PaymentRequestDTO request, HttpSession session) {
         try {
@@ -124,6 +150,10 @@ public class PaymentRestController {
         }
     }
 
+    /**
+     * [Chức năng]: Xử lý yêu cầu hoàn tiền cho bệnh nhân qua API (`POST /api/payments/refund`).
+     * [Mục đích]: Xác thực nhân sự đăng nhập, gọi `refundService.processRefund` (hỗ trợ hoàn từ hóa đơn kèm/không kèm giảm tổng hóa đơn `reduceInvoiceTotal` hoặc hoàn từ ví tạm ứng) và trả về mã phiếu hoàn `HT...` cùng số tiền hoàn.
+     */
     @PostMapping("/refund")
     public ResponseEntity<?> refund(@RequestBody RefundRequestDTO request, HttpSession session) {
         try {
@@ -144,7 +174,8 @@ public class PaymentRestController {
     }
 
     /**
-     * API xem trước phân bổ số tiền thanh toán vào từng dòng chi tiết hóa đơn (FIFO: Dịch vụ -> Thuốc -> Phụ thu).
+     * [Chức năng]: Xem trước kết quả phân bổ FIFO một khoản thanh toán vào từng dòng chi tiết hóa đơn (`GET /api/payments/allocation-preview`).
+     * [Mục đích]: Giúp thu ngân kiểm tra trước khi bấm thu tiền (thu một phần hay thu đủ) xem số tiền nhập vào sẽ trừ vào từng dòng Dịch vụ -> Thuốc -> Phụ thu như thế nào mà chưa ghi vào cơ sở dữ liệu; có kiểm tra quyền truy cập chi nhánh của hóa đơn.
      */
     @GetMapping("/allocation-preview")
     public ResponseEntity<?> previewAllocation(
@@ -170,7 +201,8 @@ public class PaymentRestController {
     }
 
     /**
-     * API lấy chi tiết phân bổ của một phiếu thu (Payment).
+     * [Chức năng]: Lấy danh sách chi tiết phân bổ từng dòng dịch vụ/thuốc/phụ thu của một phiếu thu (`GET /api/payments/{paymentId}/allocations`).
+     * [Mục đích]: Phục vụ modal/phiếu thu hiển thị rõ phiếu thu đó đã chi trả bao nhiêu tiền cho từng dòng hạng mục và số nợ còn lại ngay tại thời điểm thu sau khi xác thực quyền chi nhánh.
      */
     @GetMapping("/{paymentId}/allocations")
     public ResponseEntity<?> getPaymentAllocations(
@@ -195,7 +227,8 @@ public class PaymentRestController {
     }
 
     /**
-     * API lấy toàn bộ lịch sử phân bổ của một hóa đơn.
+     * [Chức năng]: Lấy toàn bộ lịch sử phân bổ của tất cả các đợt thanh toán thuộc một hóa đơn (`GET /api/payments/invoice/{invoiceId}/allocations`).
+     * [Mục đích]: Hỗ trợ truy vết lịch sử thanh toán nhiều đợt (trả góp/thu một phần) trên màn hình chi tiết hóa đơn sau khi xác thực quyền truy cập chi nhánh phát hành hóa đơn.
      */
     @GetMapping("/invoice/{invoiceId}/allocations")
     public ResponseEntity<?> getInvoiceAllocations(

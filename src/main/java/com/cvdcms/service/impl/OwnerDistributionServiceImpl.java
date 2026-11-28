@@ -16,6 +16,10 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
+/**
+ * [Phân hệ]: Tài chính - Phân chia lợi nhuận chủ sở hữu
+ * [Vai trò]: Triển khai quy trình lập đề xuất, phê duyệt, từ chối và xác nhận chi trả lợi nhuận cho các chủ sở hữu/cổ đông (tách biệt khỏi chi phí hoạt động).
+ */
 @Service
 @Transactional
 public class OwnerDistributionServiceImpl implements OwnerDistributionService {
@@ -40,6 +44,10 @@ public class OwnerDistributionServiceImpl implements OwnerDistributionService {
         this.staffBranchAssignmentRepository = staffBranchAssignmentRepository;
     }
 
+    /**
+     * [Chức năng]: Tra cứu phân trang các đợt phân chia lợi nhuận theo tháng, năm và trạng thái trên toàn hệ thống.
+     * [Mục đích]: Ủy quyền sang hàm lọc có phạm vi chi nhánh với allowedBranchIds = null.
+     */
     @Override
     @Transactional(readOnly = true)
     public Page<OwnerDistribution> getDistributions(
@@ -51,6 +59,10 @@ public class OwnerDistributionServiceImpl implements OwnerDistributionService {
         return getDistributions(null, month, year, status, pageable);
     }
 
+    /**
+     * [Chức năng]: Tra cứu phân trang các đợt phân chia lợi nhuận trong phạm vi chi nhánh được phép theo tháng, năm và trạng thái.
+     * [Mục đích]: Gọi OwnerDistributionRepository.findFilteredDistributions để hiển thị danh sách tại màn hình phân chia lợi nhuận.
+     */
     @Override
     @Transactional(readOnly = true)
     public Page<OwnerDistribution> getDistributions(
@@ -63,6 +75,10 @@ public class OwnerDistributionServiceImpl implements OwnerDistributionService {
         return ownerDistributionRepository.findFilteredDistributions(allowedBranchIds, month, year, status, pageable);
     }
 
+    /**
+     * [Chức năng]: Lấy thông tin chi tiết của một đợt phân chia lợi nhuận cùng danh sách thành viên nhận phân bổ.
+     * [Mục đích]: Tải đầy đủ entity OwnerDistribution qua findWithDetailsById và ném lỗi nếu không tồn tại.
+     */
     @Override
     @Transactional(readOnly = true)
     public OwnerDistribution getDistributionDetail(Long distributionId) {
@@ -70,6 +86,10 @@ public class OwnerDistributionServiceImpl implements OwnerDistributionService {
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy đợt phân chia lợi nhuận: " + distributionId));
     }
 
+    /**
+     * [Chức năng]: Lập và trình duyệt đề xuất phân chia lợi nhuận mới ở trạng thái SUBMITTED.
+     * [Mục đích]: Kiểm tra tài khoản hoạt động, quyền chi nhánh hoặc quyền FINANCE_OWNER_DISTRIBUTIONS cho toàn hệ thống, xác thực bất biến ngân sách (tổng chia <= lợi nhuận - giữ lại, tổng tỷ lệ <= 100%, không trùng người nhận đang ACTIVE) và lưu bảng owner_distributions cùng owner_distribution_items.
+     */
     @Override
     public OwnerDistribution createProposal(OwnerDistributionRequestDTO dto, Long currentUserId) {
         if (currentUserId == null) {
@@ -185,6 +205,10 @@ public class OwnerDistributionServiceImpl implements OwnerDistributionService {
         return ownerDistributionRepository.save(distribution);
     }
 
+    /**
+     * [Chức năng]: Phê duyệt đề xuất phân chia lợi nhuận, chuyển trạng thái từ SUBMITTED sang APPROVED.
+     * [Mục đích]: Kiểm tra quyền Admin/FINANCE_OWNER_DISTRIBUTIONS, xác minh trạng thái SUBMITTED và đối soát lại tổng phân bổ không vượt quá quỹ khả dụng trước khi ghi nhận người duyệt và thời gian duyệt.
+     */
     @Override
     public OwnerDistribution approveDistribution(Long distributionId, Long currentUserId) {
         if (currentUserId == null || (!userRepository.hasActiveAdminRole(currentUserId)
@@ -213,6 +237,10 @@ public class OwnerDistributionServiceImpl implements OwnerDistributionService {
         return ownerDistributionRepository.save(distribution);
     }
 
+    /**
+     * [Chức năng]: Từ chối đề xuất phân chia lợi nhuận đang chờ duyệt, chuyển trạng thái sang REJECTED kèm lý do.
+     * [Mục đích]: Kiểm tra quyền Admin/FINANCE_OWNER_DISTRIBUTIONS, xác nhận trạng thái SUBMITTED và lưu lý do từ chối vào bảng owner_distributions.
+     */
     @Override
     public OwnerDistribution rejectDistribution(Long distributionId, String reason, Long currentUserId) {
         if (currentUserId == null || (!userRepository.hasActiveAdminRole(currentUserId)
@@ -231,6 +259,10 @@ public class OwnerDistributionServiceImpl implements OwnerDistributionService {
         return ownerDistributionRepository.save(distribution);
     }
 
+    /**
+     * [Chức năng]: Xác nhận đã chi trả lợi nhuận cho đợt phân phối đã phê duyệt, chuyển trạng thái từ APPROVED sang PAID.
+     * [Mục đích]: Kiểm tra quyền Admin/FINANCE_OWNER_DISTRIBUTIONS, lưu phương thức/mã tham chiếu/người chi trả và giữ nguyên tắc tách biệt (không tạo OperatingExpense).
+     */
     @Override
     public OwnerDistribution payDistribution(Long distributionId, RefundMethod paymentMethod, String paymentReference, Long currentUserId) {
         if (currentUserId == null || (!userRepository.hasActiveAdminRole(currentUserId)
@@ -256,6 +288,9 @@ public class OwnerDistributionServiceImpl implements OwnerDistributionService {
         return ownerDistributionRepository.save(distribution);
     }
 
+    /**
+     * [Hàm hỗ trợ]: Kiểm tra người dùng có quyền truy cập chi nhánh chỉ định thông qua vai trò Admin, phân công ACTIVE hoặc chi nhánh mặc định.
+     */
     private void validateBranchAccess(Long branchId, Long currentUserId) {
         if (currentUserId == null) {
             throw new AccessDeniedException("Người dùng chưa đăng nhập");

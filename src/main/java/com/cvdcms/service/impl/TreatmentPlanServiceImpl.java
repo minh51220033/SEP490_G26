@@ -21,6 +21,10 @@ import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 
+/**
+ * [Phân hệ]: Kế hoạch điều trị, Bàn giao kế toán & Thu theo đợt trả góp
+ * [Vai trò]: Triển khai toàn bộ nghiệp vụ lập/sửa/xóa kế hoạch điều trị, đồng bộ tiến độ giai đoạn/thủ thuật với quy trình lâm sàng, bàn giao phác đồ sang Kế toán, thiết lập lịch trả góp, hạch toán thu tiền theo đợt linh hoạt và nhắc hẹn thanh toán.
+ */
 @Slf4j
 @Service
 public class TreatmentPlanServiceImpl implements TreatmentPlanService {
@@ -36,6 +40,9 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
     private final InvoiceItemRepository invoiceItemRepository;
     private final TreatmentPlanInstallmentRepository treatmentPlanInstallmentRepository;
 
+    /**
+     * [Hàm hỗ trợ]: Constructor chính được Spring tiêm các repository quản lý kế hoạch điều trị, giai đoạn, bước thủ thuật, dịch vụ thực hiện, hóa đơn và lịch trả góp.
+     */
     @org.springframework.beans.factory.annotation.Autowired
     public TreatmentPlanServiceImpl(
             TreatmentPlanRepository treatmentPlanRepository,
@@ -60,6 +67,9 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
         this.treatmentPlanInstallmentRepository = treatmentPlanInstallmentRepository;
     }
 
+    /**
+     * [Hàm hỗ trợ]: Constructor tương thích giữ nguyên chữ ký có tham số GeminiAiService phục vụ các bộ unit test hiện có.
+     */
     // Compatibility constructor preserved for unit tests passing GeminiAiService
     public TreatmentPlanServiceImpl(
             TreatmentPlanRepository treatmentPlanRepository,
@@ -115,6 +125,10 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy");
     private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm dd/MM/yyyy");
 
+    /**
+     * [Chức năng]: Lấy danh sách toàn bộ kế hoạch điều trị kèm chi tiết giai đoạn, bước thủ thuật và lịch trả góp của một bệnh nhân.
+     * [Mục đích]: Truy vấn TreatmentPlanRepository.findByProfileIdWithDetails theo patientId và chuyển đổi sang TreatmentPlanResponseDTO phục vụ màn hình hồ sơ bệnh nhân/khám bệnh.
+     */
     @Override
     @Transactional(readOnly = true)
     public List<TreatmentPlanResponseDTO> getPlansByPatientId(Long patientId) {
@@ -122,6 +136,10 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
         return plans.stream().map(this::mapToResponseDTO).collect(Collectors.toList());
     }
 
+    /**
+     * [Chức năng]: Tự động khởi tạo hoặc bổ sung dịch vụ đặt lịch hẹn vào kế hoạch điều trị mặc định của lượt khám.
+     * [Mục đích]: Đảm bảo ca khám có lịch hẹn dịch vụ lâm sàng (không phải X-quang/xét nghiệm cận lâm sàng) và chưa bị khóa EMR luôn có sẵn bước thủ thuật tương ứng trong kế hoạch điều trị của lượt khám để bác sĩ thực hiện và theo dõi tiến độ.
+     */
     @Override
     @Transactional
     public TreatmentPlanResponseDTO ensureVisitDefaultPlanWithBookedService(Long visitId, Long actingDoctorStaffId) {
@@ -269,6 +287,9 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
         return mapToResponseDTO(saved);
     }
 
+    /**
+     * [Hàm hỗ trợ]: Xác định phạm vi răng mặc định ("Toàn hàm" hoặc null) cho dịch vụ đặt hẹn dựa trên cờ requiresTooth và đơn vị tính của dịch vụ.
+     */
     private String resolveDefaultBookedToothScope(com.cvdcms.entity.Service svc) {
         if (svc == null) return null;
         if (Boolean.FALSE.equals(svc.getRequiresTooth())) return "Toàn hàm";
@@ -279,6 +300,10 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
         return null;
     }
 
+    /**
+     * [Chức năng]: Lấy thông tin chi tiết của một kế hoạch điều trị theo mã planId.
+     * [Mục đích]: Truy vấn TreatmentPlanRepository.findByIdWithDetails (ném IllegalArgumentException nếu không tồn tại) và ánh xạ sang TreatmentPlanResponseDTO.
+     */
     @Override
     @Transactional(readOnly = true)
     public TreatmentPlanResponseDTO getPlanById(Long planId) {
@@ -287,6 +312,10 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
         return mapToResponseDTO(plan);
     }
 
+    /**
+     * [Chức năng]: Tạo mới kế hoạch điều trị gồm các giai đoạn, bước thủ thuật, chi phí dự kiến và lịch chia đợt thanh toán (nếu trả góp).
+     * [Mục đích]: Kiểm tra bệnh nhân, lượt khám chưa khóa EMR và khớp hồ sơ bệnh nhân; xây dựng cây TreatmentPlan -> TreatmentPlanStage -> TreatmentPlanItem, tính tổng chi phí, áp dụng lịch trả góp qua applyInstallmentSchedule (nếu isInstallment = true) và tự động bật cờ bàn giao sang Kế toán (sentToAccounting = true) trước khi lưu.
+     */
     @Override
     @Transactional
     public TreatmentPlanResponseDTO createPlan(TreatmentPlanRequestDTO request) {
@@ -424,6 +453,10 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
         return mapToResponseDTO(saved);
     }
 
+    /**
+     * [Chức năng]: Cập nhật nội dung, giai đoạn, bước thủ thuật và cấu hình trả góp của một kế hoạch điều trị hiện có.
+     * [Mục đích]: Chặn sửa phác đồ đã hủy hoặc ca khám đã khóa EMR; khóa cứng hình thức thanh toán và lộ trình chia đợt khi đã có tiền thu (totalPaidAmount > 0 hoặc đã tất toán); chặn đổi hình thức thanh toán khi đã có dịch vụ thực hiện; đối soát giữ nguyên các bước đã thực hiện (reconcilePlanStagesForUpdate), đảm bảo tổng chi phí mới không nhỏ hơn số tiền đã thu và đồng bộ lại trạng thái phác đồ/đợt thanh toán.
+     */
     @Override
     @Transactional
     public TreatmentPlanResponseDTO updatePlan(Long planId, TreatmentPlanRequestDTO request) {
@@ -519,6 +552,10 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
         return mapToResponseDTO(saved);
     }
 
+    /**
+     * [Chức năng]: Cập nhật trực tiếp trạng thái tổng của kế hoạch điều trị.
+     * [Mục đích]: Chuyển đổi chuỗi status sang enum TreatmentPlanStatus, cập nhật vào TreatmentPlan và trả về DTO sau khi lưu.
+     */
     @Override
     @Transactional
     public TreatmentPlanResponseDTO updatePlanStatus(Long planId, String status) {
@@ -536,6 +573,10 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
         }
     }
 
+    /**
+     * [Chức năng]: Xóa kế hoạch điều trị chưa phát sinh thanh toán theo đợt và chưa lập hóa đơn.
+     * [Mục đích]: Chặn xóa nếu totalPaidAmount > 0; gọi detachLinkedRecordsForPlanDelete để kiểm tra các bước đang/đã thực hiện, kiểm tra hóa đơn còn hiệu lực, hủy và gỡ khóa ngoại trên PerformedService/WorkflowExecution rồi xóa bản ghi TreatmentPlan.
+     */
     @Override
     @Transactional
     public void deletePlan(Long planId) {
@@ -552,6 +593,10 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
         log.info("Deleted TreatmentPlan {}", plan.getPlanCode());
     }
 
+    /**
+     * [Chức năng]: Kiểm tra ràng buộc và gỡ toàn bộ liên kết giữa kế hoạch điều trị với các bản ghi dịch vụ thực hiện và quy trình lâm sàng trước khi xóa phác đồ.
+     * [Mục đích]: Chặn xóa nếu có dịch vụ đã xuất hóa đơn còn hiệu lực hoặc có thủ thuật đang/đã làm mà kế hoạch chưa chuyển CANCELLED; hủy và gỡ tham chiếu planStage/planItem trên WorkflowExecution và PerformedService rồi flush để tránh lỗi ràng buộc khóa ngoại.
+     */
     private void detachLinkedRecordsForPlanDelete(TreatmentPlan plan, boolean allowDeleteCompletedUnbilled) {
         if (plan.getStages() == null) {
             return;
@@ -627,6 +672,10 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
         }
     }
 
+    /**
+     * [Chức năng]: Bàn giao kế hoạch điều trị sang bộ phận Kế toán/Thu ngân theo dõi thu tiền.
+     * [Mục đích]: Tìm kế hoạch theo planId, đánh dấu sentToAccounting = true và ghi nhận thời điểm sentToAccountingAt = now() trong bảng treatment_plans để kế hoạch xuất hiện trên danh sách chờ thu/trả góp của Kế toán.
+     */
     @Override
     @Transactional
     public TreatmentPlanResponseDTO handoverToAccounting(Long planId) {
@@ -639,6 +688,10 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
         return mapToResponseDTO(saved);
     }
 
+    /**
+     * [Chức năng]: Cập nhật trạng thái một giai đoạn điều trị (COMPLETED, IN_PROGRESS, PENDING, SKIPPED) và đồng bộ các bước con cùng quy trình lâm sàng.
+     * [Mục đích]: Chặn thao tác nếu phác đồ đã hủy; khi đặt COMPLETED tự hoàn tất toàn bộ bước con và ghi mốc thời gian; khi đặt lại PENDING sẽ kiểm tra khóa EMR, hủy các PerformedService chưa xuất hóa đơn và hoàn tác quy trình lâm sàng (syncWorkflowExecutionsAfterRevert), sau đó đồng bộ tiến độ toàn kế hoạch qua syncPlanProgressAndStatus.
+     */
     @Override
     @Transactional
     public TreatmentPlanResponseDTO updateStageStatus(Long stageId, String statusStr) {
@@ -716,6 +769,10 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
         return null;
     }
 
+    /**
+     * [Chức năng]: Cập nhật trạng thái từng bước thủ thuật trong kế hoạch điều trị và tự động tính lại trạng thái giai đoạn, phác đồ và quy trình lâm sàng.
+     * [Mục đích]: Chặn thao tác nếu phác đồ đã hủy; khi chuyển về PLANNED hoặc CANCELLED sẽ kiểm tra bất biến EMR, hủy dịch vụ thực hiện liên kết (chặn nếu đã xuất hóa đơn) và gọi syncWorkflowExecutionsAfterRevert; sau đó cập nhật trạng thái giai đoạn cha và đồng bộ toàn kế hoạch qua syncPlanProgressAndStatus.
+     */
     @Override
     @Transactional
     public TreatmentPlanResponseDTO updateItemStatus(Long planItemId, String statusStr) {
@@ -796,8 +853,8 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
     }
 
     /**
-     * Khi hoàn tác bước hoặc giai đoạn KHDT về Chưa làm, đồng bộ/đặt lại quy trình lâm sàng liên kết (FT43)
-     * để tiến độ giữa tab Kế hoạch điều trị và tab Quy trình điều trị luôn khớp nhau 100%.
+     * [Chức năng]: Đồng bộ hoặc xóa/đặt lại phiên thực thi quy trình lâm sàng (FT43) khi hoàn tác bước hoặc giai đoạn kế hoạch điều trị về chưa thực hiện.
+     * [Mục đích]: Giữ tiến độ giữa tab Kế hoạch điều trị và tab Quy trình điều trị luôn khớp 100%: nếu không còn bước nào hoàn thành/đang làm thì xóa WorkflowExecution và các bước ad-hoc; nếu còn thì đưa các bước bị hoàn tác về PENDING và cập nhật bước hiện tại (currentStep) của phiên quy trình.
      */
     private void syncWorkflowExecutionsAfterRevert(TreatmentPlanStage stage, TreatmentPlanItem targetItem) {
         if (workflowExecutionRepository == null) {
@@ -954,6 +1011,10 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
         }
     }
 
+    /**
+     * [Chức năng]: Tính toán lại và đồng bộ trạng thái tất cả các giai đoạn, trạng thái tổng của kế hoạch điều trị và các quy trình lâm sàng liên kết.
+     * [Mục đích]: Duyệt toàn bộ giai đoạn và bước thủ thuật thuộc planId để cập nhật PENDING/IN_PROGRESS/COMPLETED cho từng giai đoạn, tự chuyển phác đồ sang COMPLETED khi xong hết hoặc IN_PROGRESS/ACCEPTED khi còn bước mở, sau đó gọi syncWorkflowExecutionsForStage và trả về DTO mới nhất.
+     */
     @Override
     @Transactional
     public TreatmentPlanResponseDTO syncPlanProgressAndStatus(Long planId) {
@@ -1004,6 +1065,10 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
         return mapToResponseDTO(treatmentPlanRepository.findByIdWithDetails(planId).orElse(plan));
     }
 
+    /**
+     * [Chức năng]: Đồng bộ tiến độ thuận từ giai đoạn/bước kế hoạch điều trị sang các phiên thực thi quy trình lâm sàng (WorkflowExecution).
+     * [Mục đích]: Ánh xạ các TreatmentPlanItem đã hoàn thành sang WorkflowStepExecution tương ứng, tự động đánh dấu COMPLETED cho bước quy trình và cập nhật trạng thái tổng (COMPLETED/PAUSED/IN_PROGRESS) cùng currentStep của WorkflowExecution.
+     */
     private void syncWorkflowExecutionsForStage(TreatmentPlanStage stage, TreatmentPlanItem targetItem) {
         if (workflowExecutionRepository == null || workflowStepExecutionRepository == null) {
             return;
@@ -1146,6 +1211,9 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
         }
     }
 
+    /**
+     * [Hàm hỗ trợ]: Ánh xạ danh sách bước trong kế hoạch điều trị (TreatmentPlanItem) với các bước mẫu của quy trình lâm sàng (WorkflowStepExecution) theo tên chuẩn hóa và vị trí thứ tự.
+     */
     private Map<Long, TreatmentPlanItem> mapPlanItemsToTemplateStepsForSync(
             List<TreatmentPlanItem> linkedItems,
             List<WorkflowStepExecution> templateSteps) {
@@ -1214,6 +1282,9 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
         return mapping;
     }
 
+    /**
+     * [Hàm hỗ trợ]: Chuẩn hóa tên bước thủ thuật (bỏ dấu tiếng Việt, chuyển chữ thường, xóa khoảng trắng thừa) phục vụ so khớp đồng bộ kế hoạch - quy trình.
+     */
     private String normalizeStepNameForSync(String s) {
         if (s == null) return "";
         return java.text.Normalizer.normalize(s, java.text.Normalizer.Form.NFD)
@@ -1222,6 +1293,9 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
                 .trim().toLowerCase(Locale.ROOT);
     }
 
+    /**
+     * [Hàm hỗ trợ]: Chuyển đổi entity TreatmentPlan sang TreatmentPlanResponseDTO đầy đủ gồm tiến độ phần trăm, các giai đoạn, bước thủ thuật, tổng đã thu, số tiền còn lại, đợt thanh toán kế tiếp và danh sách lịch trả góp.
+     */
     private TreatmentPlanResponseDTO mapToResponseDTO(TreatmentPlan p) {
         PatientProfile patient = p.getPatientProfile();
         Branch branch = p.getBranch();
@@ -1378,6 +1452,9 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
                 .build();
     }
 
+    /**
+     * [Hàm hỗ trợ]: Chuyển đổi entity TreatmentPlanInstallment sang TreatmentPlanInstallmentDTO gồm thông tin bệnh nhân, chi nhánh, số tiền dự kiến, đã thu, còn lại và trạng thái nhắc hẹn.
+     */
     private TreatmentPlanInstallmentDTO mapInstallmentToDTO(TreatmentPlanInstallment inst, TreatmentPlan plan) {
         if (inst == null) return null;
         PatientProfile pat = plan != null ? plan.getPatientProfile() : null;
@@ -1414,6 +1491,10 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
                 .build();
     }
 
+    /**
+     * [Chức năng]: Lấy danh sách tất cả các đợt thanh toán trả góp của một kế hoạch điều trị.
+     * [Mục đích]: Truy vấn TreatmentPlan theo planId và ánh xạ từng TreatmentPlanInstallment sang TreatmentPlanInstallmentDTO.
+     */
     @Override
     @Transactional(readOnly = true)
     public List<TreatmentPlanInstallmentDTO> getPlanInstallments(Long planId) {
@@ -1424,6 +1505,10 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * [Chức năng]: Thiết lập hoặc cập nhật lịch chia đợt thanh toán trả góp cho kế hoạch điều trị.
+     * [Mục đích]: Khóa không cho chỉnh sửa nếu phác đồ đã phát sinh thanh toán (totalPaidAmount > 0) hoặc đã tất toán, yêu cầu ít nhất 1 đợt thanh toán, sau đó gọi applyInstallmentSchedule để bật cờ isInstallment, kiểm tra trần tổng chi phí và lưu lịch trả góp vào CSDL.
+     */
      @Override
     @Transactional
     public TreatmentPlanResponseDTO saveInstallments(Long planId, List<TreatmentPlanInstallmentDTO> installmentDTOs) {
@@ -1441,6 +1526,10 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
         return mapToResponseDTO(saved);
     }
 
+    /**
+     * [Chức năng]: Ghi nhận nhanh khoản thu trả góp theo số tiền (dạng đơn giản không hạch toán sổ cái Payment, dùng cho gọi nội bộ/tương thích).
+     * [Mục đích]: Tạo InstallmentPaymentRequestDTO mặc định phương thức CASH và ủy quyền cho recordInstallmentPaymentInternal với cờ recordAccountingLedger = false để cập nhật totalPaidAmount và phân bổ đợt thanh toán.
+     */
     @Override
     @Transactional
     public TreatmentPlanResponseDTO recordInstallmentPayment(Long planId, BigDecimal amount, Long invoiceId) {
@@ -1451,12 +1540,20 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
         return recordInstallmentPaymentInternal(planId, req, null, false);
     }
 
+    /**
+     * [Chức năng]: Ghi nhận giao dịch thu tiền theo đợt trả góp đầy đủ có hạch toán sổ cái thanh toán (Payment) và kiểm tra quyền thu ngân.
+     * [Mục đích]: Ủy quyền cho recordInstallmentPaymentInternal bật hạch toán bảng payments (khi paymentRepository khả dụng) theo tài khoản thu ngân cashierUserId.
+     */
     @Override
     @Transactional
     public TreatmentPlanResponseDTO recordInstallmentPayment(Long planId, InstallmentPaymentRequestDTO request, Long cashierUserId) {
         return recordInstallmentPaymentInternal(planId, request, cashierUserId, paymentRepository != null);
     }
 
+    /**
+     * [Chức năng]: Xử lý lõi nghiệp vụ thu tiền theo đợt cho kế hoạch điều trị trả góp (linh hoạt số tiền, đảm bảo an toàn đồng thời và hạch toán kế toán).
+     * [Mục đích]: Khóa bi quan TreatmentPlan (findByIdForUpdate), chặn kế hoạch đã hủy, xác thực thu ngân có quyền PAYMENT_COLLECT và thuộc chi nhánh, kiểm tra chống trùng giao dịch theo idempotencyKey/transactionRef, chặn thu vượt số tiền còn lại; nếu hạch toán sổ cái thì trừ ví cọc (có khóa bi quan PatientProfile nếu dùng DEPOSIT_WALLET), gắn snapshot tài khoản ngân hàng (nếu BANK_TRANSFER), lưu Payment, cộng điểm thưởng qua LoyaltyService (trừ ví cọc), cộng dồn totalPaidAmount và phân bổ tự động sang các đợt trả góp qua recalculateInstallmentsInternal.
+     */
     private TreatmentPlanResponseDTO recordInstallmentPaymentInternal(
             Long planId,
             InstallmentPaymentRequestDTO request,
@@ -1594,6 +1691,10 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
         return mapToResponseDTO(saved);
     }
 
+    /**
+     * [Chức năng]: Xác thực tài khoản và hồ sơ nhân sự thu ngân được phép thực hiện thu tiền trả góp tại chi nhánh.
+     * [Mục đích]: Kiểm tra tài khoản đang ACTIVE, có vai trò Admin hoặc quyền PAYMENT_COLLECT, hồ sơ StaffProfile đang hoạt động và có phân công chi nhánh ACTIVE khớp branchId của kế hoạch điều trị.
+     */
     private StaffProfile validateInstallmentCashier(Long cashierUserId, Long branchId) {
         if (cashierUserId == null) {
             throw new org.springframework.security.access.AccessDeniedException("Chưa đăng nhập hoặc không xác định được thu ngân.");
@@ -1626,6 +1727,10 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
         return cashier;
     }
 
+    /**
+     * [Chức năng]: Gắn thông tin snapshot tài khoản ngân hàng nhận tiền của chi nhánh và nội dung chuyển khoản kỳ vọng lên bản ghi Payment thu trả góp.
+     * [Mục đích]: Kiểm tra tài khoản ngân hàng được chọn (hoặc tài khoản mặc định đang hoạt động của chi nhánh) thuộc đúng chi nhánh giao dịch, sao chép bankBin/bankName/accountNumber/accountHolder vào Payment để đối soát lịch sử không bị ảnh hưởng khi chi nhánh đổi cấu hình sau này.
+     */
     private void attachInstallmentBankTransferSnapshot(Payment payment, InstallmentPaymentRequestDTO request,
                                                        Branch branch, String expectedContentPrefix) {
         BranchBankAccount chosenAccount = null;
@@ -1667,6 +1772,10 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
         payment.setExpectedTransferContent(expectedContent.trim().toUpperCase());
     }
 
+    /**
+     * [Chức năng]: Phân bổ tuần tự tổng số tiền bệnh nhân đã thanh toán (totalPaidAmount) vào từng đợt trả góp và cập nhật trạng thái đợt (PAID, PARTIAL, OVERDUE, PENDING).
+     * [Mục đích]: Duyệt danh sách installments theo thứ tự, khấu trừ dần số tiền chưa phân bổ để xác định paidAmount và trạng thái từng đợt (tự đánh dấu OVERDUE nếu chưa thanh toán và đã quá expectedDate); phần dư (nếu có) cộng vào đợt cuối.
+     */
     private void recalculateInstallmentsInternal(TreatmentPlan plan) {
         if (plan.getInstallments() == null || plan.getInstallments().isEmpty()) {
             return;
@@ -1701,6 +1810,10 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
         }
     }
 
+    /**
+     * [Chức năng]: Đánh dấu đã nhắc lịch thanh toán đợt tới cho bệnh nhân và lưu ghi chú trao đổi.
+     * [Mục đích]: Chặn nhắc hẹn nếu đợt đã PAID hoặc kế hoạch đã tất toán; cập nhật cờ reminded = true, thời điểm remindedAt = now(), nối thêm ghi chú của lễ tân và lưu vào TreatmentPlanInstallmentRepository.
+     */
         @Override
     @Transactional
     public TreatmentPlanInstallmentDTO markReminderSent(Long installmentId, String notes) {
@@ -1721,6 +1834,9 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
 
     // ==================== Shared Private Helpers ====================
 
+    /**
+     * [Hàm hỗ trợ]: Chuyển đổi an toàn chuỗi ngày định dạng ISO (yyyy-MM-dd) hoặc dd/MM/yyyy sang LocalDate, trả về fallback nếu null hoặc sai định dạng.
+     */
     private LocalDate parseLocalDateSafe(String raw, LocalDate fallback) {
         if (raw == null || raw.isBlank()) {
             return fallback;
@@ -1737,6 +1853,9 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
         }
     }
 
+    /**
+     * [Hàm hỗ trợ]: Chuẩn hóa chuỗi ghi chú kế hoạch điều trị kèm thẻ tiền tố [Chẩn đoán: ...] mà không bị lặp thẻ khi cập nhật nhiều lần.
+     */
     private String buildPlanNotesWithDiagnosis(String notes, String diagnosisText) {
         String cleanedNotes = notes != null ? notes.trim() : "";
         if (!cleanedNotes.isEmpty()) {
@@ -1755,6 +1874,9 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
         return cleanedNotes.isEmpty() ? null : cleanedNotes;
     }
 
+    /**
+     * [Hàm hỗ trợ]: Kiểm tra kế hoạch điều trị đã có bất kỳ dịch vụ thực hiện (PerformedService) chưa hủy nào gắn với các bước thủ thuật hay chưa.
+     */
     private boolean hasLinkedPerformedServices(TreatmentPlan plan) {
         if (plan == null || plan.getStages() == null || performedServiceRepository == null) {
             return false;
@@ -1772,6 +1894,9 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
         return false;
     }
 
+    /**
+     * [Hàm hỗ trợ]: So sánh danh sách đợt thanh toán hiện tại với danh sách gửi lên (số đợt, số tiền dự kiến, ngày dự kiến, tên đợt) để phát hiện thay đổi khi lộ trình trả góp đã bị khóa.
+     */
     private boolean isSameInstallmentSchedule(
             List<TreatmentPlanInstallment> existing,
             List<TreatmentPlanInstallmentDTO> incoming) {
@@ -1805,6 +1930,9 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
         return true;
     }
 
+    /**
+     * [Hàm hỗ trợ]: Tính tổng chi phí dự kiến của toàn bộ các bước thủ thuật chưa bị hủy trong các giai đoạn của kế hoạch điều trị.
+     */
     private BigDecimal computePlanStagesTotal(TreatmentPlan plan) {
         BigDecimal total = BigDecimal.ZERO;
         if (plan == null || plan.getStages() == null) {
@@ -1822,6 +1950,9 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
         return total;
     }
 
+    /**
+     * [Hàm hỗ trợ]: Đồng bộ trạng thái tổng của kế hoạch điều trị (COMPLETED/IN_PROGRESS/trạng thái yêu cầu) dựa trên tiến độ thực tế của các giai đoạn và bước thủ thuật.
+     */
     private void syncPlanStatusFromStages(TreatmentPlan plan, String requestedStatus) {
         List<TreatmentPlanStage> stages = plan.getStages() != null ? plan.getStages() : Collections.emptyList();
         int totalStages = stages.size();
@@ -1857,6 +1988,9 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
         }
     }
 
+    /**
+     * [Hàm hỗ trợ]: Kiểm tra một bước thủ thuật đã bị khóa chỉnh sửa hay chưa (đang IN_PROGRESS/COMPLETED hoặc đã có bản ghi PerformedService chưa hủy).
+     */
     private boolean isPlanItemLockedForEdit(TreatmentPlanItem item) {
         if (item == null) return false;
         if (item.getStatus() == TreatmentPlanItemStatus.COMPLETED || item.getStatus() == TreatmentPlanItemStatus.IN_PROGRESS) {
@@ -1867,6 +2001,9 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
                 && performedServiceRepository.existsByPlanItem_PlanItemIdAndStatusNot(item.getPlanItemId(), PerformedServiceStatus.CANCELLED);
     }
 
+    /**
+     * [Hàm hỗ trợ]: Tạo entity TreatmentPlanItem mới từ dữ liệu request, ánh xạ dịch vụ, số lượng, kiểm tra đơn giá không âm và gán trạng thái bước thủ thuật.
+     */
     private TreatmentPlanItem buildPlanItemEntity(
             TreatmentPlanStage stage,
             TreatmentPlan plan,
@@ -1908,6 +2045,9 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
         return item;
     }
 
+    /**
+     * [Hàm hỗ trợ]: Tìm entity Service tương ứng cho bước thủ thuật theo serviceId, đối chiếu tên tùy chỉnh (customServiceName) hoặc fallback sang dịch vụ đầu tiên trong danh mục.
+     */
     private com.cvdcms.entity.Service resolveServiceForPlanItem(
             TreatmentPlanItemRequestDTO itemReq,
             List<com.cvdcms.entity.Service> allServices) {
@@ -1932,6 +2072,10 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
         return service;
     }
 
+    /**
+     * [Chức năng]: Đối soát và cập nhật cấu trúc các giai đoạn cùng danh sách bước thủ thuật khi chỉnh sửa kế hoạch điều trị.
+     * [Mục đích]: Nếu chưa có bước nào bị khóa thì tạo mới hoàn toàn danh sách giai đoạn; nếu đã có bước đang/đã thực hiện thì chặn việc xóa các bước bị khóa, dịch tạm stageOrder để tránh trùng khóa duy nhất uk_tps, giữ bất biến các bước đã làm và tính lại tổng chi phí dự kiến của toàn phác đồ.
+     */
     private BigDecimal reconcilePlanStagesForUpdate(
             TreatmentPlan plan,
             List<TreatmentPlanStageRequestDTO> stageReqs,
@@ -2100,6 +2244,10 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
         return totalEstimated;
     }
 
+    /**
+     * [Chức năng]: Kiểm tra hợp lệ và áp dụng danh sách đợt thanh toán (lịch trả góp) mới vào kế hoạch điều trị.
+     * [Mục đích]: Đảm bảo số tiền dự kiến từng đợt không âm, tổng tiền các đợt không vượt tổng chi phí phác đồ, bảo toàn trạng thái đã nhắc hẹn (reminded/remindedAt) của các đợt tương ứng, cập nhật danh sách installments và gọi recalculateInstallmentsInternal tính lại trạng thái từng đợt.
+     */
     private void applyInstallmentSchedule(
             TreatmentPlan plan,
             List<TreatmentPlanInstallmentDTO> installmentDTOs,
@@ -2165,6 +2313,10 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
         recalculateInstallmentsInternal(plan);
     }
 
+    /**
+     * [Chức năng]: Tìm kiếm phân trang các đợt thanh toán trả góp sắp tới hạn hoặc quá hạn theo chi nhánh, khoảng ngày, trạng thái và từ khóa.
+     * [Mục đích]: Truy vấn TreatmentPlanInstallmentRepository.searchUpcomingInstallments và ánh xạ sang Page<TreatmentPlanInstallmentDTO> phục vụ màn hình nhắc lịch thu tiền của lễ tân và thu ngân.
+     */
     @Override
     @Transactional(readOnly = true)
     public Page<TreatmentPlanInstallmentDTO> searchUpcomingInstallments(
@@ -2180,6 +2332,9 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
         return page.map(inst -> mapInstallmentToDTO(inst, inst.getPlan()));
     }
 
+    /**
+     * [Hàm hỗ trợ]: Trích xuất nội dung chẩn đoán nằm trong thẻ [Chẩn đoán: ...] từ chuỗi ghi chú kế hoạch điều trị.
+     */
     private String extractDiagnosisFromNotes(String notes) {
         if (notes == null || notes.isEmpty()) return null;
         int start = notes.indexOf("[Chẩn đoán: ");
@@ -2192,6 +2347,9 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
         return null;
     }
 
+    /**
+     * [Hàm hỗ trợ]: Trả về class badge Bootstrap tương ứng với trạng thái tổng của kế hoạch điều trị.
+     */
     private String getPlanStatusBadgeClass(TreatmentPlanStatus status) {
         if (status == null) return "bg-secondary";
         return switch (status) {
@@ -2204,6 +2362,9 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
         };
     }
 
+    /**
+     * [Hàm hỗ trợ]: Trả về tên hiển thị tiếng Việt tương ứng với trạng thái tổng của kế hoạch điều trị.
+     */
     private String getPlanStatusDisplayName(TreatmentPlanStatus status) {
         if (status == null) return "Bản nháp";
         return switch (status) {
@@ -2216,6 +2377,9 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
         };
     }
 
+    /**
+     * [Hàm hỗ trợ]: Trả về class badge Bootstrap tương ứng với trạng thái của một giai đoạn điều trị.
+     */
     private String getStageStatusBadgeClass(TreatmentPlanStageStatus status) {
         if (status == null) return "bg-secondary";
         return switch (status) {
@@ -2226,6 +2390,9 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
         };
     }
 
+    /**
+     * [Hàm hỗ trợ]: Trả về tên hiển thị tiếng Việt tương ứng với trạng thái của một giai đoạn điều trị.
+     */
     private String getStageStatusDisplayName(TreatmentPlanStageStatus status) {
         if (status == null) return "Chưa thực hiện";
         return switch (status) {
@@ -2236,6 +2403,9 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
         };
     }
 
+    /**
+     * [Hàm hỗ trợ]: Trả về class badge Bootstrap tương ứng với trạng thái của từng bước thủ thuật trong kế hoạch.
+     */
     private String getItemStatusBadgeClass(TreatmentPlanItemStatus status) {
         if (status == null) return "bg-secondary";
         return switch (status) {
@@ -2246,6 +2416,9 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
         };
     }
 
+    /**
+     * [Hàm hỗ trợ]: Trả về tên hiển thị tiếng Việt tương ứng với trạng thái của từng bước thủ thuật trong kế hoạch.
+     */
     private String getItemStatusDisplayName(TreatmentPlanItemStatus status) {
         if (status == null) return "Chưa thực hiện";
         return switch (status) {

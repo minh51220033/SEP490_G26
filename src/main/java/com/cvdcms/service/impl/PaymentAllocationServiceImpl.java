@@ -26,6 +26,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * [Phân hệ]: Phân bổ Thanh toán Chi tiết (FIFO từng dòng hóa đơn)
+ * [Vai trò]: Service khởi tạo công nợ từng dòng khi lập hóa đơn, xem trước (preview) và thực thi phân bổ FIFO (Dịch vụ -> Thuốc -> Phụ thu) cho mỗi đợt thu một phần hoặc thu đủ, đồng thời tái dựng lịch sử số dư nợ sau từng lần thanh toán.
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -36,6 +40,10 @@ public class PaymentAllocationServiceImpl implements PaymentAllocationService {
     private final InvoiceItemRepository invoiceItemRepository;
     private final InvoiceRepository invoiceRepository;
 
+    /**
+     * [Chức năng]: Khởi tạo thứ tự ưu tiên (`lineOrder`), phân bổ giảm giá và công nợ ban đầu cho từng dòng dịch vụ, thuốc và phụ thu khi tạo hóa đơn mới.
+     * [Mục đích]: Chuẩn hóa dữ liệu đầu vào cho thuật toán phân bổ FIFO: xếp nhóm `SERVICE` trước rồi đến `MEDICINE`, chia đều `totalDiscount` theo tỷ lệ pro-rata cho các dòng dịch vụ (dòng dịch vụ cuối gánh phần chênh lệch làm tròn để tổng khớp 100%), giữ nguyên thành tiền của thuốc, đặt `paidAmount = 0`, `remainingDebt = payableAmount` và khởi tạo công nợ phụ thu trên `Invoice`.
+     */
     @Override
     public void initializeItemizedDebtOnInvoiceCreation(Invoice invoice) {
         if (invoice == null || invoice.getItems() == null || invoice.getItems().isEmpty()) {
@@ -110,6 +118,10 @@ public class PaymentAllocationServiceImpl implements PaymentAllocationService {
         invoice.setSurchargeRemainingDebt(surcharge);
     }
 
+    /**
+     * [Chức năng]: Tính toán xem trước (không ghi DB) cách phân bổ một số tiền dự kiến thanh toán vào từng dòng hạng mục của hóa đơn theo thứ tự FIFO.
+     * [Mục đích]: Phục vụ API `/api/payments/allocation-preview` giúp thu ngân và bệnh nhân nhìn rõ khi thu một phần hoặc thu đủ thì số tiền sẽ thanh toán cho dòng Dịch vụ -> Thuốc -> Phụ thu (`lineOrder = 999`) bao nhiêu và trạng thái/nợ còn lại sau đợt thu là gì.
+     */
     @Override
     @Transactional(readOnly = true)
     public PaymentAllocationPreviewDTO previewPaymentAllocation(Long invoiceId, BigDecimal paymentAmount) {
@@ -209,6 +221,10 @@ public class PaymentAllocationServiceImpl implements PaymentAllocationService {
                 .build();
     }
 
+    /**
+     * [Chức năng]: Thực thi phân bổ thật số tiền của một phiếu thu (`Payment`) vào từng dòng hóa đơn và phụ thu theo thứ tự FIFO (`lineOrder ASC, itemId ASC`).
+     * [Mục đích]: Được gọi trong transaction của `PaymentServiceImpl.processPayment`; trừ dần công nợ từng dòng dịch vụ -> thuốc -> phụ thu, cập nhật `paidAmount`, `remainingDebt`, `paymentStatus` (`PARTIAL`/`PAID`) trên `InvoiceItem` và `Invoice`, ghi bản ghi `PaymentAllocation` và đối chiếu nghiêm ngặt `totalAllocated == amount` (ném `IllegalStateException` để rollback nếu lệch tiền).
+     */
     @Override
     public List<PaymentAllocation> allocatePayment(Payment payment, BigDecimal amount) {
         if (payment == null || payment.getInvoice() == null) {
@@ -312,6 +328,10 @@ public class PaymentAllocationServiceImpl implements PaymentAllocationService {
         return allocations;
     }
 
+    /**
+     * [Chức năng]: Lấy danh sách chi tiết phân bổ (`PaymentAllocationDTO`) của một phiếu thu kèm số nợ và trạng thái từng dòng ngay sau thời điểm phiếu thu đó được lập.
+     * [Mục đích]: Phục vụ màn hình in biên lai và API `/api/payments/{paymentId}/allocations`; tải toàn bộ lịch sử phân bổ của hóa đơn để tính `SnapshotAfter` theo dòng thời gian, tránh hiển thị nhầm số nợ hiện tại thay vì số nợ tại thời điểm thu.
+     */
     @Override
     @Transactional(readOnly = true)
     public List<PaymentAllocationDTO> getAllocationsByPaymentId(Long paymentId) {
@@ -336,6 +356,10 @@ public class PaymentAllocationServiceImpl implements PaymentAllocationService {
         return list.stream().map(a -> toDTO(a, snapshots.get(a.getAllocationId()))).toList();
     }
 
+    /**
+     * [Chức năng]: Lấy toàn bộ lịch sử phân bổ của tất cả các đợt thanh toán thuộc một hóa đơn theo thứ tự dòng và thời gian tăng dần.
+     * [Mục đích]: Phục vụ tra cứu lịch sử trả góp/thu nhiều đợt trên trang chi tiết hóa đơn và API `/api/payments/invoice/{invoiceId}/allocations`, gắn kèm snapshot nợ còn lại sau từng bản ghi phân bổ.
+     */
     @Override
     @Transactional(readOnly = true)
     public List<PaymentAllocationDTO> getAllocationsByInvoiceId(Long invoiceId) {
@@ -350,8 +374,14 @@ public class PaymentAllocationServiceImpl implements PaymentAllocationService {
         return list.stream().map(a -> toDTO(a, snapshots.get(a.getAllocationId()))).toList();
     }
 
+    /**
+     * [Hàm hỗ trợ]: Record nội bộ lưu nhanh số nợ còn lại và trạng thái (`UNPAID`/`PARTIAL`/`PAID`) của một dòng hạng mục ngay sau một bản ghi phân bổ cụ thể.
+     */
     private record SnapshotAfter(BigDecimal remainingDebt, String status) {}
 
+    /**
+     * [Hàm hỗ trợ]: Sắp xếp toàn bộ bản ghi phân bổ theo trình tự thời gian (`createdAt`, `paymentId`, `allocationId`) và cộng dồn số tiền đã trả theo từng khóa dòng (`ITEM:<id>` hoặc `SURCHARGE:<invoiceId>`) để tái dựng snapshot nợ còn lại sau mỗi đợt thu.
+     */
     private Map<Long, SnapshotAfter> computeSnapshots(List<PaymentAllocation> allocations) {
         List<PaymentAllocation> ordered = new ArrayList<>(allocations);
         ordered.sort(Comparator
@@ -391,6 +421,10 @@ public class PaymentAllocationServiceImpl implements PaymentAllocationService {
         return snapshots;
     }
 
+    /**
+     * [Chức năng]: Kiểm tra một hóa đơn đã phát sinh ít nhất một bản ghi phân bổ thanh toán hay chưa.
+     * [Mục đích]: Hỗ trợ tầng giao diện/nghiệp vụ xác định hóa đơn có dữ liệu phân bổ chi tiết để hiển thị bảng phân bổ hay bảo vệ chỉnh sửa.
+     */
     @Override
     @Transactional(readOnly = true)
     public boolean hasAllocations(Long invoiceId) {
@@ -400,6 +434,9 @@ public class PaymentAllocationServiceImpl implements PaymentAllocationService {
         return paymentAllocationRepository.existsByInvoice_InvoiceId(invoiceId);
     }
 
+    /**
+     * [Hàm hỗ trợ]: Ánh xạ entity `PaymentAllocation` cùng `SnapshotAfter` sang `PaymentAllocationDTO` kèm tên phương thức thanh toán tiếng Việt và tên thu ngân.
+     */
     private PaymentAllocationDTO toDTO(PaymentAllocation entity, SnapshotAfter snapshot) {
         Payment p = entity.getPayment();
         String methodName = "Tiền mặt";

@@ -18,6 +18,10 @@ import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
 
+/**
+ * [Phân hệ]: Quản lý Công nợ Bệnh nhân
+ * [Vai trò]: Service đọc dữ liệu (read-only) tổng hợp danh sách công nợ, chi tiết tổng hóa đơn/đã thanh toán/còn nợ/ví tạm ứng và các hóa đơn chưa thanh toán đủ của bệnh nhân theo phạm vi chi nhánh phân quyền.
+ */
 @Service
 @Transactional(readOnly = true)
 public class DebtServiceImpl implements DebtService {
@@ -25,16 +29,27 @@ public class DebtServiceImpl implements DebtService {
     private final InvoiceRepository invoiceRepository;
     private final PatientProfileRepository patientProfileRepository;
 
+    /**
+     * [Hàm hỗ trợ]: Khởi tạo service công nợ với repository hóa đơn và hồ sơ bệnh nhân.
+     */
     public DebtServiceImpl(InvoiceRepository invoiceRepository, PatientProfileRepository patientProfileRepository) {
         this.invoiceRepository = invoiceRepository;
         this.patientProfileRepository = patientProfileRepository;
     }
 
+    /**
+     * [Chức năng]: Truy vấn phân trang danh sách công nợ bệnh nhân theo một chi nhánh và từ khóa (overload đơn giản).
+     * [Mục đích]: Ủy quyền sang overload đầy đủ của `getPatientDebts`, giới hạn phạm vi chi nhánh theo `branchId` nếu có.
+     */
     @Override
     public Page<PatientDebtSummaryDTO> getPatientDebts(Long branchId, String keyword, Pageable pageable) {
         return getPatientDebts(branchId, branchId != null ? List.of(branchId) : null, null, keyword, pageable);
     }
 
+    /**
+     * [Chức năng]: Truy vấn phân trang danh sách công nợ bệnh nhân theo chi nhánh, danh sách chi nhánh được phép, trạng thái thanh toán và từ khóa (không lọc khoảng ngày).
+     * [Mục đích]: Ủy quyền sang hàm `getPatientDebts` đầy đủ với `startDate = null`, `endDate = null`.
+     */
     @Override
     public Page<PatientDebtSummaryDTO> getPatientDebts(
             Long branchId,
@@ -46,6 +61,10 @@ public class DebtServiceImpl implements DebtService {
         return getPatientDebts(branchId, allowedBranchIds, paymentStatus, keyword, null, null, pageable);
     }
 
+    /**
+     * [Chức năng]: Truy vấn phân trang danh sách bệnh nhân còn công nợ kèm lọc chi nhánh, trạng thái thanh toán (`UNPAID`/`PARTIAL`), từ khóa và khoảng thời gian phát hành hóa đơn.
+     * [Mục đích]: Áp dụng bảo vệ phân quyền chi nhánh nghiêm ngặt (trả trang rỗng nếu nhân sự không có chi nhánh phân công hoặc chọn `branchId` ngoài `allowedBranchIds`), chỉ Admin (`allowedBranchIds == null`) mới được truy vấn toàn hệ thống.
+     */
     @Override
     public Page<PatientDebtSummaryDTO> getPatientDebts(
             Long branchId,
@@ -82,11 +101,19 @@ public class DebtServiceImpl implements DebtService {
         return invoiceRepository.findPatientDebtsByBranch(null, paymentStatus, kw, startDate, endDate, pageable);
     }
 
+    /**
+     * [Chức năng]: Lấy tóm tắt công nợ toàn hệ thống của một bệnh nhân theo `profileId`.
+     * [Mục đích]: Overload không giới hạn chi nhánh (dành cho Admin hoặc truy vấn tổng hợp toàn chuỗi), ủy quyền cho `getPatientDebtDetail(profileId, null)`.
+     */
     @Override
     public PatientDebtSummaryDTO getPatientDebtDetail(Long profileId) {
         return getPatientDebtDetail(profileId, (List<Long>) null);
     }
 
+    /**
+     * [Chức năng]: Tổng hợp chi tiết tình hình tài chính của một bệnh nhân (tổng phát sinh, tổng đã trả, tổng nợ còn lại, số dư ví tạm ứng, số hóa đơn còn nợ và ngày hóa đơn gần nhất) trong phạm vi `branchIds`.
+     * [Mục đích]: Phục vụ Dashboard tài chính bệnh nhân; bảo vệ phân quyền bằng cách trả số liệu 0 nếu `branchIds` là danh sách rỗng, còn `branchIds == null` (Admin) sẽ cộng dồn trên toàn bộ các chi nhánh.
+     */
     @Override
     public PatientDebtSummaryDTO getPatientDebtDetail(Long profileId, List<Long> branchIds) {
         PatientProfile patient = patientProfileRepository.findById(profileId)
@@ -144,11 +171,19 @@ public class DebtServiceImpl implements DebtService {
         return dto;
     }
 
+    /**
+     * [Chức năng]: Lấy toàn bộ danh sách hóa đơn chưa thanh toán đủ (`UNPAID`, `PARTIAL`) của một bệnh nhân trên tất cả chi nhánh.
+     * [Mục đích]: Overload tiện ích ủy quyền cho `getUnpaidInvoicesForPatient(profileId, null)`.
+     */
     @Override
     public List<Invoice> getUnpaidInvoicesForPatient(Long profileId) {
         return getUnpaidInvoicesForPatient(profileId, (List<Long>) null);
     }
 
+    /**
+     * [Chức năng]: Lấy danh sách hóa đơn còn nợ (`UNPAID`, `PARTIAL`) của một bệnh nhân trong giới hạn `branchIds`.
+     * [Mục đích]: Cung cấp danh sách hóa đơn cần thu nợ cho API và modal thu tiền, đảm bảo nhân sự chi nhánh chỉ thao tác được trên các hóa đơn thuộc chi nhánh được phân quyền.
+     */
     @Override
     public List<Invoice> getUnpaidInvoicesForPatient(Long profileId, List<Long> branchIds) {
         if (branchIds != null && branchIds.isEmpty()) {

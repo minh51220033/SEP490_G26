@@ -30,6 +30,10 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * [Phân hệ]: Tài chính - Chi phí hoạt động phòng khám
+ * [Vai trò]: Triển khai nghiệp vụ quản lý phiếu chi vận hành (lọc, xem chi tiết, lập phiếu thủ công, cập nhật kèm audit log, hủy phiếu và tổng hợp chi phí hiệu lực).
+ */
 @Service
 @Transactional
 public class OperatingExpenseServiceImpl implements OperatingExpenseService {
@@ -64,6 +68,10 @@ public class OperatingExpenseServiceImpl implements OperatingExpenseService {
         this(operatingExpenseRepository, branchRepository, staffBranchAssignmentRepository, userRepository, null);
     }
 
+    /**
+     * [Chức năng]: Tìm kiếm và phân trang danh sách phiếu chi vận hành theo chi nhánh, danh mục, nguồn chi, phương thức, khoảng ngày, trạng thái hủy và từ khóa.
+     * [Mục đích]: Áp dụng giới hạn phạm vi chi nhánh được phép (allowedBranchIds) để chống xem chéo chi nhánh và truy vấn OperatingExpenseRepository.findFilteredExpenses.
+     */
     @Override
     @Transactional(readOnly = true)
     public Page<OperatingExpense> getExpenses(
@@ -108,6 +116,10 @@ public class OperatingExpenseServiceImpl implements OperatingExpenseService {
         );
     }
 
+    /**
+     * [Chức năng]: Lấy thông tin chi tiết của một phiếu chi vận hành theo ID.
+     * [Mục đích]: Tải đầy đủ chi tiết phiếu chi kèm kiểm tra quyền truy cập chi nhánh nếu người dùng không phải Admin.
+     */
     @Override
     @Transactional(readOnly = true)
     public OperatingExpense getExpenseDetail(Long expenseId, Long currentUserId) {
@@ -121,6 +133,10 @@ public class OperatingExpenseServiceImpl implements OperatingExpenseService {
         return expense;
     }
 
+    /**
+     * [Chức năng]: Lập mới một phiếu chi vận hành thủ công (MANUAL) tại chi nhánh chỉ định.
+     * [Mục đích]: Xác thực đăng nhập và quyền chi nhánh (FINANCE_EXPENSES), lưu chữ ký số nếu có, thiết lập nguồn MANUAL và lưu bản ghi vào bảng operating_expenses.
+     */
     @Override
     public OperatingExpense createManualExpense(OperatingExpenseRequestDTO dto, Long currentUserId) {
         if (currentUserId == null) {
@@ -154,6 +170,10 @@ public class OperatingExpenseServiceImpl implements OperatingExpenseService {
         return operatingExpenseRepository.save(expense);
     }
 
+    /**
+     * [Chức năng]: Hủy mềm một phiếu chi vận hành thủ công kèm lý do, người hủy và thời điểm hủy.
+     * [Mục đích]: Kiểm tra quyền chi nhánh, chặn hủy phiếu chi tự động từ bảng lương/tạm ứng hoặc phiếu đã hủy trước đó, sau đó cập nhật cờ isCancelled trong bảng operating_expenses.
+     */
     @Override
     public OperatingExpense cancelExpense(Long expenseId, String reason, Long currentUserId) {
         if (currentUserId == null) {
@@ -185,6 +205,10 @@ public class OperatingExpenseServiceImpl implements OperatingExpenseService {
         return operatingExpenseRepository.save(expense);
     }
 
+    /**
+     * [Chức năng]: Hủy tự động phiếu chi vận hành gắn với một kỳ lương khi kỳ lương bị hủy hoặc trả về.
+     * [Mục đích]: Tìm phiếu chi theo payrollPeriodId và cập nhật trạng thái hủy mềm để đảm bảo chi phí thực tế khớp với trạng thái bảng lương.
+     */
     @Override
     public void cancelAutomatedPayrollExpense(Long periodId, String reason, Long currentUserId) {
         if (periodId == null) {
@@ -202,6 +226,10 @@ public class OperatingExpenseServiceImpl implements OperatingExpenseService {
         });
     }
 
+    /**
+     * [Chức năng]: Cập nhật thông tin phiếu chi vận hành thủ công (MANUAL) và ghi nhận nhật ký kiểm toán thay đổi.
+     * [Mục đích]: Kiểm tra quyền trên chi nhánh cũ và chi nhánh mới, chặn sửa phiếu tự động hoặc đã hủy, yêu cầu bắt buộc có lý do chỉnh sửa, lưu cập nhật vào operating_expenses và ghi bản ghi JSON cũ/mới vào system_audit_logs.
+     */
     @Override
     public OperatingExpense updateManualExpense(Long expenseId, OperatingExpenseRequestDTO dto, String editReason, Long currentUserId) {
         if (currentUserId == null) {
@@ -299,12 +327,20 @@ public class OperatingExpenseServiceImpl implements OperatingExpenseService {
         return saved;
     }
 
+    /**
+     * [Chức năng]: Tính tổng số tiền các phiếu chi vận hành còn hiệu lực theo chi nhánh và khoảng ngày.
+     * [Mục đích]: Ủy quyền sang hàm tổng hợp chi phí đầy đủ tham số để phục vụ báo cáo và thẻ tổng quan.
+     */
     @Override
     @Transactional(readOnly = true)
     public BigDecimal getTotalActiveExpenses(Long branchId, List<Long> allowedBranchIds, LocalDate startDate, LocalDate endDate) {
         return getTotalActiveExpenses(branchId, allowedBranchIds, null, null, null, startDate, endDate, null);
     }
 
+    /**
+     * [Chức năng]: Tính tổng số tiền các phiếu chi vận hành chưa bị hủy theo đầy đủ bộ lọc (chi nhánh, danh mục, nguồn, phương thức, khoảng ngày, từ khóa).
+     * [Mục đích]: Giới hạn dữ liệu trong phạm vi chi nhánh được phép và truy vấn OperatingExpenseRepository.sumFilteredActiveExpenses.
+     */
     @Override
     @Transactional(readOnly = true)
     public BigDecimal getTotalActiveExpenses(
@@ -345,6 +381,10 @@ public class OperatingExpenseServiceImpl implements OperatingExpenseService {
         );
     }
 
+    /**
+     * [Chức năng]: Trả về danh sách các hạng mục chi phí vận hành phổ biến của phòng khám nha khoa.
+     * [Mục đích]: Cung cấp danh mục chuẩn để hiển thị trên bộ lọc và form lập/chỉnh sửa phiếu chi.
+     */
     @Override
     public List<String> getCommonExpenseCategories() {
         return List.of(
@@ -361,6 +401,9 @@ public class OperatingExpenseServiceImpl implements OperatingExpenseService {
         );
     }
 
+    /**
+     * [Hàm hỗ trợ]: Kiểm tra người dùng có quyền truy cập chi nhánh mục tiêu và quyền nghiệp vụ FINANCE_EXPENSES hay không (Admin được miễn kiểm tra).
+     */
     private void validateBranchAccess(Long branchId, Long currentUserId) {
         if (currentUserId == null) {
             throw new AccessDeniedException("Người dùng chưa đăng nhập");

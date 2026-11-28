@@ -11,15 +11,26 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
+/**
+ * [Phân hệ]: Tài chính & Kế toán - Điều hướng theo phân quyền
+ * [Vai trò]: Controller điều hướng người dùng khi bấm vào cổng vào chung `/finance`, `/finance/customer` hoặc `/finance/clinic` tới màn hình tài chính phù hợp nhất với quyền hiện có.
+ */
 @Controller
 public class FinanceRedirectController {
 
     private final UserRepository userRepository;
 
+    /**
+     * [Hàm hỗ trợ]: Khởi tạo controller với `UserRepository` để truy vấn dự phòng vai trò và mã quyền khi session chưa lưu đầy đủ.
+     */
     public FinanceRedirectController(UserRepository userRepository) {
         this.userRepository = userRepository;
     }
 
+    /**
+     * [Chức năng]: Điều hướng từ `/finance` hoặc `/finance/customer` đến màn hình thu ngân/tài chính đầu tiên mà người dùng có quyền truy cập.
+     * [Mục đích]: Tránh lỗi 403 khi nhân sự chỉ được cấp một phần quyền tài chính; kiểm tra quyền theo thứ tự ưu tiên nhóm Khách hàng (Tổng quan -> Hóa đơn -> Phiếu thu -> Công nợ -> Tạm ứng -> Hoàn tiền) rồi fallback sang nhóm tài chính Phòng khám (Chi phí -> Bảng lương -> Tạm ứng lương -> Hoa hồng -> Chia cổ tức).
+     */
     @GetMapping({"/finance", "/finance/customer"})
     public String redirectFinance(HttpServletRequest request, HttpSession session) {
         if (session == null || !(session.getAttribute("loggedInUser") instanceof User user)) {
@@ -88,6 +99,10 @@ public class FinanceRedirectController {
         return "redirect:/expenses";
     }
 
+    /**
+     * [Chức năng]: Điều hướng từ `/finance/clinic` tới tab quản trị tài chính nội bộ phòng khám phù hợp với quyền của người đăng nhập.
+     * [Mục đích]: Chuyển Admin hoặc nhân sự có quyền tương ứng đến màn hình Chi phí (`/expenses`), Bảng lương (`/payroll`), Tạm ứng lương, Cấu hình hoa hồng hoặc Phân bổ lợi nhuận chủ sở hữu.
+     */
     @GetMapping("/finance/clinic")
     public String redirectFinanceClinic(HttpServletRequest request, HttpSession session) {
         if (session == null || !(session.getAttribute("loggedInUser") instanceof User user)) {
@@ -118,6 +133,9 @@ public class FinanceRedirectController {
         return "redirect:/expenses";
     }
 
+    /**
+     * [Hàm hỗ trợ]: Chuyển đổi an toàn thuộc tính dạng `Collection` trong `HttpSession` sang `List<String>` bỏ qua phần tử `null`.
+     */
     private List<String> extractList(Object obj) {
         if (obj instanceof Collection<?> col) {
             return col.stream().filter(o -> o != null).map(Object::toString).toList();

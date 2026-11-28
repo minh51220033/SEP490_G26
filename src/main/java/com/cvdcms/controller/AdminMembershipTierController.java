@@ -18,6 +18,10 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import java.util.Collection;
 import java.util.List;
 
+/**
+ * [Phân hệ]: Hạng thành viên & Quy tắc tích điểm (Quản trị)
+ * [Vai trò]: Controller quản trị cấu hình các hạng thẻ thành viên, ngưỡng chi tiêu, chiết khấu và tỷ lệ quy đổi điểm tại đường dẫn /admin/membership-tiers.
+ */
 @Controller
 @RequestMapping("/admin/membership-tiers")
 public class AdminMembershipTierController {
@@ -35,6 +39,9 @@ public class AdminMembershipTierController {
         this.userRepository = userRepository;
     }
 
+    /**
+     * [Hàm hỗ trợ]: Nạp các thuộc tính giao diện chung (menu đang chọn, tên hiển thị, vai trò, người dùng hiện tại) vào Model.
+     */
     private void addLayoutAttributes(HttpSession session, Model model) {
         model.addAttribute("activeMenu", "membership-tiers");
         if (session != null) {
@@ -44,6 +51,9 @@ public class AdminMembershipTierController {
         }
     }
 
+    /**
+     * [Hàm hỗ trợ]: Kiểm tra trạng thái đăng nhập và quyền quản trị hạng thành viên (Admin, CATALOG_MEMBERSHIP_TIERS hoặc CATALOG_MANAGE).
+     */
     private String checkAdmin(HttpSession session) {
         if (userRepository == null || session == null) {
             return null;
@@ -61,6 +71,10 @@ public class AdminMembershipTierController {
         return null;
     }
 
+    /**
+     * [Chức năng]: Xử lý trang GET /admin/membership-tiers hiển thị danh sách toàn bộ hạng thành viên và biểu mẫu tạo mới.
+     * [Mục đích]: Xác thực quyền quản trị, lấy danh sách hạng từ MembershipTierService và trả về view admin/memberships/list.
+     */
     @GetMapping
     public String listTiers(Model model, HttpSession session) {
         String authRedirect = checkAdmin(session);
@@ -75,6 +89,10 @@ public class AdminMembershipTierController {
         return "admin/memberships/list";
     }
 
+    /**
+     * [Chức năng]: Xử lý POST /admin/membership-tiers/save để tạo mới hoặc cập nhật thông tin một hạng thành viên.
+     * [Mục đích]: Xác thực quyền quản trị và kiểm tra hợp lệ dữ liệu DTO; gọi MembershipTierService để cập nhật (nếu có tierId) hoặc tạo mới, sau đó chuyển hướng kèm thông báo kết quả.
+     */
     @PostMapping("/save")
     public String saveTier(
             @Valid @ModelAttribute("tierForm") MembershipTierDTO dto,
@@ -110,6 +128,10 @@ public class AdminMembershipTierController {
         return "redirect:/admin/membership-tiers";
     }
 
+    /**
+     * [Chức năng]: Xử lý POST /admin/membership-tiers/{id}/toggle-status để kích hoạt hoặc vô hiệu hóa hạng thành viên.
+     * [Mục đích]: Kiểm tra quyền quản trị, gọi MembershipTierService.toggleTierStatus và chuyển hướng về trang danh sách kèm flash message kết quả hoặc lỗi nghiệp vụ.
+     */
     @PostMapping("/{id}/toggle-status")
     public String toggleStatus(
             @PathVariable Long id,
