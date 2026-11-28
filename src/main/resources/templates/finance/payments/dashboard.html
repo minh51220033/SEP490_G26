@@ -157,95 +157,62 @@
                 </div>
             </div>
 
-            <!-- 2. Bảng Danh sách bệnh nhân chờ lập hóa đơn / thu tiền (Requirements 2, 4, 5, 7) -->
-            <div class="fin-card fin-table-card mb-4 p-0">
-                <div class="fin-grid-topbar d-flex justify-content-between align-items-center p-3 bg-light border-bottom flex-wrap gap-2">
-                    <div>
-                        <h5 class="fw-bold m-0 text-dark d-flex align-items-center">
-                            <i class="bi bi-people-fill text-primary me-2"></i>
-                            <span th:if="${(pendingKeyword == null or pendingKeyword.isEmpty()) and pendingBranchId == null and pendingStatus == null and pendingFromDate == null and pendingToDate == null}">
-                                Bệnh nhân chờ lập hóa đơn / thu tiền
-                            </span>
-                            <span th:if="${(pendingKeyword != null and !pendingKeyword.isEmpty()) or pendingBranchId != null or pendingStatus != null or pendingFromDate != null or pendingToDate != null}">
-                                Kết quả lọc danh sách bệnh nhân
-                            </span>
-                        </h5>
-                        <small class="text-muted" th:if="${(pendingKeyword == null or pendingKeyword.isEmpty()) and pendingBranchId == null and pendingStatus == null and pendingFromDate == null and pendingToDate == null}">
-                            Tự động lọc các hồ sơ có ca khám chờ lập hóa đơn (A) hoặc có hóa đơn còn nợ cần thu (B)
-                        </small>
-                        <div class="mt-1 d-flex flex-wrap gap-1 align-items-center" th:if="${(pendingKeyword != null and !pendingKeyword.isEmpty()) or pendingBranchId != null or pendingStatus != null or pendingFromDate != null or pendingToDate != null}">
-                            <span class="badge bg-primary-subtle text-primary border" th:if="${pendingKeyword != null and !pendingKeyword.isEmpty()}">
-                                Từ khóa: "<span th:text="${pendingKeyword}"></span>"
-                            </span>
-                            <span class="badge bg-info-subtle text-info border" th:if="${pendingFromDate != null or pendingToDate != null}">
-                                <i class="bi bi-calendar3 me-1"></i>
-                                <span th:text="'Từ ' + (${pendingFromDate != null} ? ${#temporals.format(pendingFromDate, 'dd/MM/yyyy')} : 'đầu') + ' đến ' + (${pendingToDate != null} ? ${#temporals.format(pendingToDate, 'dd/MM/yyyy')} : 'nay')"></span>
-                            </span>
-                            <span class="badge bg-warning-subtle text-dark border" th:if="${pendingStatus != null and !pendingStatus.isEmpty()}">
-                                Trạng thái: 
-                                <span th:if="${pendingStatus == 'PENDING_INVOICE'}">Chờ lập HĐ</span>
-                                <span th:if="${pendingStatus == 'PENDING_PAYMENT'}">Chờ thu tiền / Còn nợ</span>
-                                <span th:if="${pendingStatus == 'PENDING_BOTH'}">Cả chờ lập & Chờ thu</span>
-                            </span>
-                        </div>
-                    </div>
-                    <div class="fin-topbar-right d-flex align-items-center gap-2">
-                        <span class="badge bg-secondary-subtle text-secondary border px-3 py-2 fw-medium"
-                              th:if="${pendingPatientsPage != null and pendingPatientsPage.totalElements > 0}"
-                              th:text="'Hiển thị ' + (${pendingPatientsPage.number * 10 + 1}) + '–' + (${pendingPatientsPage.number * 10 + pendingPatients.size()}) + ' / ' + ${pendingPatientsPage.totalElements} + ' bệnh nhân'">
-                            Hiển thị 1–10 / 10 bệnh nhân
-                        </span>
-                        <span class="badge bg-light text-muted border px-3 py-2"
-                              th:if="${pendingPatientsPage == null or pendingPatientsPage.totalElements == 0}">
-                            0 bệnh nhân
-                        </span>
+            <!-- 2. Bảng Danh sách bệnh nhân chờ lập hóa đơn / thu tiền (đồng bộ chuẩn bảng Tài chính) -->
+            <div class="fin-card fin-table-card p-0">
+                <div class="fin-grid-topbar">
+                    <div class="fin-topbar-left">
+                        Hiển thị <span class="text-primary fw-bolder" th:text="${pendingPatients != null ? pendingPatients.size() : 0}">0</span> bệnh nhân
+                        <span class="text-muted mx-1">•</span>
+                        <span class="text-secondary fw-semibold" th:if="${pendingFromDate == null and pendingToDate == null}">Tất cả các ngày</span>
+                        <span class="text-secondary fw-semibold" th:if="${pendingFromDate != null or pendingToDate != null}"
+                              th:text="'Từ ' + (${pendingFromDate != null} ? ${#temporals.format(pendingFromDate, 'dd/MM/yyyy')} : 'đầu') + ' đến ' + (${pendingToDate != null} ? ${#temporals.format(pendingToDate, 'dd/MM/yyyy')} : 'nay')"></span>
                     </div>
                 </div>
 
                 <!-- Khung bảng danh sách bệnh nhân -->
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0 enhanced-table"
+                <div class="fin-table-wrapper">
+                    <table class="fin-table"
                            data-enhanced-table="cashier-pending-patients"
-                           data-config-version="2.0"
-                           style="font-size: 13px;">
-                        <thead class="table-light text-nowrap">
+                           data-config-version="2.0">
+                        <thead>
                             <tr>
-                                <th class="text-center" style="width: 45px;">STT</th>
-                                <th>Bệnh nhân</th>
-                                <th>Số điện thoại</th>
-                                <th>Cơ sở liên quan</th>
-                                <th class="text-center">Số ca chờ lập</th>
-                                <th class="text-center">Số HĐ còn nợ</th>
-                                <th class="text-end">Tổng phải trả</th>
-                                <th class="text-end">Đã thanh toán</th>
-                                <th class="text-end">Còn nợ</th>
-                                <th class="text-end">Ví tạm ứng</th>
-                                <th class="text-center">Trạng thái xử lý</th>
+                                <th class="text-center" data-column-key="stt" data-column-required="true" data-column-pinned="true" style="width: 55px;">STT</th>
+                                <th data-column-key="patient" data-column-required="true" data-column-pinned="true">Bệnh nhân</th>
+                                <th data-column-key="phone">Số điện thoại</th>
+                                <th data-column-key="branch">Cơ sở liên quan</th>
+                                <th class="text-center" data-column-key="unbilled_visits">Số ca chờ lập</th>
+                                <th class="text-center" data-column-key="unpaid_invoices">Số HĐ còn nợ</th>
+                                <th class="text-end" data-column-key="total_billed">Tổng phải trả</th>
+                                <th class="text-end" data-column-key="total_paid">Đã thanh toán</th>
+                                <th class="text-end" data-column-key="remaining_debt">Còn nợ</th>
+                                <th class="text-end" data-column-key="deposit_balance">Ví tạm ứng</th>
+                                <th class="text-center" data-column-key="status">Trạng thái xử lý</th>
                                 <th class="text-center" data-column-key="actions" data-column-action="true" data-column-required="true" data-column-pinnable="true" style="min-width: 130px; width: 140px;">Thao tác</th>
                             </tr>
                         </thead>
                         <tbody>
                             <tr th:if="${#lists.isEmpty(pendingPatients)}">
-                                <td colspan="12" class="text-center py-5 text-muted">
-                                    <div class="mb-2">
-                                        <i class="bi bi-inbox text-secondary" style="font-size: 2.5rem;"></i>
+                                <td colspan="12" class="text-center py-4">
+                                    <div class="empty-state-box">
+                                        <i class="bi bi-inbox empty-icon"></i>
+                                        <h6>Không có bệnh nhân chờ xử lý</h6>
+                                        <p th:if="${pendingKeyword == null or pendingKeyword.isEmpty()}">
+                                            Không có bệnh nhân nào đang chờ lập hóa đơn hoặc chờ thu tiền trong phạm vi lọc.
+                                        </p>
+                                        <p th:if="${pendingKeyword != null and !pendingKeyword.isEmpty()}">
+                                            Không tìm thấy bệnh nhân nào khớp với từ khóa "<strong th:text="${pendingKeyword}"></strong>".
+                                        </p>
                                     </div>
-                                    <p class="m-0 fw-medium" th:if="${pendingKeyword == null or pendingKeyword.isEmpty()}">
-                                        Không có bệnh nhân nào đang chờ lập hóa đơn hoặc chờ thu tiền.
-                                    </p>
-                                    <p class="m-0 fw-medium" th:if="${pendingKeyword != null and !pendingKeyword.isEmpty()}">
-                                        Không tìm thấy bệnh nhân nào khớp với từ khóa "<strong th:text="${pendingKeyword}"></strong>".
-                                    </p>
                                 </td>
                             </tr>
                             <tr th:each="p, stat : ${pendingPatients}"
                                 th:classappend="${patient != null and patient.profileId == p.profileId} ? 'table-primary border-primary' : ''">
                                 <!-- STT -->
-                                <td class="text-center text-muted fw-medium"
+                                <td data-column-key="stt" class="text-center text-muted fw-medium"
                                     th:text="${(currentPendingPage * 10) + stat.index + 1}">1</td>
 
                                 <!-- Bệnh nhân (Tên & Mã) - Bấm nhảy sang trang chi tiết bệnh nhân -->
-                                <td>
+                                <td data-column-key="patient">
                                     <div>
                                         <a th:href="@{/payments/patient/{id}(id=${p.profileId})}"
                                            class="fw-bold text-dark text-decoration-none patient-name"
@@ -261,15 +228,15 @@
                                 </td>
 
                                 <!-- SĐT -->
-                                <td th:text="${p.phoneNumber != null ? p.phoneNumber : '-'}">0912345678</td>
+                                <td data-column-key="phone" th:text="${p.phoneNumber != null ? p.phoneNumber : '-'}">0912345678</td>
 
                                 <!-- Cơ sở liên quan -->
-                                <td>
+                                <td data-column-key="branch">
                                     <span th:text="${p.branchNames != null ? p.branchNames : 'Toàn hệ thống'}">Cơ sở 1</span>
                                 </td>
 
                                 <!-- Số ca chờ lập HĐ -->
-                                <td class="text-center">
+                                <td data-column-key="unbilled_visits" class="text-center">
                                     <span th:if="${p.unbilledVisitCount > 0}"
                                           class="badge bg-warning-subtle text-warning border border-warning-subtle fw-bold px-2 py-1"
                                           th:text="${p.unbilledVisitCount}">1</span>
@@ -277,7 +244,7 @@
                                 </td>
 
                                 <!-- Số HĐ còn nợ -->
-                                <td class="text-center">
+                                <td data-column-key="unpaid_invoices" class="text-center">
                                     <span th:if="${p.unpaidInvoiceCount > 0}"
                                           class="badge bg-danger-subtle text-danger border border-danger-subtle fw-bold px-2 py-1"
                                           th:text="${p.unpaidInvoiceCount}">1</span>
@@ -285,27 +252,27 @@
                                 </td>
 
                                 <!-- Tổng phải trả (HĐ hiệu lực) -->
-                                <td class="text-end fw-medium"
+                                <td data-column-key="total_billed" class="text-end fw-medium"
                                     th:text="${#numbers.formatDecimal(p.totalBilled, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</td>
 
                                 <!-- Đã thanh toán -->
-                                <td class="text-end text-success fw-medium"
+                                <td data-column-key="total_paid" class="text-end text-success fw-medium"
                                     th:text="${#numbers.formatDecimal(p.totalPaid, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</td>
 
                                 <!-- Còn nợ -->
-                                <td class="text-end fw-bold"
+                                <td data-column-key="remaining_debt" class="text-end fw-bold"
                                     th:classappend="${p.remainingDebt > 0} ? 'text-danger' : 'text-success'"
                                     th:text="${#numbers.formatDecimal(p.remainingDebt, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</td>
 
                                 <!-- Số dư ví tạm ứng (Toàn hệ thống) -->
-                                <td class="text-end">
+                                <td data-column-key="deposit_balance" class="text-end">
                                     <span class="fw-bold text-dark"
                                           th:text="${#numbers.formatDecimal(p.depositBalance, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</span>
                                     <small class="d-block text-muted" style="font-size: 10px;">(Toàn hệ thống)</small>
                                 </td>
 
                                 <!-- Trạng thái xử lý -->
-                                <td class="text-center">
+                                <td data-column-key="status" class="text-center">
                                     <div class="d-flex flex-column gap-1 align-items-center">
                                         <span th:if="${p.hasUnbilledItems}"
                                               class="badge bg-warning-subtle text-warning border border-warning-subtle" style="font-size: 11px;">
@@ -339,33 +306,34 @@
                     </table>
                 </div>
 
-                <!-- Phân trang bảng bệnh nhân chờ xử lý (Requirement 7) -->
-                <div th:if="${pendingPatientsPage != null and pendingPatientsPage.totalPages > 1}"
-                     class="d-flex justify-content-between align-items-center p-3 bg-light border-top flex-wrap gap-2">
-                    <small class="text-muted"
-                           th:text="'Trang ' + (${pendingPatientsPage.number + 1}) + ' / ' + ${pendingPatientsPage.totalPages}">
-                    </small>
-                    <nav aria-label="Phân trang bệnh nhân chờ xử lý">
-                        <ul class="pagination pagination-sm m-0">
-                            <li class="page-item" th:classappend="${pendingPatientsPage.first} ? 'disabled'">
-                                <a class="page-link" th:href="@{/payments/dashboard(keyword=${pendingKeyword}, pendingBranchId=${pendingBranchId}, pendingFromDate=${pendingFromDate}, pendingToDate=${pendingToDate}, pendingStatus=${pendingStatus}, pendingPage=${pendingPatientsPage.number - 1}, patientId=${patient != null ? patient.profileId : null})}">
-                                    <i class="bi bi-chevron-left"></i> Trước
-                                </a>
-                            </li>
-                            <li class="page-item"
-                                th:each="pNo : ${#numbers.sequence(0, pendingPatientsPage.totalPages - 1)}"
-                                th:classappend="${pNo == pendingPatientsPage.number} ? 'active'">
-                                <a class="page-link"
-                                   th:href="@{/payments/dashboard(keyword=${pendingKeyword}, pendingBranchId=${pendingBranchId}, pendingFromDate=${pendingFromDate}, pendingToDate=${pendingToDate}, pendingStatus=${pendingStatus}, pendingPage=${pNo}, patientId=${patient != null ? patient.profileId : null})}"
-                                   th:text="${pNo + 1}">1</a>
-                            </li>
-                            <li class="page-item" th:classappend="${pendingPatientsPage.last} ? 'disabled'">
-                                <a class="page-link" th:href="@{/payments/dashboard(keyword=${pendingKeyword}, pendingBranchId=${pendingBranchId}, pendingFromDate=${pendingFromDate}, pendingToDate=${pendingToDate}, pendingStatus=${pendingStatus}, pendingPage=${pendingPatientsPage.number + 1}, patientId=${patient != null ? patient.profileId : null})}">
-                                    Sau <i class="bi bi-chevron-right"></i>
-                                </a>
-                            </li>
-                        </ul>
-                    </nav>
+                <!-- Pagination MISA đồng bộ các bảng Tài chính -->
+                <div class="misa-pagination-footer">
+                    <div class="misa-pagination-left">
+                        Tổng số: <strong th:text="${pendingPatientsPage != null ? pendingPatientsPage.totalElements : 0}">0</strong>
+                    </div>
+                    <div class="misa-pagination-right">
+                        <div class="misa-page-range">
+                            <span th:text="${pendingPatientsPage != null and pendingPatientsPage.totalElements > 0 ? (pendingPatientsPage.number * 10 + 1) : 0}">0</span> - <span th:text="${pendingPatientsPage != null and pendingPatientsPage.totalElements > 0 ? (pendingPatientsPage.number * 10 + pendingPatients.size()) : 0}">0</span>
+                        </div>
+                        <div class="d-flex align-items-center gap-1">
+                            <a class="misa-nav-btn" th:classappend="${pendingPatientsPage == null or pendingPatientsPage.first} ? 'disabled' : ''"
+                               th:href="@{/payments/dashboard(keyword=${pendingKeyword}, pendingBranchId=${pendingBranchId}, pendingFromDate=${pendingFromDate}, pendingToDate=${pendingToDate}, pendingStatus=${pendingStatus}, pendingPage=0, patientId=${patient != null ? patient.profileId : null})}" title="Trang đầu">
+                                <i class="bi bi-chevron-bar-left"></i>
+                            </a>
+                            <a class="misa-nav-btn" th:classappend="${pendingPatientsPage == null or pendingPatientsPage.first} ? 'disabled' : ''"
+                               th:href="@{/payments/dashboard(keyword=${pendingKeyword}, pendingBranchId=${pendingBranchId}, pendingFromDate=${pendingFromDate}, pendingToDate=${pendingToDate}, pendingStatus=${pendingStatus}, pendingPage=${pendingPatientsPage != null and pendingPatientsPage.number > 0 ? pendingPatientsPage.number - 1 : 0}, patientId=${patient != null ? patient.profileId : null})}" title="Trang trước">
+                                <i class="bi bi-chevron-left"></i>
+                            </a>
+                            <a class="misa-nav-btn" th:classappend="${pendingPatientsPage == null or pendingPatientsPage.last or pendingPatientsPage.totalPages == 0} ? 'disabled' : ''"
+                               th:href="@{/payments/dashboard(keyword=${pendingKeyword}, pendingBranchId=${pendingBranchId}, pendingFromDate=${pendingFromDate}, pendingToDate=${pendingToDate}, pendingStatus=${pendingStatus}, pendingPage=${pendingPatientsPage != null and !pendingPatientsPage.last ? pendingPatientsPage.number + 1 : 0}, patientId=${patient != null ? patient.profileId : null})}" title="Trang sau">
+                                <i class="bi bi-chevron-right"></i>
+                            </a>
+                            <a class="misa-nav-btn" th:classappend="${pendingPatientsPage == null or pendingPatientsPage.last or pendingPatientsPage.totalPages == 0} ? 'disabled' : ''"
+                               th:href="@{/payments/dashboard(keyword=${pendingKeyword}, pendingBranchId=${pendingBranchId}, pendingFromDate=${pendingFromDate}, pendingToDate=${pendingToDate}, pendingStatus=${pendingStatus}, pendingPage=${pendingPatientsPage != null and pendingPatientsPage.totalPages > 0 ? pendingPatientsPage.totalPages - 1 : 0}, patientId=${patient != null ? patient.profileId : null})}" title="Trang cuối">
+                                <i class="bi bi-chevron-bar-right"></i>
+                            </a>
+                        </div>
+                    </div>
                 </div>
             </div>
 
