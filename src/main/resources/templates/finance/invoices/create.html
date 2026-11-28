@@ -383,12 +383,6 @@
                                     </label>
                                     <textarea id="notes" name="notes" class="form-control" rows="2"
                                               placeholder="Nhập ghi chú thêm cho hóa đơn (hoặc lý do nếu có điều chỉnh đơn giá/số lượng)..."></textarea>
-                                    <div class="d-flex justify-content-end mt-3">
-                                        <div class="text-center">
-                                            <div class="inv-field-label mb-1">Xác nhận</div>
-                                            <th:block th:replace="~{fragments/finance-signature :: sigField('invoice', null)}"></th:block>
-                                        </div>
-                                    </div>
                                 </div>
                             </div>
 
@@ -478,10 +472,6 @@
                                         <div class="text-end text-muted mt-1" style="font-size: 12px;">
                                             Điểm tích lũy dự kiến: <strong id="lblPointsEarnable" class="text-success">+0 điểm</strong>
                                         </div>
-                                    </div>
-
-                                    <div class="border-top mt-3 pt-3">
-                                        <th:block th:replace="~{fragments/finance-signature :: sigMirror('invoice', null, 'Người lập phiếu', '(Chữ Ký, Họ Và Tên)', ${displayName != null and !displayName.isBlank() ? displayName : (loggedInUser != null ? loggedInUser.username : 'Thu ngân')})}"></th:block>
                                     </div>
 
                                     <div id="invoiceSubmitError" class="alert alert-danger py-2 px-3 small mt-3 mb-0" style="display: none;">
