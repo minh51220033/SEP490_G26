@@ -538,6 +538,8 @@ public class ParaclinicalOrderServiceImpl implements ParaclinicalOrderService {
 
         item.setStatus(ParaclinicalOrderItemStatus.COMPLETED);
         item.setPerformedAt(now);
+        // Đồng bộ sang PerformedService để ghi nhận dịch vụ đã thực hiện & lập hóa đơn
+        syncOrderItemToPerformedService(item, false);
         // KHÔNG chuyển VisitStatus sang WAITING_RESULT cho xét nghiệm máu ngoài viện (bệnh nhân quay lại xếp hàng bình thường)
         ParaclinicalOrderItem saved = paraclinicalOrderItemRepository.save(item);
         if (doctorNotificationService != null && saved.getOrder() != null) {
@@ -813,8 +815,7 @@ public class ParaclinicalOrderServiceImpl implements ParaclinicalOrderService {
             ParaclinicalOrderItem item = paraclinicalOrderItemRepository.findByIdForUpdate(candidate.getOrderItemId())
                     .orElse(candidate);
             if (item.getStatus() == ParaclinicalOrderItemStatus.COMPLETED
-                    && item.getPerformedService() == null
-                    && !isExternalLabItem(item)) {
+                    && item.getPerformedService() == null) {
                 syncOrderItemToPerformedService(item, false);
                 paraclinicalOrderItemRepository.save(item);
             }

@@ -536,18 +536,19 @@ public class DiagnosisServiceImpl implements DiagnosisService {
             }
         }
 
-        if (dentalChairs != null && visit.getChairId() != null) {
-            dentalChairs.findById(visit.getChairId()).ifPresent(chair -> {
-                if (chair.getStatus() == com.cvdcms.entity.enums.ChairStatus.IN_USE) {
-                    chair.setStatus(com.cvdcms.entity.enums.ChairStatus.AVAILABLE);
-                    dentalChairs.save(chair);
-                }
-            });
-        }
         if (queueCoordinator != null) {
             User actor = resolveCurrentSessionUser();
             queueCoordinator.completeVisitAndAutoCallNext(visit, actor);
-        } else if (queueTickets != null) {
+        } else {
+            if (dentalChairs != null && visit.getChairId() != null) {
+                dentalChairs.findById(visit.getChairId()).ifPresent(chair -> {
+                    if (chair.getStatus() == com.cvdcms.entity.enums.ChairStatus.IN_USE) {
+                        chair.setStatus(com.cvdcms.entity.enums.ChairStatus.AVAILABLE);
+                        dentalChairs.save(chair);
+                    }
+                });
+            }
+            if (queueTickets != null) {
             queueTickets.findByVisitVisitIdAndQueueType(visitId, com.cvdcms.entity.enums.QueueType.EXAM)
                     .stream().filter(t -> t.getStatus() == com.cvdcms.entity.enums.QueueStatus.IN_SERVICE
                             || t.getStatus() == com.cvdcms.entity.enums.QueueStatus.CALLED)
@@ -596,6 +597,7 @@ public class DiagnosisServiceImpl implements DiagnosisService {
                         queueTickets.save(nextTicket);
                     });
                 }
+            }
             }
         }
 

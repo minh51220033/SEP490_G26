@@ -1095,9 +1095,19 @@ public class ClinicQueueCoordinatorService {
         visits.saveAndFlush(visit);
 
         if (visit.getChairId() != null) {
+            boolean engineEnabled = Boolean.TRUE.equals(branch.getResourceEngineEnabled());
+            int turnMin = resolveTurnoverMinutes(visit);
             chairs.findById(visit.getChairId()).ifPresent(chair -> {
                 if (chair.getStatus() == ChairStatus.IN_USE) {
-                    chair.setStatus(ChairStatus.AVAILABLE);
+                    if (engineEnabled || turnMin > 0) {
+                        chair.setStatus(ChairStatus.TURNOVER);
+                        chair.setTurnoverStartedAt(now);
+                        chair.setTurnoverDurationMinutes(turnMin > 0 ? turnMin : 5);
+                    } else {
+                        chair.setStatus(ChairStatus.AVAILABLE);
+                        chair.setTurnoverStartedAt(null);
+                        chair.setTurnoverDurationMinutes(null);
+                    }
                     chairs.saveAndFlush(chair);
                 }
             });
@@ -1125,6 +1135,22 @@ public class ClinicQueueCoordinatorService {
             return autoCallNextForDoctorIfIdleLocked(branchId, doctorId, actor, LocalDate.now(clock));
         }
         return Optional.empty();
+    }
+
+    private int resolveTurnoverMinutes(Visit visit) {
+        if (visit != null && visit.getAppointmentId() != null && appointmentRepository != null) {
+            var apptOpt = appointmentRepository.findById(visit.getAppointmentId());
+            if (apptOpt.isPresent()) {
+                Appointment appt = apptOpt.get();
+                if (appt.getTurnoverDurationMinutes() != null) {
+                    return Math.max(0, appt.getTurnoverDurationMinutes());
+                }
+                if (appt.getService() != null && appt.getService().getTurnoverDurationMinutes() != null) {
+                    return Math.max(0, appt.getService().getTurnoverDurationMinutes());
+                }
+            }
+        }
+        return 0;
     }
 
     /**
