@@ -12,9 +12,19 @@ import org.springframework.data.repository.query.Param;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * Repository truy vấn tồn kho tổng hợp theo cơ sở ({@link BranchInventory}).
+ * <p>Cung cấp truy vấn tìm kiếm phân trang, khóa bi quan {@code PESSIMISTIC_WRITE} chống xung đột khi nhập/xuất/điều chuyển
+ * và các truy vấn đếm KPI đầu trang Quản lý kho.</p>
+ */
 public interface BranchInventoryRepository
         extends JpaRepository<BranchInventory, Long> {
 
+    /**
+     * Tìm kiếm phân trang tồn kho của một cơ sở theo từ khóa (mã, tên, nhóm vật tư)
+     * và tùy chọn lọc trạng thái chạm ngưỡng tồn tối thiểu ({@code currentStock <= minStockThreshold}).
+     * <p>Được gọi từ: {@link com.cvdcms.service.impl.BranchInventoryServiceImpl#search}.</p>
+     */
     @Query("""
     SELECT i
     FROM BranchInventory i
@@ -46,11 +56,16 @@ public interface BranchInventoryRepository
             Pageable pageable
     );
 
+    /** Tìm bản ghi tồn kho theo cặp khóa duy nhất ({@code branchId}, {@code materialId}). */
     Optional<BranchInventory> findByBranch_BranchIdAndMaterial_MaterialId(
             Long branchId,
             Long materialId
     );
 
+    /**
+     * Khóa bi quan ({@code PESSIMISTIC_WRITE}) bản ghi tồn kho của một vật tư tại cơ sở
+     * để đảm bảo cộng/trừ tồn kho an toàn khi có nhiều phiếu nhập/xuất/điều chuyển chạy đồng thời.
+     */
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""
         SELECT i
@@ -63,6 +78,10 @@ public interface BranchInventoryRepository
             @Param("materialId") Long materialId
     );
 
+    /**
+     * Lấy toàn bộ bản ghi tồn kho của các vật tư đang hoạt động tại một cơ sở (JOIN FETCH {@code material}),
+     * sắp xếp theo tên vật tư A–Z. Phục vụ API Material Picker.
+     */
     @Query("""
         SELECT i
         FROM BranchInventory i

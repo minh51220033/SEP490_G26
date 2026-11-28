@@ -617,8 +617,8 @@ class HieuUtReportTest {
         }
 
         @Test
-        @DisplayName("UTCID10 (N) - Create receipt saves SupplierPayment 1M CASH, signature PNG, and remaining debt 1.5M")
-        void utcid10() throws Exception {
+        @DisplayName("UTCID10 (N) - Create receipt saves SupplierPayment 1M CASH and remaining debt 1.5M")
+        void utcid10() {
             stubHeader();
             when(materialRepository.findById(100L)).thenReturn(Optional.of(composite));
             when(batchRepository.findForUpdate(1L, 100L, "LO-01")).thenReturn(Optional.empty());
@@ -632,51 +632,11 @@ class HieuUtReportTest {
             StockReceiptCreateDTO dto = baseDto();
             dto.setPaidAmount(new BigDecimal("1000000"));
             dto.setPaymentMethod("CASH");
-            dto.setSignatureData(buildValidSignatureDataUrl());
 
             StockReceiptResponseDTO res = receiptService.create(dto, 1L);
-            if (res.getSignatureUrl() != null && res.getSignatureUrl().startsWith("/")) {
-                createdFiles.add(Paths.get(res.getSignatureUrl().substring(1)).toAbsolutePath().normalize());
-            }
 
             assertEquals(new BigDecimal("1500000.00"), res.getRemainingDebt());
-            assertNotNull(res.getSignatureUrl());
-            assertEquals("Nguyễn Văn Kho", res.getSignedByName());
             verify(supplierPaymentRepository).save(any(SupplierPayment.class));
-        }
-
-        @Test
-        @DisplayName("UTCID11 (N) - Sign receipt enforces branch access, blocks re-signing, and saves new PNG signature")
-        void utcid11() throws Exception {
-            StockReceipt receipt = new StockReceipt();
-            receipt.setReceiptId(60L);
-            receipt.setReceiptCode("PN060");
-            receipt.setBranch(cn1);
-            receipt.setSupplier(ncc3m);
-            receipt.setReceiver(khoStaff);
-            receipt.setReceiptDate(LocalDate.now());
-            receipt.setTotalAmount(new BigDecimal("100000.00"));
-            when(receiptRepository.findByIdWithDetails(60L)).thenReturn(Optional.of(receipt));
-
-            when(accessService.canAccessBranch(9L, 1L)).thenReturn(false);
-            assertEquals(HttpStatus.FORBIDDEN,
-                    assertThrows(ResponseStatusException.class, () -> receiptService.signReceipt(60L, "data", 9L)).getStatusCode());
-
-            when(accessService.canAccessBranch(1L, 1L)).thenReturn(true);
-            receipt.setSignatureUrl("/uploads/signatures/existing.png");
-            assertEquals(HttpStatus.BAD_REQUEST,
-                    assertThrows(ResponseStatusException.class, () -> receiptService.signReceipt(60L, "data", 1L)).getStatusCode());
-
-            receipt.setSignatureUrl(null);
-            when(staffRepository.findByUser_UserId(1L)).thenReturn(Optional.of(khoStaff));
-            when(receiptRepository.save(any(StockReceipt.class))).thenAnswer(inv -> inv.getArgument(0));
-
-            StockReceiptResponseDTO signed = receiptService.signReceipt(60L, buildValidSignatureDataUrl(), 1L);
-            if (signed.getSignatureUrl() != null && signed.getSignatureUrl().startsWith("/")) {
-                createdFiles.add(Paths.get(signed.getSignatureUrl().substring(1)).toAbsolutePath().normalize());
-            }
-            assertNotNull(signed.getSignatureUrl());
-            assertEquals("Nguyễn Văn Kho", signed.getSignedByName());
         }
     }
 
@@ -1004,8 +964,8 @@ class HieuUtReportTest {
         }
 
         @Test
-        @DisplayName("UTCID11 (N) - Destination branch CN2 views/signs transfer DC300; blocks re-signing (400) and outsider (403)")
-        void utcid11() throws Exception {
+        @DisplayName("UTCID11 (N) - Destination branch CN2 views transfer DC300; blocks outsider (403)")
+        void utcid11() {
             StockIssue dc = new StockIssue();
             dc.setIssueId(300L);
             dc.setIssueCode("DC300");
@@ -1021,24 +981,10 @@ class HieuUtReportTest {
 
             assertEquals("DC300", issueService.getById(300L, 20L).getIssueCode());
 
-            when(staffRepository.findByUser_UserId(20L)).thenReturn(Optional.of(khoStaff));
-            when(issueRepository.save(any(StockIssue.class))).thenAnswer(i -> i.getArgument(0));
-            StockIssueResponseDTO signed = issueService.signIssue(300L, buildValidSignatureDataUrl(), 20L);
-            if (signed.getSignatureUrl() != null && signed.getSignatureUrl().startsWith("/")) {
-                createdFiles.add(Paths.get(signed.getSignatureUrl().substring(1)).toAbsolutePath().normalize());
-            }
-            assertNotNull(signed.getSignatureUrl());
-
-            assertEquals(HttpStatus.BAD_REQUEST,
-                    assertThrows(ResponseStatusException.class,
-                            () -> issueService.signIssue(300L, buildValidSignatureDataUrl(), 20L)).getStatusCode());
-
             when(accessService.canAccessBranch(99L, 1L)).thenReturn(false);
             when(accessService.canAccessBranch(99L, 2L)).thenReturn(false);
             assertEquals(HttpStatus.FORBIDDEN,
                     assertThrows(ResponseStatusException.class, () -> issueService.getById(300L, 99L)).getStatusCode());
-            assertEquals(HttpStatus.FORBIDDEN,
-                    assertThrows(ResponseStatusException.class, () -> issueService.signIssue(300L, "data", 99L)).getStatusCode());
         }
     }
 

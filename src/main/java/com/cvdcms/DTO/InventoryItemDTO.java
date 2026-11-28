@@ -5,24 +5,36 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
- * DTO trả dữ liệu tồn kho của vật tư tại một cơ sở.
- * Không ánh xạ trực tiếp với bảng database.
+ * DTO trả về thông tin tồn kho tổng hợp của một vật tư tại một cơ sở.
+ * <p>Sử dụng bởi {@link com.cvdcms.service.impl.BranchInventoryServiceImpl#search} và trả về JSON tại
+ * {@code GET /api/inventory} cho bảng Tồn kho hiện tại trong {@code inventory.js}.</p>
  */
 public class InventoryItemDTO {
 
+    /** Mã định danh bản ghi tồn kho cơ sở. */
     private Long inventoryId;
+    /** Mã định danh chi nhánh. */
     private Long branchId;
+    /** Tên chi nhánh hiển thị. */
     private String branchName;
 
+    /** Mã định danh vật tư. */
     private Long materialId;
+    /** Mã vật tư (SKU). */
     private String materialCode;
+    /** Tên vật tư. */
     private String materialName;
+    /** Nhóm vật tư. */
     private String category;
+    /** Đơn vị tính (Hộp, Tuýp, Cái, ...). */
     private String unit;
 
+    /** Số lượng tồn kho thực tế hiện tại tại chi nhánh. */
     private BigDecimal currentStock;
+    /** Ngưỡng tồn kho tối thiểu dùng để cảnh báo sắp hết hàng. */
     private BigDecimal minStockThreshold;
 
+    /** Thời điểm cập nhật tồn kho gần nhất. */
     private LocalDateTime lastUpdated;
 
     public InventoryItemDTO() {

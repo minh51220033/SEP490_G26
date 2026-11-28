@@ -7,7 +7,12 @@ import lombok.Setter;
 import java.time.LocalDateTime;
 
 /**
- * DTO nhận dữ liệu khi nhân viên CSKH ghi kết quả liên hệ bệnh nhân (SCR-44.4).
+ * DTO nhận dữ liệu đầu vào khi nhân viên CSKH hoặc Bác sĩ ghi nhận một lần liên hệ/tương tác với bệnh nhân (SCR-44.4).
+ *
+ * <p><b>Đầu vào:</b> Payload JSON cho {@code POST /api/customer-care/tasks/{taskId}/interactions}
+ * và {@code POST /api/customer-care/visits/{visitId}/interactions}.</p>
+ * <p><b>Được gửi từ:</b> {@code submitInteractionForm()} trong {@code customer-care.js}
+ * và {@code submitDoctorCareInteraction()} trong {@code patient-care-tab.html}.</p>
  */
 @Getter
 @Setter

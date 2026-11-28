@@ -19,7 +19,6 @@ import org.springframework.web.server.ResponseStatusException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Pattern;
@@ -31,23 +30,28 @@ import java.util.regex.Pattern;
  * - Tự động tạo mới hoặc cộng dồn lô vật tư (MaterialBatch) và kiểm tra khớp hạn sử dụng.
  * - Cộng dồn số lượng tồn kho tổng hợp tại chi nhánh (BranchInventory) trong cùng transaction.
  * - Tính toán độc lập tổng tiền phiếu nhập ở Backend, ghi nhận thanh toán ban đầu (SupplierPayment) và công nợ còn lại.
- * - Hỗ trợ ký điện tử bất biến (chống ký đè / chống giả mạo người ký).
  */
 @Service
 public class StockReceiptServiceImpl implements StockReceiptService {
 
+    /** Regex kiểm tra số lô hợp lệ (1–50 ký tự chữ, số và ., _, /, -). */
     private static final Pattern BATCH_NUMBER_PATTERN =
             Pattern.compile("^[A-Za-z0-9._/-]{1,50}$");
 
+    /** Regex kiểm tra số hóa đơn nhà cung cấp hợp lệ (1–50 ký tự). */
     private static final Pattern INVOICE_NO_PATTERN =
             Pattern.compile("^[A-Za-z0-9._/-]{1,50}$");
 
+    /** Regex kiểm tra số chứng từ thanh toán hợp lệ (1–100 ký tự). */
     private static final Pattern REFERENCE_NO_PATTERN =
             Pattern.compile("^[A-Za-z0-9._/-]{1,100}$");
 
+    /** Tập phương thức thanh toán hợp lệ khi trả tiền ngay lúc nhập kho. */
     private static final Set<String> ALLOWED_PAYMENT_METHODS = Set.of("CASH", "BANK_TRANSFER");
 
+    /** Bộ sinh số tuần tự an toàn đa luồng cho mã phiếu nhập ({@code PN...}). */
     private static final AtomicLong CODE_SEQ = new AtomicLong(System.currentTimeMillis());
+    /** Bộ sinh số tuần tự an toàn đa luồng cho mã phiếu chi nhà cung cấp ({@code PC...}). */
     private static final AtomicLong PAYMENT_CODE_SEQ = new AtomicLong(System.currentTimeMillis());
 
     private final BranchRepository branchRepository;
@@ -61,6 +65,9 @@ public class StockReceiptServiceImpl implements StockReceiptService {
     private final SupplierPaymentRepository supplierPaymentRepository;
     private final BranchAccessService accessService;
 
+    /**
+     * Khởi tạo service với đầy đủ các repository liên quan tới nhập kho, lô vật tư, tồn kho, nhân sự và thanh toán NCC.
+     */
     public StockReceiptServiceImpl(
             BranchRepository branchRepository,
             SupplierRepository supplierRepository,
@@ -84,6 +91,18 @@ public class StockReceiptServiceImpl implements StockReceiptService {
         this.accessService = accessService;
     }
 
+    /**
+     * Tạo mới phiếu nhập kho trong một giao dịch duy nhất ({@code @Transactional}).
+     * <p>Quy trình xử lý:</p>
+     * <ol>
+     *   <li>Kiểm tra quyền chi nhánh, nhà cung cấp, danh sách vật tư, chứng từ hóa đơn bắt buộc và ngày nhập không ở tương lai.</li>
+     *   <li>Xác thực chi nhánh, nhà cung cấp đang hoạt động và lấy/tạo hồ sơ nhân viên tiếp nhận ({@link #resolveOrCreateStaffProfile(Long)}).</li>
+     *   <li>Duyệt từng dòng vật tư: kiểm tra số lô (chuẩn hóa chữ hoa, không trùng lặp trong cùng phiếu), HSD &gt;= ngày nhập, SL &gt; 0, đơn giá &gt;= 0.</li>
+     *   <li>Khóa bi quan ({@code findForUpdate}) để tạo mới hoặc cộng dồn {@link MaterialBatch} (đảm bảo khớp HSD nếu lô đã tồn tại) và cộng tồn {@link BranchInventory}.</li>
+     *   <li>Tính tổng tiền phiếu nhập, kiểm tra số tiền thanh toán ngay ({@code paidAmount <= totalAmount}), lưu {@link StockReceipt} và sinh {@link SupplierPayment} nếu {@code paidAmount > 0}.</li>
+     * </ol>
+     * <p>Được gọi từ: {@link com.cvdcms.controller.StockReceiptController#create} và {@code createMultipart}.</p>
+     */
     @Override
     @Transactional
     public StockReceiptResponseDTO create(StockReceiptCreateDTO dto, Long userId) {
@@ -286,16 +305,6 @@ public class StockReceiptServiceImpl implements StockReceiptService {
             }
         }
 
-        // Xử lý chữ ký điện tử nếu người lập ký ngay lúc tạo phiếu (A4)
-        String rawSignature = trimToNull(dto.getSignatureData());
-        if (rawSignature != null) {
-            String sigUrl = InventoryFileStorageUtil.saveSignatureDataUrl(rawSignature, "receipt");
-            receipt.setSignatureUrl(sigUrl);
-            receipt.setSignedByUserId(userId);
-            receipt.setSignedByName(receiver.getFullName());
-            receipt.setSignedAt(LocalDateTime.now());
-        }
-
         StockReceipt saved = receiptRepository.save(receipt);
         if (saved == null) {
             saved = receipt;
@@ -328,37 +337,7 @@ public class StockReceiptServiceImpl implements StockReceiptService {
         return response;
     }
 
-    @Override
-    @Transactional
-    public StockReceiptResponseDTO signReceipt(Long receiptId, String signatureData, Long userId) {
-        if (receiptId == null || receiptId <= 0) {
-            bad("Mã phiếu nhập không hợp lệ.");
-        }
-        StockReceipt receipt = receiptRepository.findByIdWithDetails(receiptId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy phiếu nhập kho."));
-
-        if (!accessService.canAccessBranch(userId, receipt.getBranch().getBranchId())) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Bạn không có quyền ký phiếu nhập của chi nhánh này.");
-        }
-
-        if (receipt.getSignatureUrl() != null && !receipt.getSignatureUrl().isBlank()) {
-            bad("Phiếu nhập kho " + receipt.getReceiptCode()
-                    + " đã được ký điện tử bởi " + (receipt.getSignedByName() != null ? receipt.getSignedByName() : "nhân viên")
-                    + " và không thể ký đè hoặc chỉnh sửa chữ ký.");
-        }
-
-        StaffProfile signer = resolveOrCreateStaffProfile(userId);
-        String sigUrl = InventoryFileStorageUtil.saveSignatureDataUrl(signatureData, "receipt_" + receiptId);
-
-        receipt.setSignatureUrl(sigUrl);
-        receipt.setSignedByUserId(userId);
-        receipt.setSignedByName(signer.getFullName());
-        receipt.setSignedAt(LocalDateTime.now());
-
-        StockReceipt saved = receiptRepository.save(receipt);
-        return toDetailDTO(saved != null ? saved : receipt);
-    }
-
+    /** Sinh mã phiếu nhập kho duy nhất có tiền tố {@code PN}, kiểm tra chống trùng trong CSDL. */
     private String generateUniqueReceiptCode() {
         String code;
         do {
@@ -368,6 +347,7 @@ public class StockReceiptServiceImpl implements StockReceiptService {
         return code;
     }
 
+    /** Sinh mã phiếu chi nhà cung cấp duy nhất có tiền tố {@code PC}, kiểm tra chống trùng trong CSDL. */
     private String generateUniquePaymentCode() {
         String code;
         do {
@@ -377,6 +357,12 @@ public class StockReceiptServiceImpl implements StockReceiptService {
         return code;
     }
 
+    /**
+     * Tìm kiếm và phân trang lịch sử phiếu nhập kho theo chi nhánh, nhà cung cấp, từ khóa và khoảng ngày.
+     * <p>Tối ưu N+1: gom toàn bộ {@code receiptId} của trang hiện tại và truy vấn tổng tiền đã thanh toán
+     * trong 1 câu query duy nhất ({@link SupplierPaymentRepository#sumPaidAmountByReceipts}) trước khi ánh xạ DTO.</p>
+     * <p>Được gọi từ: {@link com.cvdcms.controller.StockReceiptController#list}.</p>
+     */
     @Override
     @Transactional(readOnly = true)
     public Page<StockReceiptResponseDTO> search(
@@ -424,6 +410,11 @@ public class StockReceiptServiceImpl implements StockReceiptService {
         return page.map(r -> toSummaryDTOWithPreloadedPaid(r, paidMap.get(r.getReceiptId())));
     }
 
+    /**
+     * Truy vấn chi tiết đầy đủ một phiếu nhập kho kèm danh sách dòng vật tư/lô và kiểm tra quyền truy cập chi nhánh.
+     * <p>Được gọi từ: {@link com.cvdcms.controller.StockReceiptController#detail}, {@code exportPdf}
+     * và {@link com.cvdcms.controller.InventoryPageController#printReceiptPage}.</p>
+     */
     @Override
     @Transactional(readOnly = true)
     public StockReceiptResponseDTO getById(Long receiptId, Long userId) {
@@ -440,6 +431,10 @@ public class StockReceiptServiceImpl implements StockReceiptService {
         return toDetailDTO(receipt);
     }
 
+    /**
+     * Tìm hồ sơ nhân viên ({@link StaffProfile}) gắn với {@code userId}.
+     * Nếu tài khoản là Quản trị viên ({@code isAdmin}) nhưng chưa có hồ sơ nhân viên, tự động khởi tạo hồ sơ mặc định để lưu vết người lập phiếu.
+     */
     private StaffProfile resolveOrCreateStaffProfile(Long userId) {
         return staffRepository.findByUser_UserId(userId).orElseGet(() -> {
             if (!accessService.isAdmin(userId)) {
@@ -461,6 +456,7 @@ public class StockReceiptServiceImpl implements StockReceiptService {
         });
     }
 
+    /** Ánh xạ {@link StockReceipt} sang DTO tóm tắt kèm tổng tiền đã thanh toán truy vấn trực tiếp theo {@code receiptId}. */
     private StockReceiptResponseDTO toSummaryDTO(StockReceipt r) {
         BigDecimal paid = r.getReceiptId() != null
                 ? supplierPaymentRepository.sumPaidAmountByReceipt(r.getReceiptId())
@@ -468,6 +464,7 @@ public class StockReceiptServiceImpl implements StockReceiptService {
         return toSummaryDTOWithPreloadedPaid(r, paid);
     }
 
+    /** Ánh xạ {@link StockReceipt} sang DTO tóm tắt với số tiền đã trả được nạp sẵn và tự tính {@code remainingDebt = max(0, total - paid)}. */
     private StockReceiptResponseDTO toSummaryDTOWithPreloadedPaid(StockReceipt r, BigDecimal preloadedPaid) {
         StockReceiptResponseDTO dto = new StockReceiptResponseDTO(
                 r.getReceiptId(),
@@ -484,10 +481,6 @@ public class StockReceiptServiceImpl implements StockReceiptService {
         dto.setReceiverName(r.getReceiver() != null ? r.getReceiver().getFullName() : null);
         dto.setNotes(r.getNotes());
         dto.setAttachmentUrl(r.getAttachmentUrl());
-        dto.setSignatureUrl(r.getSignatureUrl());
-        dto.setSignedByUserId(r.getSignedByUserId());
-        dto.setSignedByName(r.getSignedByName());
-        dto.setSignedAt(r.getSignedAt());
         dto.setItemCount(r.getItems() != null ? r.getItems().size() : 0);
 
         BigDecimal paid = preloadedPaid != null ? preloadedPaid : BigDecimal.ZERO;
@@ -500,6 +493,7 @@ public class StockReceiptServiceImpl implements StockReceiptService {
         return dto;
     }
 
+    /** Ánh xạ {@link StockReceipt} sang DTO chi tiết đầy đủ bao gồm danh sách {@link StockReceiptResponseDTO.ItemDetail} và thành tiền từng dòng. */
     private StockReceiptResponseDTO toDetailDTO(StockReceipt r) {
         StockReceiptResponseDTO dto = toSummaryDTO(r);
         List<StockReceiptResponseDTO.ItemDetail> detailList = new ArrayList<>();
@@ -527,10 +521,12 @@ public class StockReceiptServiceImpl implements StockReceiptService {
         return dto;
     }
 
+    /** Cắt khoảng trắng đầu cuối chuỗi; trả về {@code null} nếu chuỗi rỗng hoặc chỉ chứa khoảng trắng. */
     private static String trimToNull(String s) {
         return s == null || s.isBlank() ? null : s.trim();
     }
 
+    /** Ném ngoại lệ HTTP 400 Bad Request kèm thông báo nghiệp vụ tiếng Việt. */
     private static void bad(String message) {
         throw new ResponseStatusException(HttpStatus.BAD_REQUEST, message);
     }

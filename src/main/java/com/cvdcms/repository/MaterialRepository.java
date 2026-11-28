@@ -10,16 +10,29 @@ import org.springframework.data.repository.query.Param;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * Repository truy vấn Danh mục vật tư nha khoa dùng chung ({@link Material}).
+ * <p>Cung cấp truy vấn tìm kiếm phân trang, thống kê nhóm vật tư, kiểm tra trùng mã và các truy vấn đếm liên kết
+ * phục vụ đồng bộ giữa Danh mục thuốc và Kho vật tư.</p>
+ */
 public interface MaterialRepository extends JpaRepository<Material, Long> {
 
+    /** Kiểm tra mã vật tư đã tồn tại hay chưa (không phân biệt hoa thường). */
     boolean existsByMaterialCodeIgnoreCase(String materialCode);
 
+    /** Kiểm tra mã vật tư có trùng với bản ghi khác khi cập nhật hay không. */
     boolean existsByMaterialCodeIgnoreCaseAndMaterialIdNot(String materialCode, Long materialId);
 
+    /** Tìm vật tư theo mã vật tư (không phân biệt hoa thường). */
     Optional<Material> findByMaterialCodeIgnoreCase(String materialCode);
 
+    /** Lấy toàn bộ vật tư đang hoạt động ({@code isActive = true}) sắp xếp theo tên tăng dần. */
     List<Material> findByIsActiveTrueOrderByMaterialNameAsc();
 
+    /**
+     * Tìm kiếm phân trang danh mục vật tư theo từ khóa (mã, tên, nhóm, đơn vị), nhóm vật tư và trạng thái hoạt động.
+     * <p>Được gọi từ: {@link com.cvdcms.service.impl.MaterialServiceImpl#search}.</p>
+     */
     @Query("""
         SELECT m
         FROM Material m
@@ -38,6 +51,7 @@ public interface MaterialRepository extends JpaRepository<Material, Long> {
             Pageable pageable
     );
 
+    /** Lấy danh sách tên nhóm vật tư không trùng lặp, không rỗng, sắp xếp theo bảng chữ cái. */
     @Query("""
         SELECT DISTINCT m.category
         FROM Material m
@@ -47,6 +61,10 @@ public interface MaterialRepository extends JpaRepository<Material, Long> {
         """)
     List<String> findAllDistinctCategories();
 
+    /**
+     * Thống kê số lượng vật tư theo từng nhóm: trả về mảng {@code [category, totalCount, activeCount]}.
+     * <p>Được gọi từ: {@link com.cvdcms.service.impl.MaterialServiceImpl#getCategories}.</p>
+     */
     @Query("""
         SELECT m.category, COUNT(m), SUM(CASE WHEN m.isActive = TRUE THEN 1 ELSE 0 END)
         FROM Material m
@@ -56,6 +74,7 @@ public interface MaterialRepository extends JpaRepository<Material, Long> {
         """)
     List<Object[]> countMaterialsByCategory();
 
+    /** Đếm số vật tư thuộc một nhóm cụ thể (không phân biệt hoa thường). */
     long countByCategoryIgnoreCase(String category);
 
     // ─── Đồng bộ danh mục thuốc ↔ kho vật tư ──────────────────────────────────

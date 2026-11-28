@@ -21,8 +21,16 @@ import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * Dịch vụ tự động phát sinh công việc CSKH theo sự kiện nghiệp vụ (Event-driven)
- * kết hợp tác vụ nền @Scheduled rà soát bù các công việc bị bỏ sót.
+ * Dịch vụ tự động phát sinh và đối soát công việc Chăm sóc khách hàng (CSKH) theo 2 cơ chế:
+ * <ul>
+ *   <li><b>Event-driven ({@code @TransactionalEventListener AFTER_COMMIT}):</b> Tự động sinh task CSKH ngay sau khi
+ *       lượt khám hoàn tất, đơn thuốc mới được kê, lịch hẹn được tạo/cập nhật/NO_SHOW, đơn nghỉ phép bác sĩ được duyệt
+ *       hoặc thanh toán trả góp được ghi nhận.</li>
+ *   <li><b>Scheduler ({@code @Scheduled} mỗi 5 phút):</b> Quét bù các task bị bỏ sót và đối soát đóng/hủy các task
+ *       bác sĩ nghỉ phép (FT01) hoặc nhắc thanh toán trả góp (FT02) đã không còn hiệu lực.</li>
+ * </ul>
+ * <p><b>Được gọi từ:</b> Spring Event Bus (nhận {@link com.cvdcms.event.CustomerCareDomainEvents} và
+ * {@link com.cvdcms.event.ClinicQueueDomainEvent}) và Spring Task Scheduler.</p>
  */
 @Slf4j
 @Service
@@ -42,6 +50,9 @@ public class CustomerCareAutomationService {
     private final LeaveRequestRepository leaveRequestRepository;
     private final TreatmentPlanInstallmentRepository installmentRepository;
 
+    /**
+     * Lắng nghe sự kiện hoàn thành lượt khám (sau commit) và tạo task hỏi thăm sau điều trị ({@code POST_TREATMENT_FOLLOWUP}) nếu chưa có.
+     */
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onVisitCompleted(VisitCompletedCareEvent event) {
@@ -53,6 +64,9 @@ public class CustomerCareAutomationService {
         }
     }
 
+    /**
+     * Lắng nghe sự kiện tạo mới đơn thuốc (sau commit) và tạo task nhắc dùng thuốc ({@code MEDICATION_REMINDER}) nếu chưa có.
+     */
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onPrescriptionCreated(PrescriptionCreatedCareEvent event) {
@@ -64,6 +78,9 @@ public class CustomerCareAutomationService {
         }
     }
 
+    /**
+     * Lắng nghe sự kiện tạo/cập nhật lịch hẹn (sau commit) và tạo task nhắc lịch hẹn ({@code APPOINTMENT_REMINDER}) nếu chưa có.
+     */
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onAppointmentUpserted(AppointmentUpsertedCareEvent event) {
@@ -75,6 +92,9 @@ public class CustomerCareAutomationService {
         }
     }
 
+    /**
+     * Lắng nghe sự kiện bệnh nhân lỡ hẹn (NO_SHOW) sau commit và tạo task gọi lại đặt lịch mới ({@code NO_SHOW_RECALL}) nếu chưa có.
+     */
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onAppointmentNoShow(AppointmentNoShowCareEvent event) {
@@ -86,6 +106,9 @@ public class CustomerCareAutomationService {
         }
     }
 
+    /**
+     * Lắng nghe sự kiện duyệt đơn nghỉ phép bác sĩ ({@code LEAVE_APPROVED}) để tự động sinh task liên hệ đổi/hủy lịch cho các bệnh nhân bị ảnh hưởng.
+     */
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onClinicQueueDomainEvent(com.cvdcms.event.ClinicQueueDomainEvent event) {
@@ -98,6 +121,9 @@ public class CustomerCareAutomationService {
         }
     }
 
+    /**
+     * Lắng nghe sự kiện ghi nhận thanh toán trả góp kế hoạch điều trị để tự động đồng bộ/đóng task nhắc thanh toán ({@code PAYMENT_REMINDER}).
+     */
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onInstallmentPaymentRecorded(InstallmentPaymentRecordedCareEvent event) {
@@ -110,6 +136,10 @@ public class CustomerCareAutomationService {
         }
     }
 
+    /**
+     * Tác vụ nền định kỳ (chạy sau 60 giây khởi động và lặp mỗi 5 phút) rà soát bù toàn bộ các chi nhánh đang hoạt động:
+     * tạo thiếu task sau khám, nhắc thuốc, nhắc lịch hẹn, NO_SHOW, bác sĩ nghỉ phép và nhắc thanh toán từng đợt.
+     */
     @Scheduled(fixedDelay = 300000, initialDelay = 60000)
     @Transactional
     public void catchUpMissedTasks() {
@@ -154,6 +184,13 @@ public class CustomerCareAutomationService {
         }
     }
 
+    /**
+     * Tạo task hỏi thăm sau điều trị ({@code POST_TREATMENT_FOLLOWUP}) cho lượt khám đã {@code COMPLETED} nếu chưa tồn tại.
+     * Hạn xử lý mặc định là ngày khám + 1 (hoặc hôm nay nếu đã qua).
+     *
+     * @param visitId ID lượt khám
+     * @return {@code true} nếu tạo mới thành công, {@code false} nếu bỏ qua/đã tồn tại
+     */
     public boolean createPostTreatmentTaskIfMissing(Long visitId) {
         Visit v = visitRepository.findWithDetailsById(visitId).orElse(null);
         if (v == null || v.getStatus() != VisitStatus.COMPLETED
@@ -193,6 +230,10 @@ public class CustomerCareAutomationService {
         return true;
     }
 
+    /**
+     * Tạo task nhắc dùng thuốc ({@code MEDICATION_REMINDER}) cho đơn thuốc hợp lệ nếu chưa tồn tại.
+     * Hạn xử lý lấy theo {@code followupDate} của đơn thuốc (hoặc hôm nay nếu không có).
+     */
     public boolean createMedicationReminderIfMissing(Long prescriptionId) {
         Prescription pr = prescriptionRepository.findByIdWithDetails(prescriptionId).orElse(null);
         if (pr == null || pr.getPatientProfile() == null || pr.getBranch() == null) {
@@ -229,6 +270,10 @@ public class CustomerCareAutomationService {
         return true;
     }
 
+    /**
+     * Tạo task nhắc lịch hẹn ({@code APPOINTMENT_REMINDER}) cho lịch hẹn {@code PENDING/CONFIRMED} nếu chưa tồn tại.
+     * Hạn xử lý mặc định là 1 ngày trước ngày hẹn ({@code appointmentDate - 1}).
+     */
     public boolean createAppointmentReminderIfMissing(Long appointmentId) {
         Appointment a = appointmentRepository.findById(appointmentId).orElse(null);
         if (a == null || a.getPatientProfile() == null || a.getBranch() == null || a.getStatus() == null) {
@@ -262,6 +307,9 @@ public class CustomerCareAutomationService {
         return true;
     }
 
+    /**
+     * Tạo task gọi lại đặt lịch mới ({@code NO_SHOW_RECALL}) cho lịch hẹn có trạng thái {@code NO_SHOW} nếu chưa tồn tại.
+     */
     public boolean createNoShowRecallIfMissing(Long appointmentId) {
         Appointment a = appointmentRepository.findById(appointmentId).orElse(null);
         if (a == null || a.getPatientProfile() == null || a.getBranch() == null
@@ -293,6 +341,9 @@ public class CustomerCareAutomationService {
     // FT01 — BÁC SĨ NGHỈ PHÉP (TẠO TASK & ĐỐI SOÁT THU HỒI)
     // =========================================================================
 
+    /**
+     * Xử lý toàn bộ đơn nghỉ phép đã duyệt còn hiệu lực của một bác sĩ tại chi nhánh và sinh task dời lịch cho các lịch hẹn bị trùng.
+     */
     @Transactional
     public int processDoctorLeaveForBranch(Long branchId, Long doctorId) {
         if (leaveRequestRepository == null || branchId == null || doctorId == null) {
@@ -310,6 +361,9 @@ public class CustomerCareAutomationService {
         return created;
     }
 
+    /**
+     * Đối soát toàn hệ thống các đơn nghỉ phép bác sĩ đã duyệt: sinh task dời lịch còn thiếu và tự động hủy các task không còn hiệu lực.
+     */
     @Transactional
     public int reconcileAllDoctorLeaves() {
         if (leaveRequestRepository == null) return 0;
@@ -328,6 +382,9 @@ public class CustomerCareAutomationService {
         return created;
     }
 
+    /**
+     * Quét tất cả lịch hẹn của chi nhánh bị ảnh hưởng bởi đơn nghỉ phép {@code leave} và tạo task {@code DOCTOR_LEAVE_RESCHEDULE} nếu chưa có.
+     */
     public int createDoctorLeaveTasksIfMissing(LeaveRequest leave) {
         if (leave == null || leave.getStatus() != LeaveStatus.APPROVED
                 || leave.getStaff() == null || leave.getBranch() == null
@@ -382,6 +439,10 @@ public class CustomerCareAutomationService {
         return created;
     }
 
+    /**
+     * Kiểm tra một lịch hẹn có bị ảnh hưởng bởi đơn nghỉ phép của bác sĩ hay không
+     * (khớp chi nhánh, bác sĩ, khoảng ngày và giao nhau với ca nghỉ / buổi khám).
+     */
     public boolean isAppointmentAffectedByLeave(Appointment appt, LeaveRequest leave) {
         if (appt == null || leave == null || appt.getPatientProfile() == null
                 || appt.getBranch() == null || appt.getDoctor() == null) {
@@ -425,6 +486,10 @@ public class CustomerCareAutomationService {
         };
     }
 
+    /**
+     * Tự động hủy ({@code CANCELLED}) các task {@code DOCTOR_LEAVE_RESCHEDULE} đang mở nhưng đơn nghỉ phép đã hủy
+     * hoặc lịch hẹn đã được dời ra khỏi khung giờ nghỉ.
+     */
     private void reconcileStaleDoctorLeaveTasks() {
         List<CustomerCareTaskStatus> openStatuses = List.of(
                 CustomerCareTaskStatus.PENDING,
@@ -457,6 +522,10 @@ public class CustomerCareAutomationService {
     // FT02 — NHẮC THANH TOÁN THEO TỪNG ĐỢT (T-3, T-0, OVERDUE)
     // =========================================================================
 
+    /**
+     * Quét toàn bộ đợt thanh toán kế hoạch điều trị sắp đến hạn (trong vòng 3 ngày tới) hoặc quá hạn để tạo/nâng mốc task {@code PAYMENT_REMINDER},
+     * đồng thời đóng các task đã được thanh toán đủ hoặc kế hoạch bị hủy.
+     */
     @Transactional
     public int reconcileDueInstallments() {
         if (installmentRepository == null) return 0;
@@ -476,6 +545,9 @@ public class CustomerCareAutomationService {
         return affected;
     }
 
+    /**
+     * Đồng bộ trạng thái các task nhắc thanh toán cho toàn bộ đợt thanh toán thuộc một kế hoạch điều trị cụ thể.
+     */
     @Transactional
     public void reconcileInstallmentsForPlan(Long planId) {
         if (installmentRepository == null || planId == null) return;
@@ -487,6 +559,10 @@ public class CustomerCareAutomationService {
         }
     }
 
+    /**
+     * Đồng bộ một đợt thanh toán đơn lẻ với task {@code PAYMENT_REMINDER}:
+     * đóng/hủy nếu đã trả đủ hoặc kế hoạch hủy; tạo mới hoặc nâng mốc nhắc ({@code T_MINUS_3 -> T_ZERO -> OVERDUE}) theo nguyên tắc idempotent.
+     */
     private boolean syncSingleInstallmentTask(TreatmentPlanInstallment inst, LocalDate today) {
         if (inst == null || inst.getInstallmentId() == null || inst.getPlan() == null) return false;
         TreatmentPlan plan = inst.getPlan();
@@ -577,6 +653,9 @@ public class CustomerCareAutomationService {
         }
     }
 
+    /**
+     * Rà soát tất cả task {@code PAYMENT_REMINDER} đang mở để đóng/hủy ngay nếu đợt thanh toán tương ứng đã hoàn tất.
+     */
     private void closePaidOrCancelledInstallmentTasks(LocalDate today) {
         List<CustomerCareTaskStatus> openStatuses = List.of(
                 CustomerCareTaskStatus.PENDING,
@@ -592,6 +671,10 @@ public class CustomerCareAutomationService {
         }
     }
 
+    /**
+     * Xác định mốc nhắc thanh toán dựa trên ngày dự kiến đóng tiền và ngày hiện tại:
+     * {@code OVERDUE} (quá hạn), {@code T_ZERO} (đúng hạn hôm nay) hoặc {@code T_MINUS_3} (trước hạn <= 3 ngày).
+     */
     public static String resolveInstallmentReminderStage(LocalDate expectedDate, LocalDate today) {
         if (today.isAfter(expectedDate)) {
             return "OVERDUE";
@@ -602,6 +685,9 @@ public class CustomerCareAutomationService {
         return "T_MINUS_3";
     }
 
+    /**
+     * Chọn nhân viên CSKH/Lễ tân mặc định của chi nhánh để gán cho task tạo tự động (ưu tiên nhân sự không phải bác sĩ).
+     */
     private StaffProfile resolveDefaultBranchCareStaff(Long branchId) {
         if (branchId != null) {
             List<Long> staffIds = taskRepository.findActiveStaffIdsByBranch(branchId);
@@ -621,6 +707,9 @@ public class CustomerCareAutomationService {
         return staffRepository.findByStatus(StaffStatus.ACTIVE).stream().findFirst().orElse(null);
     }
 
+    /**
+     * Kiểm tra một hồ sơ nhân viên có phải là Bác sĩ hay không dựa theo chức danh, phòng ban và mã nhân viên.
+     */
     private boolean isDoctorStaff(StaffProfile s) {
         String pos = (s.getPositionTitle() != null ? s.getPositionTitle() : "").toLowerCase(Locale.ROOT);
         String dept = (s.getDepartment() != null ? s.getDepartment() : "").toLowerCase(Locale.ROOT);
@@ -630,6 +719,9 @@ public class CustomerCareAutomationService {
                 || code.startsWith("bs");
     }
 
+    /**
+     * Sinh mã công việc CSKH duy nhất dạng {@code TASK<seq>} (tối đa 20 ký tự), kiểm tra không trùng trong DB.
+     */
     private String generateUniqueTaskCode() {
         String code;
         do {

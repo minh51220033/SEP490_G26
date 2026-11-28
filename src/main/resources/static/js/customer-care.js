@@ -222,6 +222,10 @@
         if ($("statEscalatedTasksSub")) $("statEscalatedTasksSub").textContent = msg;
     }
 
+    /**
+     * Tải số liệu tổng hợp KPI CSKH từ GET /api/customer-care/summary cho chi nhánh đang chọn
+     * và cập nhật 4 thẻ KPI (Tổng đang mở, Quá hạn, Hôm nay, Chờ bác sĩ) cùng badge đếm trên từng tab.
+     */
     async function loadSummary() {
         setKpiLoading();
         try {
@@ -292,6 +296,11 @@
     // 2. LOAD CHI NHÁNH & DANH MỤC TRA CỨU (LOOKUPS)
     // =========================================================================
 
+    /**
+     * Khởi tạo toàn bộ trang /customer-care: gọi GET /api/customer-care/branches để lấy quyền vai trò & chi nhánh,
+     * thiết lập bộ chọn chi nhánh, tải đồng loạt lookups/KPI/danh sách, nạp thông báo, kết nối WebSocket STOMP
+     * và tự mở modal chi tiết nếu URL có tham số ?taskId=...
+     */
     async function loadBranchesAndInit() {
         const branchSelect = $("branchId");
         setKpiLoading();
@@ -825,6 +834,13 @@
         visibleLimit: 10
     };
 
+    /**
+     * Mở Drawer bên phải hiển thị lịch sử CSKH riêng của một bệnh nhân (gọi GET /api/customer-care/patients/{profileId}/history).
+     * Hỗ trợ 2 cấp xem: Cấp 1 danh sách công việc CSKH của BN và Cấp 2 timeline tương tác chi tiết của 1 task hoặc toàn bộ.
+     *
+     * @param {number|string} profileId ID hồ sơ bệnh nhân
+     * @param {number|string|null} targetTaskId ID công việc muốn mở thẳng ở Cấp 2 (tùy chọn)
+     */
     async function openPatientHistoryDrawer(profileId, targetTaskId = null) {
         const pid = Number(profileId);
         if (!pid) return;
@@ -1060,6 +1076,12 @@
         debounceTimer: null
     };
 
+    /**
+     * Tải danh sách lịch sử tương tác CSKH chung có phân trang cho tab Lịch sử BN (gọi GET /api/customer-care/interactions)
+     * với đầy đủ bộ lọc chi nhánh, từ khóa, mốc thời gian VN, nhân viên, bác sĩ, kênh, kết quả và nhóm CSKH.
+     *
+     * @param {number} page Chỉ số trang (0-indexed)
+     */
     async function loadGeneralHistory(page = generalHistoryState.page) {
         generalHistoryState.page = page;
 
@@ -1548,6 +1570,13 @@
         };
     }
 
+    /**
+     * Tải danh sách công việc CSKH phân trang từ GET /api/customer-care/tasks theo tab đang chọn
+     * (TODAY/OVERDUE/ESCALATED/ALL/COMPLETED/CANCELLED), bộ lọc nâng cao và chế độ "Việc của tôi",
+     * sau đó render bảng dữ liệu theo cấu hình cột tùy biến và thanh phân trang.
+     *
+     * @param {number} page Chỉ số trang cần tải (0-indexed)
+     */
     async function loadTasks(page = state.page) {
         state.page = page;
         renderCcTableHeader();
@@ -1792,6 +1821,12 @@
     // 4. MODAL LẬP LỊCH / PHÂN CÔNG CHĂM SÓC & TỰ ĐỘNG TỔNG HỢP (SCR-44.3)
     // =========================================================================
 
+    /**
+     * Mở Modal Lập lịch / Phân công công việc CSKH (SCR-44.3) ở chế độ tạo mới (task = null)
+     * hoặc chỉnh sửa/phân công lại (task != null), đồng thời nạp danh sách ca khám/đơn thuốc/lịch hẹn của bệnh nhân.
+     *
+     * @param {Object|null} task Dữ liệu công việc cần chỉnh sửa hoặc null khi tạo mới
+     */
     function openTaskFormModal(task = null) {
         $("taskForm").reset();
         $("editTaskId").value = task?.taskId || "";
@@ -1822,6 +1857,10 @@
         $("taskFormModal").hidden = false;
     }
 
+    /**
+     * Validate và gửi form tạo mới (POST /api/customer-care/tasks) hoặc cập nhật (PUT /api/customer-care/tasks/{id})
+     * công việc CSKH, sau đó đóng modal và làm mới KPI + bảng/lịch.
+     */
     async function submitTaskForm(event) {
         event.preventDefault();
         const editId = $("editTaskId").value;
@@ -2132,6 +2171,13 @@
         }
     }
 
+    /**
+     * Tải chi tiết công việc CSKH từ GET /api/customer-care/tasks/{taskId} và mở Modal Chi tiết & Ghi kết quả liên hệ (SCR-44.4),
+     * hiển thị thông tin khám lâm sàng/lời dặn, ngữ cảnh đặc thù (FT01/FT02), phản hồi bác sĩ, khóa form nếu task đã đóng
+     * và render timeline tương tác của công việc.
+     *
+     * @param {number|string} taskId ID công việc CSKH
+     */
     async function openInteractionModal(taskId) {
         try {
             const t = await request(`/api/customer-care/tasks/${taskId}`);
@@ -2186,6 +2232,10 @@
         });
     }
 
+    /**
+     * Validate và gửi kết quả liên hệ CSKH tới POST /api/customer-care/tasks/{taskId}/interactions
+     * (bắt buộc nhập nextRetryAt khi kết quả là NO_ANSWER hoặc BUSY), sau đó làm mới KPI và bảng/lịch.
+     */
     async function submitInteractionForm(event) {
         event.preventDefault();
         const taskId = $("intTaskId").value;
@@ -2237,6 +2287,12 @@
     // 6. CHUYỂN BÁC SĨ HỖ TRỢ CHUYÊN MÔN & PHẢN HỒI BÁC SĨ (SCR-44.5)
     // =========================================================================
 
+    /**
+     * Mở Modal Chuyển Bác sĩ hỗ trợ chuyên môn (SCR-44.5) cho một công việc đang mở,
+     * tự động gợi ý chọn bác sĩ điều trị chính của lượt khám nếu có.
+     *
+     * @param {number|string} taskId ID công việc CSKH cần chuyển lên bác sĩ
+     */
     async function openEscalateModal(taskId) {
         try {
             const t = await request(`/api/customer-care/tasks/${taskId}`);
@@ -2266,6 +2322,10 @@
         }
     }
 
+    /**
+     * Validate lý do chuyển bác sĩ (>= 5 ký tự) và gửi POST /api/customer-care/tasks/{taskId}/escalate
+     * để chuyển trạng thái công việc sang ESCALATED_TO_DOCTOR và thông báo cho bác sĩ tiếp nhận.
+     */
     async function submitEscalateForm(event) {
         event.preventDefault();
         const taskId = $("escTaskId").value;
@@ -2305,6 +2365,12 @@
         }
     }
 
+    /**
+     * Mở Modal Phản hồi chuyên môn của Bác sĩ (SCR-44.5) cho công việc đang mở,
+     * hiển thị tóm tắt chẩn đoán, lời dặn, ghi chú CSKH ban đầu và lý do lễ tân chuyển lên.
+     *
+     * @param {number|string} taskId ID công việc CSKH
+     */
     async function openDoctorResponseModal(taskId) {
         try {
             const t = await request(`/api/customer-care/tasks/${taskId}`);
@@ -2334,6 +2400,10 @@
         }
     }
 
+    /**
+     * Validate nội dung chỉ định chuyên môn (>= 5 ký tự) và gửi POST /api/customer-care/tasks/{taskId}/doctor-response
+     * kèm trạng thái tiếp theo (nextStatus: IN_PROGRESS để chuyển lại lễ tân gọi bệnh nhân, COMPLETED hoặc giữ ESCALATED_TO_DOCTOR).
+     */
     async function submitDoctorResponseForm(event) {
         event.preventDefault();
         const taskId = $("docRespTaskId").value;
@@ -2373,6 +2443,11 @@
     // 6B. MỞ LẠI CÔNG VIỆC ĐÃ HOÀN THÀNH (CHỈ ADMIN) - BẮT BUỘC NHẬP LÝ DO
     // =========================================================================
 
+    /**
+     * Mở Modal Mở lại công việc CSKH đã hoàn thành (chỉ cho phép vai trò ADMIN) để nhập lý do mở lại bắt buộc.
+     *
+     * @param {number|string} taskId ID công việc đã COMPLETED
+     */
     function openReopenModal(taskId) {
         const t = state.tasksById[String(taskId)];
         if (!t) return;
@@ -2396,6 +2471,10 @@
         $("reopenReason")?.focus();
     }
 
+    /**
+     * Validate lý do mở lại (>= 5 ký tự) và gửi POST /api/customer-care/tasks/{taskId}/reopen
+     * để chuyển công việc từ COMPLETED về IN_PROGRESS (kèm ghi Audit Log ở backend) rồi làm mới dữ liệu.
+     */
     async function submitReopenForm(event) {
         event.preventDefault();
         const taskId = $("reopenTaskId").value;
@@ -2550,6 +2629,12 @@
         }
     }
 
+    /**
+     * Chuyển đổi giữa các tab trạng thái (TODAY, OVERDUE, ESCALATED, ALL, COMPLETED, CANCELLED, HISTORY),
+     * ẩn/hiện panel bảng, lịch, lịch sử và dải lọc con tương ứng rồi tải lại dữ liệu.
+     *
+     * @param {string} tab Mã tab đích
+     */
     function switchTab(tab) {
         state.activeTab = tab;
         document.querySelectorAll(".tab").forEach(btn => {
@@ -2628,6 +2713,10 @@
         };
     }
 
+    /**
+     * Tải danh sách công việc CSKH cho chế độ xem Lịch (Ngày/Tuần/Tháng) qua GET /api/customer-care/calendar
+     * theo khoảng ngày hiện tại và bộ lọc trên lịch, sau đó gọi renderCalendarGrid().
+     */
     async function loadCalendar() {
         const grid = $("ccCalendarGrid");
         if (!grid) return;
@@ -2715,6 +2804,13 @@
         `;
     }
 
+    /**
+     * Dựng giao diện lưới Lịch CSKH theo chế độ đang chọn:
+     * - Chế độ "day": hiển thị bảng chi tiết công việc trong ngày.
+     * - Chế độ "week" / "month": hiển thị lưới 7 cột (Thứ 2 - Chủ nhật) với các thẻ công việc phân màu theo trạng thái/hạn.
+     *
+     * @param {Object} range Khoảng ngày { startDate, endDate, monthIndex, year, title }
+     */
     function renderCalendarGrid(range) {
         const grid = $("ccCalendarGrid");
         if (!grid) return;
@@ -2938,6 +3034,10 @@
         `).join("");
     }
 
+    /**
+     * Tải danh sách 30 thông báo CSKH gần nhất, số lượng chưa đọc và số chưa đọc theo tab
+     * từ GET /api/customer-care/notifications rồi cập nhật chuông thông báo và badge KPI.
+     */
     async function loadNotifications() {
         try {
             const data = await request("/api/customer-care/notifications?limit=30");
@@ -3090,6 +3190,13 @@
         }, 5000);
     }
 
+    /**
+     * Xử lý payload sự kiện thời gian thực nhận qua WebSocket STOMP:
+     * hiển thị toast thông báo, đồng bộ tức thì modal chi tiết nếu đang mở đúng taskId,
+     * và debounce 350ms để làm mới KPI, thông báo và bảng/lịch.
+     *
+     * @param {string|Object} payload Chuỗi JSON hoặc object CustomerCareRealtimeEventDTO
+     */
     function handleIncomingRealtimeEvent(payload) {
         let evt = null;
         try {
@@ -3119,6 +3226,11 @@
         }, 350);
     }
 
+    /**
+     * Đăng ký (hoặc đăng ký lại khi đổi chi nhánh) 2 kênh WebSocket STOMP:
+     * 1) /user/queue/customer-care/notifications (thông báo cá nhân).
+     * 2) /topic/customer-care/branch/{branchId} (hoặc /topic/customer-care/admin nếu Admin xem tất cả cơ sở).
+     */
     function subscribeWsTopics() {
         const client = state.wsClient;
         if (!client || !state.wsConnected) return;
@@ -3157,6 +3269,13 @@
         }, delay);
     }
 
+    /**
+     * Khởi tạo kết nối WebSocket STOMP qua SockJS tới endpoint /ws-chat,
+     * cập nhật badge trạng thái kết nối (Trực tuyến / Đang kết nối lại), đăng ký topic
+     * và tự động reconnect theo cơ chế exponential backoff khi mất kết nối.
+     *
+     * @param {boolean} isReconnect true nếu đây là lần kết nối lại tự động
+     */
     function initWebSocket(isReconnect = false) {
         if (typeof SockJS === "undefined" || typeof Stomp === "undefined") {
             setWsStatusBadge("offline", "Thiếu thư viện WS");

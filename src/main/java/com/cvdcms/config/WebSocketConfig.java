@@ -16,10 +16,21 @@ import java.util.Arrays;
 import java.util.Map;
 
 /**
- * Cấu hình WebSocket + STOMP cho chức năng Realtime Chat theo Cơ sở:
- * - Endpoint kết nối: /ws-chat (hỗ trợ cả WebSocket thuần và SockJS fallback).
- * - Prefix gửi tin từ client: /app (ví dụ: /app/chat.send).
- * - Broker phát tin: /topic (cho cơ sở & Admin) và /queue (cho hàng đợi cá nhân /user/queue/chat/messages).
+ * Cấu hình WebSocket + STOMP tập trung cho toàn hệ thống CV-DCMS.
+ * <p>
+ * <strong>LƯU Ý DÙNG CHUNG:</strong> Cấu hình này không chỉ phục vụ Chatbox nội bộ / bệnh nhân,
+ * mà còn <b>dùng chung</b> với các phân hệ realtime khác:
+ * <ul>
+ *     <li><b>Chatbox:</b> {@code /topic/chat/branch/{branchId}}, {@code /topic/chat/admin},
+ *     {@code /user/queue/chat/messages}, và đích gửi STOMP {@code /app/chat.send}.</li>
+ *     <li><b>Chăm sóc khách hàng (CSKH):</b> {@code /topic/customer-care/branch/{branchId}},
+ *     {@code /topic/customer-care/admin}, {@code /user/queue/customer-care/notifications}.</li>
+ *     <li><b>Hàng đợi khám &amp; Bác sĩ (Queue/Doctor):</b> {@code /topic/queue/branch/{branchId}},
+ *     {@code /topic/queue/doctor/{doctorId}}, {@code /user/queue/doctor/notifications}.</li>
+ * </ul>
+ * - Endpoint kết nối chung: {@code /ws-chat} (hỗ trợ cả WebSocket thuần và SockJS fallback).<br>
+ * - Prefix gửi tin từ client lên server: {@code /app}.<br>
+ * - Broker phát tin: {@code /topic} (broadcast theo cơ sở/Admin) và {@code /queue} (hàng đợi riêng theo user).
  */
 @Configuration
 @EnableWebSocketMessageBroker
@@ -38,6 +49,10 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
         this.stompChannelInterceptor = stompChannelInterceptor;
     }
 
+    /**
+     * Đăng ký Simple Broker nội bộ cho {@code /topic}, {@code /queue},
+     * prefix nhận lệnh ứng dụng {@code /app} và prefix định tuyến cá nhân {@code /user}.
+     */
     @Override
     public void configureMessageBroker(MessageBrokerRegistry registry) {
         registry.enableSimpleBroker("/topic", "/queue");
@@ -45,6 +60,11 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
         registry.setUserDestinationPrefix("/user");
     }
 
+    /**
+     * Đăng ký endpoint STOMP {@code /ws-chat} (kèm SockJS fallback), gắn
+     * {@link ChatWebSocketHandshakeInterceptor} để xác thực từ {@code HttpSession} và
+     * ánh xạ thành {@link ChatStompPrincipal} làm danh tính người dùng của phiên WebSocket.
+     */
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         DefaultHandshakeHandler handshakeHandler = new DefaultHandshakeHandler() {
@@ -74,6 +94,10 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
                 .withSockJS();
     }
 
+    /**
+     * Đăng ký {@link ChatStompChannelInterceptor} trên kênh inbound để kiểm soát quyền
+     * CONNECT, SUBSCRIBE và SEND cho tất cả kênh Chatbox, CSKH và Queue/Doctor.
+     */
     @Override
     public void configureClientInboundChannel(ChannelRegistration registration) {
         registration.interceptors(stompChannelInterceptor);

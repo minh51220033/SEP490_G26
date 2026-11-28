@@ -5,7 +5,13 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 /**
- * DTO nhận dữ liệu khi chuyển ca cho Bác sĩ hỗ trợ chuyên môn hoặc khi Bác sĩ nhập phản hồi (SCR-44.5).
+ * DTO dùng chung cho luồng chuyển công việc CSKH lên Bác sĩ hỗ trợ chuyên môn và luồng Bác sĩ phản hồi (SCR-44.5).
+ *
+ * <p><b>Đầu vào:</b> Payload JSON cho {@code POST /api/customer-care/tasks/{taskId}/escalate}
+ * và {@code POST /api/customer-care/tasks/{taskId}/doctor-response}.</p>
+ * <p><b>Xử lý thực tế:</b> Khi chuyển bác sĩ dùng {@code escalatedToDoctorId} + {@code escalationReason};
+ * khi bác sĩ phản hồi dùng {@code doctorResponse} + {@code nextStatus} ({@code IN_PROGRESS} để chuyển lại lễ tân
+ * hoặc {@code COMPLETED} để đóng công việc).</p>
  */
 @Getter
 @Setter

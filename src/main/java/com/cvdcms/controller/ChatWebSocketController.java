@@ -18,15 +18,28 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Controller xử lý tin nhắn Realtime qua STOMP WebSocket (@MessageMapping("/chat.send")).
- * Quy tắc:
- * 1. Luôn xác thực danh tính người gửi từ Principal / Session của kết nối WebSocket (tuyệt đối không tin payload).
- * 2. Lưu tin nhắn vào MySQL (thông qua ChatService.sendMessage) TRƯỚC KHI phát sự kiện STOMP.
- * 3. Phát tin nhắn tới:
- *    - Hàng đợi cá nhân của người khởi tạo, người nhận trực tiếp (nếu có) và người gửi (/user/{username}/queue/chat/messages).
- *    - Nếu là hội thoại chung của cơ sở (directConversation == false): phát tới kênh /topic/chat/branch/{branchId}
- *      (chỉ Lễ tân, Bác sĩ thuộc cơ sở đó và Admin mới được phép đăng ký kênh này).
- *    - Kênh tổng hợp của Admin (/topic/chat/admin).
+ * Controller điều phối phát tin nhắn Realtime qua STOMP WebSocket và tiếp nhận khung tin {@code @MessageMapping("/chat.send")}.
+ * <p>
+ * <b>Quan hệ với luồng HTTP REST:</b>
+ * <ul>
+ *     <li>Trên thực tế, Frontend JS gửi tin nhắn mới qua HTTP {@code POST /api/chat/messages}
+ *     ({@link ChatRestController#sendMessage}), sau đó controller REST gọi trực tiếp
+ *     {@link #broadcastSavedMessage(ChatMessageDTO)} để phát realtime (tương tự khi chỉnh sửa hoặc thu hồi tin).</li>
+ *     <li>Endpoint STOMP {@code /app/chat.send} ({@link #handleSendMessage}) vẫn được cung cấp song song
+ *     cho các client muốn gửi tin trực tiếp qua kênh WebSocket STOMP.</li>
+ * </ul>
+ * <b>Quy tắc phát tin (Broadcast):</b>
+ * <ol>
+ *     <li>Luôn xác thực danh tính người gửi từ Principal / Session của kết nối WebSocket (tuyệt đối không tin payload).</li>
+ *     <li>Lưu tin nhắn vào MySQL (thông qua {@link ChatService#sendMessage}) TRƯỚC KHI phát sự kiện STOMP.</li>
+ *     <li>Phát tin nhắn tới 3 nhóm kênh:
+ *         <ul>
+ *             <li>Hàng đợi cá nhân {@code /user/{username}/queue/chat/messages} của người khởi tạo, người nhận trực tiếp (nếu có) và người gửi.</li>
+ *             <li>Kênh cơ sở {@code /topic/chat/branch/{branchId}} nếu là hội thoại chung của cơ sở ({@code directConversation == false}).</li>
+ *             <li>Kênh tổng hợp toàn hệ thống {@code /topic/chat/admin} cho Admin.</li>
+ *         </ul>
+ *     </li>
+ * </ol>
  */
 @Controller
 public class ChatWebSocketController {
@@ -41,6 +54,10 @@ public class ChatWebSocketController {
         this.messagingTemplate = messagingTemplate;
     }
 
+    /**
+     * Xử lý yêu cầu gửi tin nhắn trực tiếp qua STOMP tại đích {@code /app/chat.send}:
+     * xác thực người gửi từ phiên WebSocket, lưu vào MySQL rồi phát đồng bộ qua {@link #broadcastSavedMessage(ChatMessageDTO)}.
+     */
     @MessageMapping("/chat.send")
     public void handleSendMessage(
             @Payload ChatSendRequestDTO request,
@@ -100,6 +117,10 @@ public class ChatWebSocketController {
         messagingTemplate.convertAndSend("/topic/chat/admin", savedMessage);
     }
 
+    /**
+     * Trích xuất {@code userId} đã xác thực từ {@link ChatStompPrincipal} hoặc thuộc tính phiên WebSocket
+     * (từ {@link ChatWebSocketHandshakeInterceptor#ATTR_USER_ID}).
+     */
     private Long extractAuthenticatedUserId(Principal principal, SimpMessageHeaderAccessor headerAccessor) {
         if (principal instanceof ChatStompPrincipal chatPrincipal && chatPrincipal.getUserId() != null) {
             return chatPrincipal.getUserId();

@@ -41,6 +41,14 @@ public class ChatPageController {
         this.staffProfileRepository = staffProfileRepository;
     }
 
+    /**
+     * Render trang Hộp thư Tin nhắn ({@code chat/inbox.html}) sau khi xác thực phiên đăng nhập
+     * và kiểm tra quyền truy cập Hộp thư qua {@link ChatService#requireInboxAccess(Long)}.
+     * <p>
+     * Nạp đầy đủ thuộc tính vào {@link Model}: danh sách vai trò, tên hiển thị (ưu tiên họ tên từ
+     * {@link StaffProfile}), cờ {@code isAdmin}, {@code canHandlePatients}, danh sách cơ sở được phép
+     * truy cập và thông tin tài khoản hiện tại để JavaScript ({@code chat-inbox.js}) khởi tạo giao diện.
+     */
     @GetMapping({"/chat", "/chat/inbox"})
     public String chatInboxPage(
             HttpSession session,

@@ -10,6 +10,15 @@ import org.springframework.web.servlet.HandlerInterceptor;
 
 import java.io.IOException;
 
+/**
+ * Spring MVC {@link HandlerInterceptor} bảo vệ các API Quản lý Nhà cung cấp ({@code /api/suppliers/**}).
+ *
+ * <p><b>Chức năng:</b> Chặn mọi request trước khi vào {@link com.cvdcms.controller.SupplierController},
+ * xác thực phiên đăng nhập trong {@link HttpSession} và kiểm tra quyền hạn thời gian thực từ CSDL
+ * (trả về JSON kèm mã HTTP {@code 401}/{@code 403}, không redirect sang trang HTML {@code /login}).</p>
+ *
+ * <p><b>Được đăng ký tại:</b> Cấu hình WebMvc ({@code WebConfig}) áp dụng cho đường dẫn {@code /api/suppliers/**}.</p>
+ */
 @Component
 public class SupplierManagementInterceptor implements HandlerInterceptor {
 
@@ -19,6 +28,26 @@ public class SupplierManagementInterceptor implements HandlerInterceptor {
         this.userRepository = userRepository;
     }
 
+    /**
+     * Kiểm tra phiên đăng nhập và quyền quản lý nhà cung cấp trước khi thực thi controller.
+     *
+     * <p><b>Xử lý từng bước:</b>
+     * <ol>
+     *   <li>Lấy {@link HttpSession} hiện tại (không tạo mới); nếu thiếu hoặc không chứa {@code loggedInUser}
+     *   thuộc kiểu {@link User} → trả HTTP {@code 401 Unauthorized} dạng JSON và dừng request.</li>
+     *   <li>Nếu {@code sessionUser.getUserId() == null} → trả HTTP {@code 403 Forbidden}.</li>
+     *   <li>Truy vấn trực tiếp CSDL qua {@link UserRepository} để xác minh người dùng có ít nhất một trong:
+     *   role quản lý nhà cung cấp đang hoạt động ({@code hasActiveSupplierManagementRole}),
+     *   quyền {@code SUPPLIER_MANAGE}, hoặc quyền {@code LABO_SUPPLIERS}. Nếu không → trả HTTP {@code 403 Forbidden}.</li>
+     * </ol>
+     * </p>
+     *
+     * @param request  HTTP request đến
+     * @param response HTTP response để ghi lỗi JSON nếu bị chặn
+     * @param handler  handler đích
+     * @return {@code true} nếu hợp lệ và cho phép tiếp tục; {@code false} nếu đã chặn và ghi response lỗi
+     * @throws IOException nếu có lỗi khi ghi JSON ra {@code response.getWriter()}
+     */
     @Override
     public boolean preHandle(
             HttpServletRequest request,

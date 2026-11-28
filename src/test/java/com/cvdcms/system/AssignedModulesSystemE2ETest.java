@@ -240,10 +240,6 @@ public class AssignedModulesSystemE2ETest {
         return baos.toByteArray();
     }
 
-    private String createSignatureDataUrl() throws Exception {
-        return "data:image/png;base64," + Base64.getEncoder().encodeToString(createNonBlankPngBytes());
-    }
-
     private String uploadTestInvoice(User actor) throws Exception {
         MockMultipartFile file = new MockMultipartFile(
                 "file", "invoice-test.png", "image/png", createNonBlankPngBytes()
@@ -431,7 +427,7 @@ public class AssignedModulesSystemE2ETest {
 
     @Test
     @Order(2)
-    @DisplayName("ST-IV-01..07: End-to-end Materials BR-CAT-08, Receipt/Invoice/E-sign/PDF, FEFO Issue, Expired block, Transfer & Isolation")
+    @DisplayName("ST-IV-01..07: End-to-end Materials BR-CAT-08, Receipt/Invoice/PDF, FEFO Issue, Expired block, Transfer & Isolation")
     void inventoryEndToEndSystemFlows() throws Exception {
         // ST-IV-01: Create Material & test BR-CAT-08 lock on medication-synced Material
         MaterialCreateDTO matDto = new MaterialCreateDTO();
@@ -498,9 +494,8 @@ public class AssignedModulesSystemE2ETest {
         sup.setIsActive(true);
         sup = supplierRepository.saveAndFlush(sup);
 
-        // ST-IV-02: Upload invoice + Create Stock Receipt with 2 FEFO batches + e-sign + PDF & A4 Print
+        // ST-IV-02: Upload invoice + Create Stock Receipt with 2 FEFO batches + PDF & A4 Print
         String invoiceUrl = uploadTestInvoice(khoCn01User);
-        String sigDataUrl = createSignatureDataUrl();
 
         StockReceiptCreateDTO receiptDto = new StockReceiptCreateDTO();
         receiptDto.setBranchId(cn01.getBranchId());
@@ -508,7 +503,6 @@ public class AssignedModulesSystemE2ETest {
         receiptDto.setSupplierInvoiceNo("HD-E2E-01");
         receiptDto.setReceiptDate(LocalDate.now());
         receiptDto.setAttachmentUrl(invoiceUrl);
-        receiptDto.setSignatureData(sigDataUrl);
         receiptDto.setPaidAmount(new BigDecimal("500000"));
         receiptDto.setPaymentMethod("BANK_TRANSFER");
         receiptDto.setPaymentReferenceNo("UNC-E2E-01");
@@ -534,7 +528,6 @@ public class AssignedModulesSystemE2ETest {
                         .content(mapper.writeValueAsString(receiptDto)))
                 .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString());
         long receiptId = receiptRes.get("receiptId").asLong();
-        trackUploadCleanup(receiptRes.path("signatureUrl").asText(null));
         assertEquals(0, new BigDecimal("1500000").compareTo(new BigDecimal(receiptRes.get("totalAmount").asText())));
         assertEquals(0, new BigDecimal("1000000").compareTo(new BigDecimal(receiptRes.get("remainingDebt").asText())));
 
@@ -677,16 +670,11 @@ public class AssignedModulesSystemE2ETest {
                 .findFirst().orElseThrow();
         assertEquals(0, new BigDecimal("100000").compareTo(destLot.getImportPrice()));
 
-        // ST-IV-07: Multi-branch isolation (CN02 user blocked on CN01) & E-sign lock (cannot re-sign receipt)
+        // ST-IV-07: Multi-branch isolation (CN02 user blocked on CN01)
         mockMvc.perform(get("/api/inventory")
                         .param("branchId", cn01.getBranchId().toString())
                         .sessionAttr("loggedInUser", khoCn02User))
                 .andExpect(status().isForbidden());
-        mockMvc.perform(post("/api/inventory/receipts/{id}/sign", receiptId)
-                        .sessionAttr("loggedInUser", khoCn01User)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(mapper.writeValueAsString(Map.of("signatureData", sigDataUrl))))
-                .andExpect(status().isBadRequest());
         assertTrue(trRes.get("issueId").asLong() > 0);
     }
 

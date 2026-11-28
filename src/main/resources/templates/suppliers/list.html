@@ -41,7 +41,8 @@
                 </div>
             </header>
 
-            <!-- Thanh tìm kiếm và lọc -->
+            <!-- ==================== THANH TÌM KIẾM & BỘ LỌC ==================== -->
+            <!-- Gồm: chọn chi nhánh tính công nợ (#branchSelect), ô tìm kiếm debounce (#keyword), lọc trạng thái (#active), nút #searchBtn & #clearBtn -->
             <section class="toolbar">
                 <select id="branchSelect" aria-label="Chi nhánh tính công nợ" style="min-width:190px;">
                     <option value="">Đang tải chi nhánh...</option>
@@ -72,7 +73,8 @@
             <!-- Thông báo -->
             <p id="message" class="message" role="status" aria-live="polite" hidden></p>
 
-            <!-- Bảng nhà cung cấp -->
+            <!-- ==================== BẢNG DANH SÁCH NHÀ CUNG CẤP & CÔNG NỢ ==================== -->
+            <!-- Dữ liệu được nạp động qua suppliers.js (GET /api/suppliers + GET /api/inventory/supplier-payments/debts) vào #supplierTable -->
             <section class="table-card">
                 <div class="table-heading">
                     <h2>Danh sách nhà cung cấp vật tư &amp; công nợ</h2>
@@ -101,7 +103,8 @@
                     </table>
                 </div>
 
-                <!-- FOOTER PHÂN TRANG CHUẨN MISA AMIS -->
+                <!-- ==================== FOOTER PHÂN TRANG CHUẨN MISA AMIS ==================== -->
+                <!-- Hiển thị tổng bản ghi (#lblSuppliersTotal), chọn số dòng/trang (#supplierPageSizeSelect), khoảng hiển thị (#lblSuppliersRange) và 4 nút điều hướng -->
                 <div class="misa-pagination-footer" id="supplierPaginationFooter">
                     <!-- Bên trái: Tổng số -->
                     <div class="misa-pagination-left">
@@ -150,7 +153,8 @@
     </div>
 </div>
 
-<!-- Modal Thêm / Sửa Nhà cung cấp -->
+<!-- ==================== MODAL THÊM / SỬA NHÀ CUNG CẤP ==================== -->
+<!-- Mở bởi nút #addBtn (thêm mới) hoặc nút Sửa trong bảng (#supplierTable); submit gọi POST/PUT /api/suppliers qua #supplierForm -->
 <div id="modal" class="modal" hidden>
     <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="formTitle">
         <div class="modal-heading">
@@ -227,7 +231,8 @@
     </div>
 </div>
 
-<!-- Modal Thanh toán công nợ Nhà cung cấp -->
+<!-- ==================== MODAL THANH TOÁN CÔNG NỢ NHÀ CUNG CẤP ==================== -->
+<!-- Mở bởi nút Thanh toán trên dòng NCC còn nợ; hỗ trợ trả công nợ chung hoặc đối ứng theo phiếu nhập (#payReceiptSelect), submit gọi POST /api/inventory/supplier-payments qua #supplierPayForm -->
 <div id="supplierPayModal" class="modal" hidden>
     <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="supplierPayTitle">
         <div class="modal-heading">

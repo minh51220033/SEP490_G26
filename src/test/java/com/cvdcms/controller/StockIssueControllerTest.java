@@ -24,7 +24,6 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -99,16 +98,6 @@ class StockIssueControllerTest {
         when(issueService.create(transferDto, 8L)).thenReturn(detail);
         controller.createTransfer(transferDto, session);
         assertEquals("TRANSFER", transferDto.getIssueType());
-    }
-
-    @Test
-    void signIssue_HandlesPresentOrNullBody() {
-        StockIssueResponseDTO signed = new StockIssueResponseDTO();
-        when(issueService.signIssue(9L, "sig-data", 8L)).thenReturn(signed);
-        when(issueService.signIssue(9L, null, 8L)).thenReturn(signed);
-
-        assertSame(signed, controller.signIssue(9L, Map.of("signatureData", "sig-data"), session));
-        assertSame(signed, controller.signIssue(9L, null, session));
     }
 
     @Test

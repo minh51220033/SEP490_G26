@@ -9,6 +9,10 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * Repository truy vấn bảng cuộc hội thoại chat ({@code chat_conversations}) cùng các truy vấn native
+ * hỗ trợ phân quyền vai trò đang hoạt động và xác định cơ sở được phân công của nhân sự.
+ */
 @Repository
 public interface ChatConversationRepository extends JpaRepository<ChatConversation, Long> {
 

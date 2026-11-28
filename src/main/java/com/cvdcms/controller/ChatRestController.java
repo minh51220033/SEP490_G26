@@ -20,17 +20,23 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * REST API Controller phục vụ chức năng Realtime Chat theo Cơ sở:
- * - Cung cấp ngữ cảnh người dùng & lịch sử hội thoại cho Floating Widget (/api/chat/context, /api/chat/my-conversation).
- * - Đếm tổng số tin nhắn chưa đọc riêng theo từng tài khoản (/api/chat/unread-count).
- * - Tìm kiếm tất cả các tài khoản trong cùng cơ sở để gửi tin nhắn cho các vai trò ngoài Bệnh nhân (/api/chat/recipients).
- * - Khởi tạo hoặc mở cuộc hội thoại với người nhận đã chọn (/api/chat/conversations/start).
- * - Tìm kiếm, lọc theo vai trò, lọc theo cơ sở và phân trang cho Hộp thư (/api/chat/conversations).
- * - Lấy chi tiết lịch sử tin nhắn (/api/chat/conversations/{id}/messages).
- * - Gửi tin nhắn qua HTTP POST và phát đồng bộ qua STOMP (/api/chat/messages).
- * - Chỉnh sửa và thu hồi tin nhắn đã gửi trong vòng 10 phút (/api/chat/messages/{id}, /api/chat/messages/{id}/recall).
- * - Xóa tin nhắn hoặc xóa cuộc hội thoại ở phía tài khoản hiện tại (/api/chat/messages/{id}/self, /api/chat/conversations/{id}/self).
- * - Đánh dấu hội thoại đã đọc riêng cho tài khoản hiện tại (/api/chat/conversations/{id}/read).
+ * REST API Controller phục vụ chức năng Realtime Chat theo Cơ sở (cho cả Floating Widget và trang Hộp thư):
+ * <ul>
+ *     <li>Ngữ cảnh &amp; hội thoại Floating Widget: {@code GET /api/chat/context}, {@code GET /api/chat/my-conversation}.</li>
+ *     <li>Đếm tổng số tin nhắn chưa đọc riêng theo từng tài khoản (dựa trên trạng thái cá nhân, không sửa {@code ChatMessage.isRead}):
+ *     {@code GET /api/chat/unread-count}.</li>
+ *     <li>Tìm kiếm người nhận trong cùng cơ sở &amp; khởi tạo hội thoại trực tiếp:
+ *     {@code GET /api/chat/recipients}, {@code GET /api/chat/recipients/page}, {@code POST /api/chat/conversations/start}.</li>
+ *     <li>Danh sách hội thoại &amp; lịch sử tin nhắn: {@code GET /api/chat/conversations},
+ *     {@code GET /api/chat/conversations/{conversationId}/messages}.</li>
+ *     <li><b>Luồng gửi tin nhắn chính từ Frontend JS:</b> {@code POST /api/chat/messages} → {@link ChatService#sendMessage}
+ *     lưu MySQL → {@link ChatWebSocketController#broadcastSavedMessage} phát đồng bộ realtime qua STOMP.</li>
+ *     <li>Chỉnh sửa &amp; thu hồi tin nhắn trong vòng 10 phút kể từ lúc gửi:
+ *     {@code PUT /api/chat/messages/{messageId}}, {@code POST /api/chat/messages/{messageId}/recall}.</li>
+ *     <li>Xóa tin nhắn / xóa hội thoại chỉ ở phía tài khoản hiện tại và đánh dấu đã đọc riêng theo từng người dùng:
+ *     {@code DELETE /api/chat/messages/{messageId}/self}, {@code DELETE /api/chat/conversations/{conversationId}/self},
+ *     {@code POST /api/chat/conversations/{conversationId}/read}.</li>
+ * </ul>
  */
 @RestController
 @RequestMapping("/api/chat")
@@ -46,6 +52,10 @@ public class ChatRestController {
         this.chatWebSocketController = chatWebSocketController;
     }
 
+    /**
+     * Lấy {@code userId} từ {@link HttpSession} (thuộc tính {@code loggedInUser});
+     * ném {@link ResponseStatusException} với mã {@code 401 UNAUTHORIZED} nếu chưa đăng nhập.
+     */
     private Long requireSessionUserId(HttpSession session) {
         Object obj = session != null ? session.getAttribute("loggedInUser") : null;
         if (obj instanceof User user && user.getUserId() != null) {
@@ -302,6 +312,10 @@ public class ChatRestController {
         return ResponseEntity.ok(chatService.markConversationAsRead(userId, conversationId));
     }
 
+    /**
+     * Xử lý tập trung {@link ResponseStatusException} trong controller và trả về JSON {@code {"message": ...}}
+     * kèm đúng HTTP status code để phía Frontend hiển thị thông báo lỗi rõ ràng.
+     */
     @ExceptionHandler(ResponseStatusException.class)
     public ResponseEntity<Map<String, String>> handleResponseStatus(ResponseStatusException ex) {
         String msg = ex.getReason() != null ? ex.getReason() : "Yêu cầu không hợp lệ.";

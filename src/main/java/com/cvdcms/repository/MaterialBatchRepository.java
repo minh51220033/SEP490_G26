@@ -14,9 +14,18 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * Repository truy vấn quản lý Lô vật tư &amp; Hạn sử dụng ({@link MaterialBatch}).
+ * <p>Hỗ trợ tìm kiếm phân trang theo khoảng HSD, khóa bi quan {@code PESSIMISTIC_WRITE} cho xuất kho FEFO/hủy hết hạn/nhập kho,
+ * và các truy vấn đếm cảnh báo lô sắp hết hạn/hết hạn phục vụ KPI Dashboard.</p>
+ */
 public interface MaterialBatchRepository
         extends JpaRepository<MaterialBatch, Long> {
 
+    /**
+     * Tìm kiếm phân trang danh sách lô vật tư tại chi nhánh theo từ khóa (mã/tên vật tư, số lô) và khoảng hạn sử dụng.
+     * <p>Được gọi từ: {@link com.cvdcms.service.impl.MaterialBatchServiceImpl#searchBatches}.</p>
+     */
     @Query("""
         SELECT b
         FROM MaterialBatch b
@@ -49,6 +58,7 @@ public interface MaterialBatchRepository
     Optional<MaterialBatch> findForUpdate(@Param("branchId") Long branchId,
                                           @Param("materialId") Long materialId, @Param("batchNumber") String batchNumber);
 
+    /** Khóa bi quan một lô vật tư theo {@code batchId} (kèm JOIN FETCH vật tư và NCC) khi xuất đích danh theo lô. */
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""
         SELECT b
@@ -59,6 +69,10 @@ public interface MaterialBatchRepository
         """)
     Optional<MaterialBatch> findByIdForUpdate(@Param("batchId") Long batchId);
 
+    /**
+     * Khóa bi quan và lấy danh sách lô còn tồn, còn hạn ({@code expiryDate >= today}) và trạng thái {@code ACTIVE}
+     * sắp xếp theo nguyên tắc FEFO ({@code expiryDate ASC, batchId ASC}) để tự động phân bổ xuất kho.
+     */
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""
         SELECT b
@@ -78,6 +92,10 @@ public interface MaterialBatchRepository
             @Param("today") LocalDate today
     );
 
+    /**
+     * Lấy nhanh danh sách lô còn tồn và còn hạn theo danh sách {@code materialIds} tại chi nhánh (sắp theo FEFO).
+     * Dùng cho kiểm tra khả dụng hàng loạt (ví dụ cấp phát thuốc/vật tư).
+     */
     @Query("""
         SELECT b
         FROM MaterialBatch b
@@ -95,6 +113,10 @@ public interface MaterialBatchRepository
             @Param("today") LocalDate today
     );
 
+    /**
+     * Tính tổng số lượng tồn đã hết hạn theo từng {@code materialId} trong danh sách chỉ định tại chi nhánh.
+     * Trả về danh sách cặp {@code [materialId, sumExpiredQty]}.
+     */
     @Query("""
         SELECT b.material.materialId, COALESCE(SUM(b.quantityRemaining), 0)
         FROM MaterialBatch b
@@ -110,6 +132,10 @@ public interface MaterialBatchRepository
             @Param("today") LocalDate today
     );
 
+    /**
+     * Khóa bi quan và lấy các lô còn tồn nhưng đã quá hạn ({@code expiryDate < today}) sắp theo hạn cũ nhất trước,
+     * phục vụ tự động trừ lô khi lập phiếu xuất hủy ({@code DISCARD_EXPIRED}).
+     */
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""
         SELECT b
@@ -128,6 +154,10 @@ public interface MaterialBatchRepository
             @Param("today") LocalDate today
     );
 
+    /**
+     * Lấy danh sách lô còn tồn kho ({@code quantityRemaining > 0}) tại chi nhánh (tùy chọn lọc theo {@code materialId}),
+     * sắp xếp theo FEFO. Dùng cho Material Picker và dropdown chọn lô xuất kho.
+     */
     @Query("""
         SELECT b
         FROM MaterialBatch b
@@ -143,6 +173,7 @@ public interface MaterialBatchRepository
             @Param("materialId") Long materialId
     );
 
+    /** Tính tổng số lượng còn lại trên tất cả các lô của một vật tư tại một chi nhánh. */
     @Query("""
         SELECT COALESCE(SUM(b.quantityRemaining), 0)
         FROM MaterialBatch b

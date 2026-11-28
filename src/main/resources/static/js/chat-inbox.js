@@ -127,6 +127,10 @@
         }
     }
 
+    /**
+     * Kiểm tra tin nhắn có còn trong cửa sổ 10 phút và thuộc chính người dùng hiện tại
+     * để hiển thị nút Sửa / Thu hồi hay không.
+     */
     function canUserEditOrRecall(msg) {
         if (!msg || !msg.messageId || msg.isRecalled) return false;
         if (Number(msg.senderId) !== Number(state.currentUserId)) return false;
@@ -401,6 +405,10 @@
     // 2. TẢI DANH SÁCH HỘI THOẠI KÈM TÌM KIẾM & LỌC (AND LOGIC)
     // =========================================================================
 
+    /**
+     * Gọi REST API GET /api/chat/conversations để tải danh sách hội thoại theo bộ lọc hiện tại
+     * (từ khóa, vai trò, cơ sở, chỉ chưa đọc, phân trang) với AbortController chống race condition.
+     */
     async function fetchConversations(preserveActiveSelection = true) {
         if (state.convAbortController) {
             try { state.convAbortController.abort(); } catch (e) { /* ignore */ }
@@ -569,6 +577,11 @@
     // 3. XEM CHI TIẾT CUỘC HỘI THOẠI & ĐÁNH DẤU ĐÃ ĐỌC
     // =========================================================================
 
+    /**
+     * Mở một cuộc hội thoại: nạp lịch sử tin nhắn từ GET /api/chat/conversations/{id}/messages,
+     * render header + danh sách tin nhắn rồi gọi POST /api/chat/conversations/{id}/read để đánh dấu
+     * đã đọc riêng cho tài khoản hiện tại.
+     */
     async function selectConversation(conversationId) {
         state.activeConversationId = Number(conversationId);
         state.editingMessageId = null;
@@ -953,6 +966,10 @@
     // 4. GỬI TIN NHẮN PHẢN HỒI TỪ HỘP THƯ
     // =========================================================================
 
+    /**
+     * Gửi tin nhắn phản hồi từ khung soạn thảo Hộp thư qua HTTP POST /api/chat/messages
+     * (kèm clientMessageId chống trùng lặp); server lưu MySQL và phát sự kiện STOMP đồng bộ.
+     */
     async function handleSendReply() {
         if (!state.activeConversationId || !elReplyInput || state.isSending) return;
         const text = elReplyInput.value.trim();
@@ -1001,6 +1018,11 @@
     // 5. XỬ LÝ SỰ KIỆN REALTIME QUA STOMP WEBSOCKET
     // =========================================================================
 
+    /**
+     * Xử lý sự kiện tin nhắn realtime nhận từ STOMP (NEW, EDIT, RECALL):
+     * cập nhật trực tiếp khung chat đang mở, tự động đánh dấu đã đọc nếu tin đến từ đối phương
+     * và làm mới danh sách hội thoại cột trái.
+     */
     function handleIncomingRealtimeMessage(msg) {
         if (!msg || !msg.conversationId) return;
 
@@ -1030,6 +1052,12 @@
         fetchConversations(false);
     }
 
+    /**
+     * Kết nối WebSocket STOMP qua SockJS tới /ws-chat và đăng ký các kênh theo đúng phân quyền:
+     * - Mọi nhân sự: /user/queue/chat/messages.
+     * - Admin: /topic/chat/admin (toàn hệ thống).
+     * - Lễ tân / Bác sĩ (canHandlePatients): /topic/chat/branch/{branchId} cho từng cơ sở được phân công.
+     */
     function connectWebSocket() {
         if (typeof window.SockJS === 'undefined' || typeof window.Stomp === 'undefined') {
             return;

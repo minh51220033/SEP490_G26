@@ -19,10 +19,20 @@ import java.security.Principal;
 import java.util.Map;
 
 /**
- * Interceptor bảo mật các khung tin STOMP (CONNECT, SUBSCRIBE, SEND):
- * - Chặn người dùng chưa đăng nhập.
- * - Chặn Bệnh nhân hoặc nhân viên cơ sở khác SUBSCRIBE vào /topic/chat/branch/{branchId} không thuộc phạm vi của mình.
- * - Chặn người dùng không phải Admin SUBSCRIBE vào /topic/chat/admin.
+ * Interceptor bảo mật các khung tin STOMP đầu vào ({@code CONNECT}, {@code SUBSCRIBE}, {@code SEND}).
+ * <p>
+ * <strong>LƯU Ý DÙNG CHUNG:</strong> Interceptor này bảo vệ đồng thời nhiều phân hệ realtime trên cùng
+ * kết nối {@code /ws-chat}:
+ * <ul>
+ *     <li><b>Chatbox:</b> {@code /user/queue/chat/messages}, {@code /topic/chat/branch/{branchId}},
+ *     {@code /topic/chat/admin} và đích gửi {@code /app/chat.send}.</li>
+ *     <li><b>CSKH (Customer Care):</b> {@code /user/queue/customer-care/notifications},
+ *     {@code /topic/customer-care/branch/{branchId}}, {@code /topic/customer-care/admin}.</li>
+ *     <li><b>Hàng đợi khám &amp; Bác sĩ (Queue/Doctor):</b> {@code /topic/queue/branch/{branchId}},
+ *     {@code /topic/queue/doctor/{doctorId}}, {@code /user/queue/doctor/notifications}.</li>
+ * </ul>
+ * Mọi yêu cầu chưa đăng nhập, đăng ký kênh ngoài phạm vi cơ sở/vai trò hoặc gửi vào đích không hợp lệ
+ * đều bị chặn bằng {@link AccessDeniedException}.
  */
 @Component
 public class ChatStompChannelInterceptor implements ChannelInterceptor {
@@ -55,6 +65,14 @@ public class ChatStompChannelInterceptor implements ChannelInterceptor {
         this.staffProfileRepository = staffProfileRepository;
     }
 
+    /**
+     * Chặn và xác thực từng khung tin STOMP trước khi chuyển vào broker:
+     * <ul>
+     *     <li>{@code CONNECT}: bắt buộc có {@link ChatStompPrincipal} hợp lệ từ session handshake.</li>
+     *     <li>{@code SUBSCRIBE}: kiểm tra quyền truy cập kênh qua {@link #validateSubscription(Long, String)}.</li>
+     *     <li>{@code SEND}: chỉ cho phép gửi vào đích {@code /app/chat.send}.</li>
+     * </ul>
+     */
     @Override
     public Message<?> preSend(Message<?> message, MessageChannel channel) {
         StompHeaderAccessor accessor = MessageHeaderAccessor.getAccessor(message, StompHeaderAccessor.class);
@@ -99,6 +117,10 @@ public class ChatStompChannelInterceptor implements ChannelInterceptor {
         return message;
     }
 
+    /**
+     * Trích xuất {@link ChatStompPrincipal} từ header STOMP hoặc khôi phục từ {@code sessionAttributes}
+     * đã được gắn trong {@link ChatWebSocketHandshakeInterceptor}.
+     */
     private ChatStompPrincipal resolvePrincipal(StompHeaderAccessor accessor) {
         Principal user = accessor.getUser();
         if (user instanceof ChatStompPrincipal stompPrincipal) {
@@ -117,6 +139,19 @@ public class ChatStompChannelInterceptor implements ChannelInterceptor {
         return null;
     }
 
+    /**
+     * Kiểm tra phân quyền khi người dùng đăng ký (SUBSCRIBE) một kênh STOMP bất kỳ:
+     * <ul>
+     *     <li>Hàng đợi cá nhân (Chat, CSKH, thông báo Bác sĩ): mọi tài khoản đã đăng nhập đều được phép.</li>
+     *     <li>Kênh tổng hợp Admin ({@code /topic/chat/admin}, {@code /topic/customer-care/admin}): chỉ ADMIN.</li>
+     *     <li>Kênh CSKH theo cơ sở ({@code /topic/customer-care/branch/{branchId}}): kiểm tra quyền cơ sở qua CSKH &amp; ChatService.</li>
+     *     <li>Kênh hàng đợi theo cơ sở ({@code /topic/queue/branch/{branchId}}): chỉ nhân sự thuộc cơ sở hoặc ADMIN.</li>
+     *     <li>Kênh hàng đợi riêng bác sĩ ({@code /topic/queue/doctor/{doctorId}}): chỉ chính bác sĩ đó hoặc ADMIN.</li>
+     *     <li>Kênh chat theo cơ sở ({@code /topic/chat/branch/{branchId}}): chỉ Lễ tân/Bác sĩ thuộc cơ sở hoặc ADMIN.</li>
+     * </ul>
+     *
+     * @throws AccessDeniedException nếu kênh không nằm trong danh sách cho phép hoặc vượt quá quyền hạn
+     */
     public void validateSubscription(Long userId, String destination) {
         if (USER_QUEUE.equals(destination) || "/queue/chat/messages".equals(destination)
                 || CC_USER_QUEUE.equals(destination) || "/queue/customer-care/notifications".equals(destination)

@@ -135,16 +135,6 @@ class StockReceiptControllerTest {
     }
 
     @Test
-    void signReceipt_PassesSignatureDataSafelyWhenBodyNullOrPresent() {
-        StockReceiptResponseDTO signed = new StockReceiptResponseDTO();
-        when(receiptService.signReceipt(5L, null, 7L)).thenReturn(signed);
-        when(receiptService.signReceipt(5L, "data:image/png;base64,abc", 7L)).thenReturn(signed);
-
-        assertSame(signed, controller.signReceipt(5L, null, session));
-        assertSame(signed, controller.signReceipt(5L, Map.of("signatureData", "data:image/png;base64,abc"), session));
-    }
-
-    @Test
     void exportPdf_ReturnsPdfBytesWithInlineOrAttachmentDisposition() {
         StockReceiptResponseDTO dto = new StockReceiptResponseDTO(
                 15L, "PN-2026-015", 1L, 2L, LocalDate.of(2026, 3, 15), new BigDecimal("100000"));

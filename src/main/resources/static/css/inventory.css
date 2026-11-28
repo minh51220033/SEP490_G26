@@ -1117,7 +1117,7 @@ textarea:focus {
     background: #f8fafc;
 }
 
-/* 10. MODALS (DETAIL, SIGN, LIGHTBOX) */
+/* 10. MODALS (DETAIL, LIGHTBOX) */
 .modal-backdrop {
     position: fixed;
     inset: 0;
@@ -1210,7 +1210,7 @@ textarea:focus {
     display: none !important;
 }
 
-/* 11. INVOICE UPLOAD & DIGITAL SIGNATURE */
+/* 11. INVOICE UPLOAD */
 .invoice-upload-box {
     display: flex;
     flex-direction: column;
@@ -1258,57 +1258,6 @@ textarea:focus {
     margin-top: 12px;
 }
 
-.signature-inline-bar {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    flex-wrap: wrap;
-    margin-top: 10px;
-    padding: 8px 12px;
-    background: #f8fafc;
-    border: 1px dashed #cbd5e1;
-    border-radius: 8px;
-}
-
-.signature-preview-thumb {
-    max-height: 42px;
-    max-width: 130px;
-    object-fit: contain;
-    background: #ffffff;
-    border: 1px solid #cbd5e1;
-    border-radius: 4px;
-    padding: 2px 4px;
-}
-
-.signature-pad-container {
-    background: #ffffff;
-    border: 2px dashed #94a3b8;
-    border-radius: 8px;
-    padding: 6px;
-    margin: 10px 0;
-    text-align: center;
-    touch-action: none;
-}
-
-#signatureCanvas {
-    width: 100%;
-    max-width: 520px;
-    height: 200px;
-    background: #ffffff;
-    border-radius: 6px;
-    cursor: crosshair;
-    touch-action: none;
-    display: block;
-    margin: 0 auto;
-}
-
-.detail-attachments-grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 12px;
-    margin: 12px 0;
-}
-
 .detail-attachment-card {
     background: #f8fafc;
     border: 1px solid #e2e8f0;
@@ -1332,16 +1281,6 @@ textarea:focus {
     border-radius: 4px;
     background: #fff;
     cursor: zoom-in;
-}
-
-.detail-signature-img {
-    max-height: 90px;
-    max-width: 200px;
-    object-fit: contain;
-    border: 1px solid #cbd5e1;
-    border-radius: 4px;
-    background: #fff;
-    padding: 2px;
 }
 
 .lightbox-modal-card {

@@ -11,15 +11,10 @@ import javax.imageio.stream.ImageOutputStream;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
-import java.io.File;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.text.NumberFormat;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -28,15 +23,23 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * Bộ tạo file PDF chuẩn A4 (%PDF-1.4) cho Phiếu nhập kho và Phiếu xuất kho:
- * - Hỗ trợ đầy đủ tiếng Việt UTF-8 và nhúng hình ảnh chữ ký điện tử + họ tên người ký.
- * - Không phụ thuộc thư viện ngoài, hoạt động ổn định trong chế độ offline.
+ * Tiện ích sinh tệp PDF chuẩn A4 ({@code %PDF-1.4}) cho Phiếu nhập kho, Phiếu xuất kho và Phiếu điều chuyển kho.
+ * <ul>
+ *   <li>Vẽ trực tiếp trang A4 độ phân giải cao ({@code 1240 x 1754 px}) bằng Java2D ({@link Graphics2D}) hỗ trợ đầy đủ tiếng Việt UTF-8 và khu vực ký tay.</li>
+ *   <li>Đóng gói ảnh JPEG vào cấu trúc nhị phân PDF 1.4 chuẩn mà không phụ thuộc thư viện bên ngoài.</li>
+ * </ul>
+ * Được gọi từ {@link com.cvdcms.controller.StockReceiptController#exportPdf} và
+ * {@link com.cvdcms.controller.StockIssueController#exportPdf}.
  */
 public final class InventoryPdfGenerator {
 
+    /** Chiều rộng canvas trang A4 ở độ phân giải ~150 DPI (pixel). */
     private static final int CANVAS_WIDTH = 1240;
+    /** Chiều cao canvas trang A4 ở độ phân giải ~150 DPI (pixel). */
     private static final int CANVAS_HEIGHT = 1754;
+    /** Chiều rộng trang A4 trong hệ tọa độ PDF (point). */
     private static final int PDF_PAGE_WIDTH = 595;
+    /** Chiều cao trang A4 trong hệ tọa độ PDF (point). */
     private static final int PDF_PAGE_HEIGHT = 842;
 
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy");
@@ -45,6 +48,15 @@ public final class InventoryPdfGenerator {
     private InventoryPdfGenerator() {
     }
 
+    /**
+     * Sinh tệp PDF chuẩn A4 cho Phiếu nhập kho từ {@link StockReceiptResponseDTO}.
+     * <p>Bố cục gồm 6 phần: tiêu đề phòng khám/chi nhánh, tiêu đề phiếu, khung thông tin NCC &amp; hóa đơn,
+     * bảng danh sách vật tư/lô/HSD, khung tổng hợp thanh toán &amp; công nợ, và khu vực ký xác nhận 2 bên.</p>
+     * <p>Được gọi từ: {@link com.cvdcms.controller.StockReceiptController#exportPdf}.</p>
+     *
+     * @param r dữ liệu chi tiết phiếu nhập kho
+     * @return mảng byte của tệp PDF 1.4 hoàn chỉnh
+     */
     public static byte[] generateReceiptPdf(StockReceiptResponseDTO r) {
         BufferedImage page = new BufferedImage(CANVAS_WIDTH, CANVAS_HEIGHT, BufferedImage.TYPE_INT_RGB);
         Graphics2D g = page.createGraphics();
@@ -144,10 +156,7 @@ public final class InventoryPdfGenerator {
 
         y += summaryHeight + 36;
 
-        // 6. Khu vực chữ ký điện tử
-        String signerName = r.getSignedByName() != null && !r.getSignedByName().isBlank()
-                ? r.getSignedByName()
-                : safe(r.getReceiverName());
+        // 6. Khu vực chữ ký xác nhận
         drawSignatureSection(
                 g,
                 marginX,
@@ -155,18 +164,24 @@ public final class InventoryPdfGenerator {
                 contentWidth,
                 "NGƯỜI GIAO HÀNG / NCC",
                 "",
-                null,
-                null,
                 "NGƯỜI LẬP PHIẾU / THỦ KHO",
-                signerName,
-                r.getSignatureUrl(),
-                r.getSignedAt()
+                safe(r.getReceiverName())
         );
 
         g.dispose();
         return encodeBufferedImageAsPdf(page);
     }
 
+    /**
+     * Sinh tệp PDF chuẩn A4 cho Phiếu xuất kho hoặc Phiếu điều chuyển liên chi nhánh từ {@link StockIssueResponseDTO}.
+     * <p>Tự động phân nhánh tiêu đề và thông tin hiển thị theo {@code issue.getIssueType() == "TRANSFER"}:
+     * hiển thị chi nhánh nhận với phiếu điều chuyển, hoặc lý do/ghi chú với phiếu xuất thông thường;
+     * kèm bảng chi tiết lô, tổng số lượng, tổng giá trị ước tính theo giá vốn và khung ký xác nhận.</p>
+     * <p>Được gọi từ: {@link com.cvdcms.controller.StockIssueController#exportPdf}.</p>
+     *
+     * @param issue dữ liệu chi tiết phiếu xuất kho hoặc điều chuyển
+     * @return mảng byte của tệp PDF 1.4 hoàn chỉnh
+     */
     public static byte[] generateIssuePdf(StockIssueResponseDTO issue) {
         BufferedImage page = new BufferedImage(CANVAS_WIDTH, CANVAS_HEIGHT, BufferedImage.TYPE_INT_RGB);
         Graphics2D g = page.createGraphics();
@@ -269,10 +284,7 @@ public final class InventoryPdfGenerator {
 
         y += summaryHeight + 36;
 
-        // 6. Khu vực chữ ký điện tử
-        String signerName = issue.getSignedByName() != null && !issue.getSignedByName().isBlank()
-                ? issue.getSignedByName()
-                : safe(issue.getIssuerName());
+        // 6. Khu vực chữ ký xác nhận
         drawSignatureSection(
                 g,
                 marginX,
@@ -280,12 +292,8 @@ public final class InventoryPdfGenerator {
                 contentWidth,
                 isTransfer ? "NGƯỜI NHẬN ĐIỀU CHUYỂN" : "NGƯỜI NHẬN VẬT TƯ",
                 "",
-                null,
-                null,
                 "NGƯỜI LẬP PHIẾU XUẤT",
-                signerName,
-                issue.getSignatureUrl(),
-                issue.getSignedAt()
+                safe(issue.getIssuerName())
         );
 
         g.dispose();
@@ -409,12 +417,8 @@ public final class InventoryPdfGenerator {
             int contentWidth,
             String leftTitle,
             String leftSignerName,
-            String leftSignatureUrl,
-            LocalDateTime leftSignedAt,
             String rightTitle,
-            String rightSignerName,
-            String rightSignatureUrl,
-            LocalDateTime rightSignedAt) {
+            String rightSignerName) {
 
         int halfWidth = contentWidth / 2;
         int leftCenterX = marginX + (halfWidth / 2);
@@ -428,23 +432,9 @@ public final class InventoryPdfGenerator {
         g.setFont(new Font(Font.SANS_SERIF, Font.ITALIC, 13));
         g.setColor(new Color(100, 116, 139));
         drawCenteredString(g, "(Ký và ghi rõ họ tên)", leftCenterX, y + 22);
-        drawCenteredString(g, "(Chữ ký điện tử & họ tên)", rightCenterX, y + 22);
+        drawCenteredString(g, "(Ký và ghi rõ họ tên)", rightCenterX, y + 22);
 
-        int sigBoxY = y + 36;
-        int sigBoxW = 240;
-        int sigBoxH = 110;
-
-        BufferedImage rightSigImg = loadSignatureImage(rightSignatureUrl);
-        if (rightSigImg != null) {
-            int drawX = rightCenterX - (sigBoxW / 2);
-            g.drawImage(rightSigImg, drawX, sigBoxY, sigBoxW, sigBoxH, null);
-        } else {
-            g.setColor(new Color(226, 232, 240));
-            g.setStroke(new BasicStroke(1.0f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND, 0, new float[]{4, 4}, 0));
-            g.drawRoundRect(rightCenterX - (sigBoxW / 2), sigBoxY, sigBoxW, sigBoxH, 8, 8);
-        }
-
-        int nameY = sigBoxY + sigBoxH + 28;
+        int nameY = y + 174;
         g.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 16));
         g.setColor(new Color(15, 23, 42));
         if (leftSignerName != null && !leftSignerName.isBlank()) {
@@ -453,30 +443,6 @@ public final class InventoryPdfGenerator {
         if (rightSignerName != null && !rightSignerName.isBlank()) {
             drawCenteredString(g, rightSignerName, rightCenterX, nameY);
         }
-
-        if (rightSignedAt != null) {
-            g.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 13));
-            g.setColor(new Color(71, 85, 105));
-            drawCenteredString(g, "Đã ký điện tử: " + rightSignedAt.format(DATETIME_FMT), rightCenterX, nameY + 22);
-        }
-    }
-
-    private static BufferedImage loadSignatureImage(String signatureUrl) {
-        if (signatureUrl == null || signatureUrl.isBlank()) {
-            return null;
-        }
-        try {
-            String rel = signatureUrl.trim();
-            if (rel.startsWith("/")) {
-                rel = rel.substring(1);
-            }
-            Path p = Paths.get(rel).toAbsolutePath().normalize();
-            if (Files.exists(p) && Files.isRegularFile(p)) {
-                return ImageIO.read(p.toFile());
-            }
-        } catch (Exception ignored) {
-        }
-        return null;
     }
 
     private static void drawCenteredString(Graphics2D g, String text, int centerX, int y) {

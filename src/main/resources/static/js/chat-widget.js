@@ -78,6 +78,10 @@
         }
     }
 
+    /**
+     * Kiểm tra tin nhắn có còn đủ điều kiện cho phép người dùng hiện tại chỉnh sửa hoặc thu hồi hay không
+     * (chính chủ gửi, chưa bị thu hồi và nằm trong cửa sổ 10 phút kể từ sentAt).
+     */
     function canUserEditOrRecall(msg) {
         if (!msg || !msg.messageId || msg.isRecalled) return false;
         if (Number(msg.senderId) !== Number(state.userId)) return false;
@@ -111,6 +115,10 @@
         });
     }
 
+    /**
+     * Gọi REST API GET /api/chat/unread-count để đồng bộ lại tổng số tin nhắn chưa đọc
+     * riêng của tài khoản hiện tại trên tất cả badge giao diện.
+     */
     async function refreshGlobalChatUnreadCount() {
         try {
             const resp = await fetch('/api/chat/unread-count', {
@@ -156,6 +164,10 @@
         }
     }
 
+    /**
+     * Khởi tạo DOM của Floating Chat Widget cho tài khoản đã đăng nhập (nút nổi FAB, popup chat,
+     * bảng tìm người nhận cùng cơ sở cho nhân viên, nút ẩn/hoàn tác widget và gắn toàn bộ sự kiện).
+     */
     function buildWidgetDom() {
         if (document.getElementById('cvdcmsFloatingChatWidget')) {
             return;
@@ -955,6 +967,10 @@
         }
     }
 
+    /**
+     * Gửi tin nhắn mới qua HTTP POST /api/chat/messages (kèm clientMessageId chống nhân đôi);
+     * server sẽ lưu MySQL rồi phát đồng bộ realtime tới các kênh STOMP liên quan.
+     */
     async function handleSendMessage() {
         const input = document.getElementById('cvdcmsChatWidgetInput');
         const sendBtn = document.getElementById('cvdcmsChatWidgetSendBtn');
@@ -1002,6 +1018,14 @@
         }
     }
 
+    /**
+     * Kết nối WebSocket STOMP qua SockJS tới endpoint dùng chung /ws-chat và đăng ký kênh nhận tin:
+     * - Mọi tài khoản: /user/queue/chat/messages (nhận tin nhắn trực tiếp & cập nhật EDIT/RECALL).
+     * - Nhân viên / Admin ở các trang ngoài /chat: đăng ký thêm /topic/chat/admin hoặc /topic/chat/branch/{branchId}
+     *   để tự động cập nhật badge chưa đọc trên Sidebar và User Icon theo thời gian thực.
+     *
+     * @param {boolean} isPatientMode true nếu đang chạy chế độ Floating Widget cho Bệnh nhân
+     */
     async function connectWebSocket(isPatientMode) {
         try {
             await ensureWebSocketLibraries();
@@ -1149,6 +1173,11 @@
         if (closeBtn) closeBtn.addEventListener('click', () => toggleGuestPopup(false));
     }
 
+    /**
+     * Điểm khởi chạy của Floating Chat Widget: gọi GET /api/chat/context để xác định trạng thái đăng nhập,
+     * đồng bộ badge chưa đọc, dựng widget khách vãng lai nếu chưa đăng nhập, kết nối WS ngầm nếu là nhân viên/Admin
+     * ở ngoài trang /chat, hoặc dựng đầy đủ widget + nạp lịch sử hội thoại nếu là Bệnh nhân.
+     */
     async function initWidget() {
         try {
             const resp = await fetch('/api/chat/context', {

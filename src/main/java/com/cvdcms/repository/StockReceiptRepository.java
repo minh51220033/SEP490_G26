@@ -15,13 +15,24 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * Repository truy vấn Phiếu nhập kho ({@link StockReceipt}) và tổng hợp công nợ nhập hàng theo nhà cung cấp.
+ * <p>Được gọi từ {@link com.cvdcms.service.impl.StockReceiptServiceImpl} và {@code SupplierPaymentServiceImpl}.</p>
+ */
 public interface StockReceiptRepository extends JpaRepository<StockReceipt, Long> {
+
+    /** Kiểm tra mã phiếu nhập kho đã tồn tại hay chưa để đảm bảo sinh mã duy nhất. */
     boolean existsByReceiptCode(String receiptCode);
 
+    /** Khóa bi quan bản ghi phiếu nhập theo {@code receiptId} (dùng khi thanh toán công nợ gắn theo phiếu nhập). */
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT r FROM StockReceipt r WHERE r.receiptId = :receiptId")
     Optional<StockReceipt> findByIdForUpdate(@Param("receiptId") Long receiptId);
 
+    /**
+     * Tìm kiếm phân trang lịch sử phiếu nhập kho theo chi nhánh, nhà cung cấp, từ khóa (mã phiếu, số hóa đơn, tên/mã NCC)
+     * và khoảng ngày nhập. Dùng {@code JOIN FETCH} kèm {@code countQuery} tách riêng để tránh lỗi phân trang của Hibernate.
+     */
     @Query(
             value = """
                 SELECT r
@@ -64,6 +75,7 @@ public interface StockReceiptRepository extends JpaRepository<StockReceipt, Long
             Pageable pageable
     );
 
+    /** Tải đầy đủ một phiếu nhập kho kèm chi nhánh, NCC, người nhận và toàn bộ dòng vật tư ({@code items} + {@code material}). */
     @Query("""
         SELECT DISTINCT r
         FROM StockReceipt r

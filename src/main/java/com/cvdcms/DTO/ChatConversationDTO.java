@@ -9,6 +9,10 @@ import java.time.LocalDateTime;
 
 /**
  * DTO biểu diễn thông tin cuộc hội thoại trong danh sách hộp thư cơ sở / Admin và khung chat nổi.
+ * <p>
+ * Các trường {@code counterpart*}, {@code lastMessage*}, {@code unreadCount} và {@code unread}
+ * được tính toán riêng theo góc nhìn của tài khoản đang xem (dựa trên {@code ChatConversationUserState}
+ * và {@code ChatMessageUserState}).
  */
 @Data
 @Builder

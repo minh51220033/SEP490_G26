@@ -1,6 +1,18 @@
+/**
+ * Module Frontend cho màn hình Quản lý Nhà cung cấp & Công nợ (/suppliers — templates/suppliers/list.html).
+ *
+ * Chức năng chính:
+ * - Tải danh sách chi nhánh được phép truy cập (/api/branches/accessible) vào dropdown #branchSelect.
+ * - Tải đồng thời danh sách NCC (/api/suppliers) và tổng hợp công nợ động (/api/inventory/supplier-payments/debts),
+ *   kèm tìm kiếm debounce, lọc trạng thái, phân trang và chống race-condition bằng AbortController.
+ * - Thêm mới / Chỉnh sửa / Ngừng hoạt động / Kích hoạt lại NCC (Modal #modal, Form #supplierForm).
+ * - Thanh toán công nợ NCC (chung hoặc đối ứng theo phiếu nhập) kèm chống double-submit qua clientRequestId
+ *   (Modal #supplierPayModal, Form #supplierPayForm).
+ */
 const API = "/api/suppliers";
 let pageSize = 10;
 
+/** Biểu thức chính quy kiểm tra định dạng dữ liệu đầu vào phía client (đồng bộ với DTO/Service backend). */
 const REGEX = {
     SUPPLIER_CODE: /^[A-Za-z0-9_-]{2,30}$/,
     TAX_CODE: /^[0-9]{10}(-[0-9]{3})?$/,
@@ -8,6 +20,7 @@ const REGEX = {
     REFERENCE_NO: /^[A-Za-z0-9._/-]{1,100}$/
 };
 
+/** Trạng thái phân trang, bản ghi đang sửa, chi nhánh đang chọn, map công nợ theo supplierId và AbortController hủy request cũ. */
 let currentPage = 0;
 let totalPages = 0;
 let editingId = null;
@@ -15,14 +28,26 @@ let currentBranchId = null;
 let debtMap = new Map();
 let listAbortController = null;
 
+/** Hàm rút gọn document.getElementById(id). */
 const $ = (id) => document.getElementById(id);
 
+/**
+ * Định dạng số tiền sang chuẩn tiền tệ Việt Nam (VNĐ, không phần thập phân).
+ * @param {number|string} value - Giá trị tiền cần định dạng
+ * @returns {string} Chuỗi tiền tệ (VD: "1.500.000 ₫")
+ */
 const money = (value) => new Intl.NumberFormat("vi-VN", {
     style: "currency",
     currency: "VND",
     maximumFractionDigits: 0
 }).format(Number(value || 0));
 
+/**
+ * Tạo hàm debounce trì hoãn thực thi callback sau khoảng thời gian không có thao tác mới.
+ * Dùng cho ô tìm kiếm #keyword để giảm số lần gọi API khi người dùng gõ liên tục.
+ * @param {Function} fn - Hàm cần trì hoãn
+ * @param {number} [delayMs=350] - Thời gian chờ (ms)
+ */
 function debounce(fn, delayMs = 350) {
     let timer = null;
     return (...args) => {
@@ -31,6 +56,11 @@ function debounce(fn, delayMs = 350) {
     };
 }
 
+/**
+ * Hiển thị thanh thông báo trạng thái (#message) trên giao diện (success / error / info).
+ * @param {string} message - Nội dung thông báo (rỗng sẽ ẩn banner)
+ * @param {string} [type=""] - Loại thông báo CSS ("success", "error", "info")
+ */
 function showMessage(message, type = "") {
     const el = $("message");
     if (!el) return;
@@ -39,6 +69,14 @@ function showMessage(message, type = "") {
     el.hidden = !message;
 }
 
+/**
+ * Wrapper gọi fetch JSON gửi kèm cookie phiên (same-origin) và chuẩn hóa xử lý lỗi HTTP.
+ * - 401/403: Ném thông báo hết phiên hoặc không đủ quyền.
+ * - 400 (validation): Gắn err.fieldErrors từ data.errors để hiển thị lỗi inline cạnh từng input.
+ * @param {string} url - Đường dẫn API
+ * @param {RequestInit} [options={}] - Tùy chọn fetch (method, body, signal...)
+ * @returns {Promise<any>} Dữ liệu JSON trả về từ server
+ */
 async function request(url, options = {}) {
     const response = await fetch(url, {
         ...options,
@@ -78,6 +116,11 @@ async function request(url, options = {}) {
     return data;
 }
 
+/**
+ * Escape các ký tự đặc biệt HTML (&, <, >, ", ') để chống XSS khi render nội dung vào innerHTML.
+ * @param {any} value - Giá trị cần escape
+ * @returns {string} Chuỗi an toàn để chèn HTML
+ */
 function escapeHtml(value) {
     return String(value ?? "").replace(/[&<>"']/g, (char) => ({
         "&": "&amp;",
@@ -88,6 +131,11 @@ function escapeHtml(value) {
     })[char]);
 }
 
+/**
+ * Khởi tạo danh sách chi nhánh được phép truy cập cho bộ lọc #branchSelect từ API /api/branches/accessible.
+ * Chọn chi nhánh đầu tiên làm currentBranchId, khóa dropdown nếu user không có quyền đổi chi nhánh,
+ * sau đó gọi loadSuppliers() để tải dữ liệu ban đầu.
+ */
 async function initBranches() {
     const branchSelect = $("branchSelect");
     if (!branchSelect) {
@@ -114,6 +162,20 @@ async function initBranches() {
     await loadSuppliers();
 }
 
+/**
+ * Tải danh sách nhà cung cấp kết hợp số liệu công nợ động theo chi nhánh đang chọn và render bảng #supplierTable.
+ *
+ * Xử lý thực tế:
+ * 1. Hủy request đang chạy trước đó qua listAbortController (chống ghi đè dữ liệu cũ khi gõ tìm kiếm nhanh).
+ * 2. Gọi song song (Promise.all):
+ *    - GET /api/suppliers (phân trang, lọc #keyword, #active, sắp xếp theo supplierName ASC).
+ *    - GET /api/inventory/supplier-payments/debts?branchId=... (tổng nhập, đã trả, còn nợ) rồi lưu vào debtMap.
+ * 3. Cập nhật thanh phân trang (#totalCount, #lblSuppliersRange, #lblSuppliersTotal, #supplierPageSizeSelect,
+ *    các nút #supplierFirstBtn, #supplierPrevBtn, #supplierNextBtn, #supplierLastBtn).
+ * 4. Render các dòng bảng #supplierTable kèm 3 nút thao tác: Thanh toán (disable khi còn nợ <= 0), Sửa, Ngừng/Kích hoạt.
+ *
+ * @param {number} [page=currentPage] - Chỉ số trang cần tải (bắt đầu từ 0)
+ */
 async function loadSuppliers(page = currentPage) {
     if (listAbortController) {
         try { listAbortController.abort(); } catch { /* ignore */ }
@@ -247,6 +309,11 @@ async function loadSuppliers(page = currentPage) {
     }
 }
 
+/**
+ * Mở modal Thêm mới / Chỉnh sửa nhà cung cấp (#modal, form #supplierForm).
+ * Nếu truyền đối tượng supplier sẽ điền sẵn dữ liệu vào các ô nhập và đặt editingId; ngược lại mở ở chế độ thêm mới.
+ * @param {Object|null} [supplier=null] - Dữ liệu NCC cần sửa (null nếu thêm mới)
+ */
 function openForm(supplier = null) {
     editingId = supplier?.supplierId ?? null;
     $("supplierForm").reset();
@@ -269,10 +336,23 @@ function openForm(supplier = null) {
     $("modal").hidden = false;
 }
 
+/** Đóng modal Thêm / Sửa nhà cung cấp (#modal). */
 function closeForm() {
     $("modal").hidden = true;
 }
 
+/**
+ * Mở modal Thanh toán công nợ nhà cung cấp (#supplierPayModal, form #supplierPayForm).
+ *
+ * Xử lý thực tế:
+ * 1. Tra cứu công nợ từ debtMap; nếu không còn công nợ (<= 0) thì báo thông tin và không mở modal.
+ * 2. Hiển thị tổng nhập, đã trả, còn nợ (#payTotalImportDisplay, #payTotalPaidDisplay, #payRemainingDebtDisplay)
+ *    và điền mặc định số tiền thanh toán (#payAmountInput) bằng toàn bộ công nợ còn lại.
+ * 3. Tải danh sách phiếu nhập kho còn nợ của NCC từ GET /api/inventory/receipts vào dropdown #payReceiptSelect
+ *    để người dùng có thể chọn thanh toán đối ứng theo phiếu nhập hoặc để trống để trả công nợ chung.
+ *
+ * @param {number|string} supplierId - ID nhà cung cấp cần thanh toán
+ */
 async function openSupplierPayModal(supplierId) {
     const debtInfo = debtMap.get(Number(supplierId));
     if (!debtInfo || Number(debtInfo.remainingDebt || 0) <= 0) {
@@ -302,6 +382,7 @@ async function openSupplierPayModal(supplierId) {
     $("supplierPayModal").hidden = false;
 }
 
+/** Xóa toàn bộ thông báo lỗi inline dưới các trường của form #supplierForm. */
 function clearFieldErrors() {
     [
         "supplierCode",
@@ -315,11 +396,22 @@ function clearFieldErrors() {
     });
 }
 
+/**
+ * Gán thông báo lỗi inline cho một trường cụ thể (phần tử #<field>Error).
+ * @param {string} field - Tên trường (supplierCode, supplierName, taxCode, phoneNumber, address)
+ * @param {string} msg - Nội dung thông báo lỗi
+ */
 function setFieldError(field, msg) {
     const el = $(`${field}Error`);
     if (el) el.textContent = msg;
 }
 
+/**
+ * Kiểm tra hợp lệ dữ liệu form Thêm / Sửa nhà cung cấp phía client trước khi gọi API.
+ * Kiểm tra bắt buộc và regex cho supplierCode, supplierName, taxCode, phoneNumber, address.
+ * @param {Object} payload - Dữ liệu đã trim từ #supplierForm
+ * @returns {boolean} true nếu hợp lệ, false nếu có ít nhất 1 lỗi
+ */
 function validateSupplierPayload(payload) {
     let valid = true;
     clearFieldErrors();
@@ -361,6 +453,11 @@ function validateSupplierPayload(payload) {
     return valid;
 }
 
+/**
+ * Hiển thị lỗi trả về từ server: điền lỗi chi tiết theo từng trường (error.fieldErrors)
+ * và hiển thị thông báo tổng quát lên banner #message.
+ * @param {Error & {fieldErrors?: Object}} error - Lỗi ném ra từ hàm request()
+ */
 function showValidationErrors(error) {
     clearFieldErrors();
     if (error.fieldErrors && typeof error.fieldErrors === "object") {
@@ -371,13 +468,17 @@ function showValidationErrors(error) {
     showMessage(error.message, "error");
 }
 
+/* ==================== SỰ KIỆN MỞ / ĐÓNG MODAL ==================== */
+// Nút "+ Thêm nhà cung cấp" (#addBtn) mở modal thêm mới; #closeBtn và #cancelBtn đóng #modal.
 $("addBtn").addEventListener("click", () => openForm());
 $("closeBtn").addEventListener("click", closeForm);
 $("cancelBtn").addEventListener("click", closeForm);
 
+// Nút đóng (#closePayModalBtn) và nút Hủy (#cancelPayModalBtn) của modal thanh toán #supplierPayModal.
 if ($("closePayModalBtn")) $("closePayModalBtn").addEventListener("click", () => { $("supplierPayModal").hidden = true; });
 if ($("cancelPayModalBtn")) $("cancelPayModalBtn").addEventListener("click", () => { $("supplierPayModal").hidden = true; });
 
+// Khi chọn một phiếu nhập đối ứng trong #payReceiptSelect, tự động điền số tiền còn nợ của phiếu đó vào #payAmountInput.
 if ($("payReceiptSelect")) {
     $("payReceiptSelect").addEventListener("change", (e) => {
         const opt = e.target.options[e.target.selectedIndex];
@@ -387,6 +488,12 @@ if ($("payReceiptSelect")) {
     });
 }
 
+/**
+ * Xử lý submit form Thanh toán công nợ (#supplierPayForm, nút xác nhận #confirmPayBtn):
+ * - Validate số tiền > 0 và định dạng số chứng từ (#payRefInput).
+ * - Sinh clientRequestId (UUID) và disable #confirmPayBtn trong suốt quá trình gửi để chống double-submit.
+ * - Gửi POST /api/inventory/supplier-payments; khi thành công thì đóng #supplierPayModal, hiện mã phiếu chi và tải lại bảng.
+ */
 if ($("supplierPayForm")) {
     $("supplierPayForm").addEventListener("submit", async (e) => {
         e.preventDefault();
@@ -437,6 +544,7 @@ if ($("supplierPayForm")) {
     });
 }
 
+// Đóng #modal khi click ra ngoài vùng nền mờ (backdrop) và đóng modal đang mở khi nhấn phím Escape.
 $("modal").addEventListener("click", (e) => {
     if (e.target === $("modal")) closeForm();
 });
@@ -448,6 +556,8 @@ document.addEventListener("keydown", (e) => {
     }
 });
 
+/* ==================== SỰ KIỆN BỘ LỌC, TÌM KIẾM & PHÂN TRANG ==================== */
+// Đổi chi nhánh tính công nợ (#branchSelect) → tải lại danh sách & công nợ theo chi nhánh mới.
 if ($("branchSelect")) {
     $("branchSelect").addEventListener("change", () => {
         currentBranchId = Number($("branchSelect").value) || null;
@@ -455,6 +565,7 @@ if ($("branchSelect")) {
     });
 }
 
+// Nút "Tìm kiếm" (#searchBtn) và nút "Xóa lọc" (#clearBtn) đặt lại về trang đầu (page 0) và tải lại bảng.
 $("searchBtn").addEventListener("click", () => {
     currentPage = 0;
     loadSuppliers();
@@ -469,6 +580,7 @@ if ($("clearBtn")) {
     });
 }
 
+// Tự động tìm kiếm sau 350ms ngừng gõ trên ô #keyword, hỗ trợ nhấn Enter tìm ngay và lọc tức thì khi đổi #active.
 const debouncedSupplierSearch = debounce(() => {
     currentPage = 0;
     loadSuppliers();
@@ -489,6 +601,8 @@ $("active").addEventListener("change", () => {
     loadSuppliers();
 });
 
+// Cụm 4 nút điều hướng phân trang (#supplierFirstBtn, #supplierPrevBtn, #supplierNextBtn, #supplierLastBtn)
+// và dropdown đổi số dòng/trang (#supplierPageSizeSelect).
 $("supplierFirstBtn")?.addEventListener("click", () => {
     if (currentPage > 0) {
         loadSuppliers(0);
@@ -518,6 +632,13 @@ $("supplierPageSizeSelect")?.addEventListener("change", (e) => {
     loadSuppliers(0); // Bắt buộc reset về trang đầu khi đổi số lượng hiển thị
 });
 
+/* ==================== SỰ KIỆN THAO TÁC DÒNG TRONG BẢNG & SUBMIT FORM NCC ==================== */
+/**
+ * Event delegation trên #supplierTable cho các nút button[data-action]:
+ * - data-action="pay": Mở modal thanh toán công nợ (#supplierPayModal).
+ * - data-action="edit": Gọi GET /api/suppliers/{id} và mở modal chỉnh sửa (#modal).
+ * - data-action="deactivate" / "activate": Xác nhận người dùng rồi gọi POST /api/suppliers/{id}/{action} và tải lại bảng.
+ */
 $("supplierTable").addEventListener("click", async (event) => {
     const button = event.target.closest("button[data-action]");
     if (!button) return;
@@ -561,6 +682,12 @@ $("supplierTable").addEventListener("click", async (event) => {
     }
 });
 
+/**
+ * Xử lý submit form Thêm / Sửa nhà cung cấp (#supplierForm, nút lưu #saveBtn):
+ * - Chuẩn hóa mã NCC chữ hoa, kiểm tra hợp lệ qua validateSupplierPayload().
+ * - Disable #saveBtn chống gửi trùng; gọi POST /api/suppliers (thêm mới) hoặc PUT /api/suppliers/{editingId} (cập nhật).
+ * - Thành công: đóng modal, hiển thị thông báo và tải lại trang đầu danh sách; lỗi: hiển thị lỗi inline qua showValidationErrors().
+ */
 $("supplierForm").addEventListener("submit", async (event) => {
     event.preventDefault();
 
@@ -605,4 +732,5 @@ $("supplierForm").addEventListener("submit", async (event) => {
     }
 });
 
+// Khởi chạy trang: tải danh sách chi nhánh được phép truy cập trước, sau đó tự động tải bảng NCC & công nợ.
 initBranches();

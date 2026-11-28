@@ -4,9 +4,10 @@
 <body>
 
     <!-- ===================================================================== -->
-    <!-- TAB: CHĂM SÓC KHÁCH HÀNG (CUSTOMER CARE & POST-OP FOLLOW-UP - FT44)  -->
-    <!-- Frontend Fragment: doctor/fragments/patient-care-tab.html             -->
-    <!-- Thiết kế theo tiêu chuẩn Dental SaaS CRM & EMR hàng đầu              -->
+    <!-- TAB: CHĂM SÓC KHÁCH HÀNG TRONG HỒ SƠ KHÁM BÁC SĨ (FT44 / SCR-44.4)    -->
+    <!-- Fragment: doctor/fragments/patient-care-tab.html                      -->
+    <!-- Chức năng: Hiển thị danh sách nhắc việc CSKH (cột trái), bảng lịch sử -->
+    <!-- tương tác (cột phải) và modal ghi nhận cuộc gọi gắn trực tiếp visitId -->
     <!-- ===================================================================== -->
     <div th:fragment="patientCareTab">
         <div class="df-unified-tab-card mb-4 overflow-hidden bg-white" id="doctorCareTabCard">
@@ -573,6 +574,11 @@
             /*<![CDATA[*/
             let currentDcChannel = 'PHONE_CALL';
 
+            /**
+             * Mở modal Ghi nhận cuộc gọi / tương tác CSKH cho Bác sĩ ngay trong màn hình ca khám:
+             * đưa modal ra trực tiếp document.body để tránh lỗi z-index backdrop, reset các trường về mặc định
+             * (kênh PHONE_CALL, kết quả CONNECTED, trạng thái COMPLETED) rồi hiển thị modal Bootstrap.
+             */
             function openDoctorCareModal() {
                 const modalEl = document.getElementById('doctorCareModal');
                 if (!modalEl) {
@@ -667,6 +673,11 @@
                 textarea.focus();
             }
 
+            /**
+             * Validate dữ liệu trên modal CSKH của Bác sĩ (kiểm tra visitId, ghi chú >= 3 ký tự,
+             * bắt buộc nextRetryAt khi NO_ANSWER/BUSY) và gửi POST /api/customer-care/visits/{visitId}/interactions.
+             * Sau khi lưu thành công, đóng modal, hiển thị thông báo và tải lại trang giữ nguyên tab #tab-customer-care.
+             */
             function submitDoctorCareInteraction() {
                 const modalEl = document.getElementById('doctorCareModal');
                 const visitId = modalEl.getAttribute('data-visit-id')

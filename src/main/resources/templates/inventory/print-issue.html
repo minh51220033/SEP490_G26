@@ -1,4 +1,10 @@
 <!DOCTYPE html>
+<!--
+  Trang xem trước & in Phiếu xuất kho chuẩn A4 (inventory/print-issue.html).
+  Controller: InventoryPageController.printIssuePage (GET /inventory/issues/{issueId}/print).
+  Model đầu vào: issue (StockIssueResponseDTO), printedAt (LocalDateTime).
+  Hỗ trợ tải PDF trực tiếp (/api/inventory/issues/{id}/pdf?download=true) và tự động mở hộp thoại in khi có ?autoprint=true.
+-->
 <html lang="vi" xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{fragments/head :: head('Xem trước & In phiếu xuất kho - ' + ${issue.issueCode})}"></head>
 <body class="app-body">
@@ -138,7 +144,7 @@
                         </div>
                     </div>
 
-                    <!-- CHỮ KÝ ĐIỆN TỬ & XÁC NHẬN -->
+                    <!-- CHỮ KÝ XÁC NHẬN -->
                     <div class="sig-grid">
                         <div>
                             <div class="sig-title">NGƯỜI NHẬN VẬT TƯ</div>
@@ -151,17 +157,11 @@
 
                         <div>
                             <div class="sig-title">NGƯỜI LẬP PHIẾU XUẤT</div>
-                            <div class="sig-sub">(Chữ ký điện tử &amp; họ tên)</div>
+                            <div class="sig-sub">(Ký và ghi rõ họ tên)</div>
                             <div class="sig-box">
-                                <img th:if="${issue.signatureUrl != null and !#strings.isEmpty(issue.signatureUrl)}"
-                                     th:src="${issue.signatureUrl}"
-                                     alt="Chữ ký điện tử"/>
-                                <span th:if="${issue.signatureUrl == null or #strings.isEmpty(issue.signatureUrl)}"
-                                      class="sig-unsigned">(Chưa ký điện tử)</span>
+                                <span class="sig-unsigned">(Ký xác nhận khi lập phiếu)</span>
                             </div>
-                            <div class="sig-name" th:text="${issue.signedByName != null ? issue.signedByName : issue.issuerName}">Thủ kho</div>
-                            <div class="sig-time" th:if="${issue.signedAt != null}"
-                                 th:text="'Đã ký: ' + ${#temporals.format(issue.signedAt, 'dd/MM/yyyy HH:mm')}">Đã ký: 31/10/2026 10:15</div>
+                            <div class="sig-name" th:text="${issue.issuerName}">Thủ kho</div>
                         </div>
                     </div>
 
@@ -172,6 +172,7 @@
     </div>
 </div>
 
+<!-- Script tự động chờ font & hình ảnh tải xong rồi kích hoạt window.print() khi mở với tham số ?autoprint=true -->
 <script>
 (function() {
     const params = new URLSearchParams(window.location.search);

@@ -8,7 +8,6 @@ import com.cvdcms.entity.enums.StaffStatus;
 import com.cvdcms.entity.enums.StockIssueType;
 import com.cvdcms.repository.*;
 import com.cvdcms.service.impl.StockIssueServiceImpl;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -22,17 +21,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
-import javax.imageio.ImageIO;
-import java.awt.*;
-import java.awt.image.BufferedImage;
-import java.io.ByteArrayOutputStream;
 import java.math.BigDecimal;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.Base64;
 import java.util.List;
 import java.util.Optional;
 
@@ -53,7 +43,6 @@ class StockIssueServiceTest {
     @Mock private BranchAccessService accessService;
 
     private StockIssueServiceImpl issueService;
-    private final List<Path> createdFiles = new ArrayList<>();
 
     private Branch branch1;
     private Branch branch2;
@@ -92,13 +81,6 @@ class StockIssueServiceTest {
         staff.setStaffCode("NV001");
         staff.setFullName("Nguyễn Văn Kho");
         staff.setStatus(StaffStatus.ACTIVE);
-    }
-
-    @AfterEach
-    void cleanup() throws Exception {
-        for (Path p : createdFiles) {
-            Files.deleteIfExists(p);
-        }
     }
 
     @Test
@@ -343,33 +325,6 @@ class StockIssueServiceTest {
     }
 
     @Test
-    @DisplayName("create - Save PNG e-signature and signer info immediately on issue creation")
-    void create_withSignature_savesSignatureUrl() throws Exception {
-        when(accessService.canAccessBranch(1L, 1L)).thenReturn(true);
-        when(branchRepository.findById(1L)).thenReturn(Optional.of(branch1));
-        when(staffRepository.findByUser_UserId(1L)).thenReturn(Optional.of(staff));
-        when(materialRepository.findById(100L)).thenReturn(Optional.of(material));
-
-        BranchInventory inv = new BranchInventory();
-        inv.setBranch(branch1);
-        inv.setMaterial(material);
-        inv.setCurrentStock(new BigDecimal("10.000"));
-        when(inventoryRepository.findForUpdate(1L, 100L)).thenReturn(Optional.of(inv));
-        when(batchRepository.findAvailableBatchesFefoForUpdate(eq(1L), eq(100L), any(LocalDate.class)))
-                .thenReturn(List.of(buildBatch(1L, "LO-1", LocalDate.now().plusMonths(3), "10.000", "100000")));
-        when(issueRepository.save(any(StockIssue.class))).thenAnswer(i -> i.getArgument(0));
-
-        StockIssueCreateDTO dto = validIssueDto("INTERNAL_USE");
-        dto.setSignatureData(buildValidSignatureDataUrl());
-
-        StockIssueResponseDTO res = issueService.create(dto, 1L);
-        trackSignatureFile(res.getSignatureUrl());
-
-        assertNotNull(res.getSignatureUrl());
-        assertEquals("Nguyễn Văn Kho", res.getSignedByName());
-    }
-
-    @Test
     @DisplayName("searchIssues & searchTransfers - Check permissions, date range, and map DTOs")
     void searchIssuesAndTransfers_validatesAndMaps() {
         Pageable pageable = PageRequest.of(0, 10);
@@ -414,8 +369,8 @@ class StockIssueServiceTest {
     }
 
     @Test
-    @DisplayName("getById & signIssue - Allow source or destination branch to view/sign transfer; block re-signing")
-    void getByIdAndSignIssue_checksSourceOrDestinationAccessAndImmutability() throws Exception {
+    @DisplayName("getById - Allow source or destination branch to view transfer; block unauthorized users")
+    void getById_checksSourceOrDestinationAccess() {
         assertEquals(HttpStatus.BAD_REQUEST,
                 assertThrows(ResponseStatusException.class, () -> issueService.getById(0L, 1L)).getStatusCode());
 
@@ -432,28 +387,15 @@ class StockIssueServiceTest {
         when(accessService.canAccessBranch(20L, 1L)).thenReturn(false);
         when(accessService.canAccessBranch(20L, 2L)).thenReturn(true);
 
-        // User chi nhánh đích được phép xem và ký
+        // User chi nhánh đích được phép xem
         StockIssueResponseDTO viewed = issueService.getById(300L, 20L);
         assertEquals("DC300", viewed.getIssueCode());
-
-        when(staffRepository.findByUser_UserId(20L)).thenReturn(Optional.of(staff));
-        when(issueRepository.save(any(StockIssue.class))).thenAnswer(i -> i.getArgument(0));
-        StockIssueResponseDTO signed = issueService.signIssue(300L, buildValidSignatureDataUrl(), 20L);
-        trackSignatureFile(signed.getSignatureUrl());
-        assertNotNull(signed.getSignatureUrl());
-
-        // Chặn ký đè
-        assertEquals(HttpStatus.BAD_REQUEST,
-                assertThrows(ResponseStatusException.class,
-                        () -> issueService.signIssue(300L, buildValidSignatureDataUrl(), 20L)).getStatusCode());
 
         // Chặn user ngoài cả 2 chi nhánh
         when(accessService.canAccessBranch(99L, 1L)).thenReturn(false);
         when(accessService.canAccessBranch(99L, 2L)).thenReturn(false);
         assertEquals(HttpStatus.FORBIDDEN,
                 assertThrows(ResponseStatusException.class, () -> issueService.getById(300L, 99L)).getStatusCode());
-        assertEquals(HttpStatus.FORBIDDEN,
-                assertThrows(ResponseStatusException.class, () -> issueService.signIssue(300L, "data", 99L)).getStatusCode());
     }
 
     private StockIssueCreateDTO validIssueDto(String issueType) {
@@ -484,25 +426,5 @@ class StockIssueServiceTest {
         b.setImportPrice(new BigDecimal(price));
         b.setStatus(BatchStatus.ACTIVE);
         return b;
-    }
-
-    private String buildValidSignatureDataUrl() throws Exception {
-        BufferedImage img = new BufferedImage(100, 40, BufferedImage.TYPE_INT_ARGB);
-        Graphics2D g = img.createGraphics();
-        g.setColor(Color.WHITE);
-        g.fillRect(0, 0, 100, 40);
-        g.setColor(Color.BLACK);
-        g.setStroke(new BasicStroke(3f));
-        g.drawLine(10, 10, 80, 30);
-        g.dispose();
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        ImageIO.write(img, "png", baos);
-        return "data:image/png;base64," + Base64.getEncoder().encodeToString(baos.toByteArray());
-    }
-
-    private void trackSignatureFile(String url) {
-        if (url != null && url.startsWith("/")) {
-            createdFiles.add(Paths.get(url.substring(1)).toAbsolutePath().normalize());
-        }
     }
 }

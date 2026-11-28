@@ -6,8 +6,12 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * DTO biểu diễn thông tin một tài khoản trong cùng cơ sở khi nhân viên / Admin tìm kiếm người nhận để gửi tin nhắn.
- * Hỗ trợ trường hợp 1 tài khoản User quản lý nhiều hồ sơ bệnh nhân (PatientProfile) mà không tạo tài khoản chat trùng lặp.
+ * DTO biểu diễn thông tin một tài khoản trong cùng cơ sở khi nhân viên / Admin tìm kiếm người nhận để gửi tin nhắn
+ * (qua {@code GET /api/chat/recipients} hoặc {@code GET /api/chat/recipients/page}).
+ * <p>
+ * Hỗ trợ trường hợp 1 tài khoản {@code User} quản lý nhiều hồ sơ bệnh nhân ({@code PatientProfile})
+ * bằng cách gom tóm tắt vào {@code patientProfileCount} và {@code patientProfilesSummary} mà không tạo
+ * tài khoản chat trùng lặp hay lộ thông tin lâm sàng nhạy cảm.
  */
 @Data
 @Builder

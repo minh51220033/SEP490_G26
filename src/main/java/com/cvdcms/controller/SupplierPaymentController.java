@@ -21,10 +21,25 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+/**
+ * REST Controller cung cấp API quản lý Công nợ &amp; Thanh toán Nhà cung cấp cho phân hệ Kho
+ * ({@code /api/inventory/supplier-payments}).
+ *
+ * <p><b>Chức năng:</b>
+ * <ul>
+ *   <li>Tổng hợp công nợ động ({@code totalImport - totalPaid}) theo chi nhánh ({@code GET /debts}).</li>
+ *   <li>Tra cứu lịch sử thanh toán có lọc &amp; phân trang ({@code GET ""}).</li>
+ *   <li>Tạo mới phiếu thanh toán công nợ ({@code POST ""}).</li>
+ * </ul>
+ * </p>
+ *
+ * <p><b>Được gọi từ:</b> Trang Quản lý Nhà cung cấp ({@code suppliers.js}) và phân hệ Quản lý Kho ({@code inventory.js}).</p>
+ */
 @RestController
 @RequestMapping("/api/inventory/supplier-payments")
 public class SupplierPaymentController {
 
+    /** Danh sách whitelist các trường sắp xếp hợp lệ cho lịch sử thanh toán. */
     private static final Set<String> ALLOWED_SORT_FIELDS = Set.of(
             "paymentDate",
             "supplierPaymentId",
@@ -38,6 +53,19 @@ public class SupplierPaymentController {
         this.paymentService = paymentService;
     }
 
+    /**
+     * Lấy danh sách tổng hợp công nợ nhà cung cấp theo chi nhánh (tính động {@code totalImport - totalPaid}).
+     *
+     * <p><b>Endpoint:</b> {@code GET /api/inventory/supplier-payments/debts}</p>
+     * <p><b>Xử lý:</b> Xác thực người dùng qua {@link #requireUser} và gọi {@link SupplierPaymentService#getDebtSummaries}
+     * (service kiểm tra quyền truy cập chi nhánh qua {@code BranchAccessService}).</p>
+     * <p><b>Được gọi từ:</b> {@code loadSuppliers()} trong {@code suppliers.js} và tab công nợ trong {@code inventory.js}.</p>
+     *
+     * @param branchId ID chi nhánh cần xem công nợ (bắt buộc)
+     * @param keyword  từ khóa tìm kiếm nhà cung cấp (tùy chọn)
+     * @param session  phiên HTTP chứa {@code loggedInUser}
+     * @return danh sách {@link SupplierDebtSummaryDTO}
+     */
     @GetMapping("/debts")
     public List<SupplierDebtSummaryDTO> getDebtSummaries(
             @RequestParam Long branchId,
@@ -47,6 +75,27 @@ public class SupplierPaymentController {
         return paymentService.getDebtSummaries(branchId, keyword, user.getUserId());
     }
 
+    /**
+     * Tra cứu lịch sử thanh toán nhà cung cấp có phân trang, sắp xếp và lọc đa tiêu chí.
+     *
+     * <p><b>Endpoint:</b> {@code GET /api/inventory/supplier-payments}</p>
+     * <p><b>Xử lý:</b> Xác thực phiên đăng nhập, kiểm tra {@code page >= 0} và {@code 1 <= size <= 100},
+     * chuẩn hóa {@code sortBy} theo {@link #ALLOWED_SORT_FIELDS} (kèm tie-breaker theo {@code supplierPaymentId}),
+     * sau đó gọi {@link SupplierPaymentService#searchPayments}.</p>
+     * <p><b>Được gọi từ:</b> Phân hệ Quản lý Kho ({@code inventory.js}).</p>
+     *
+     * @param branchId   ID chi nhánh (bắt buộc)
+     * @param supplierId ID nhà cung cấp (tùy chọn)
+     * @param keyword    từ khóa tìm theo mã phiếu chi, tên/mã NCC, số chứng từ, mã phiếu nhập (tùy chọn)
+     * @param fromDate   từ ngày thanh toán, định dạng ISO {@code yyyy-MM-dd} (tùy chọn)
+     * @param toDate     đến ngày thanh toán, định dạng ISO {@code yyyy-MM-dd} (tùy chọn)
+     * @param page       chỉ số trang (mặc định 0)
+     * @param size       kích thước trang, 1–100 (mặc định 10)
+     * @param sortBy     trường sắp xếp (mặc định {@code paymentDate})
+     * @param direction  chiều sắp xếp {@code asc}/{@code desc} (mặc định {@code desc})
+     * @param session    phiên HTTP chứa {@code loggedInUser}
+     * @return trang kết quả {@link Page}&lt;{@link SupplierPaymentResponseDTO}&gt;
+     */
     @GetMapping
     public Page<SupplierPaymentResponseDTO> listPayments(
             @RequestParam Long branchId,
@@ -73,6 +122,19 @@ public class SupplierPaymentController {
         return paymentService.searchPayments(branchId, supplierId, keyword, fromDate, toDate, pageable, user.getUserId());
     }
 
+    /**
+     * Tạo mới phiếu thanh toán công nợ nhà cung cấp (gắn phiếu nhập đối ứng hoặc trả công nợ chung).
+     *
+     * <p><b>Endpoint:</b> {@code POST /api/inventory/supplier-payments}</p>
+     * <p><b>Đầu vào:</b> {@link SupplierPaymentCreateDTO} (chứa {@code branchId}, {@code supplierId}, {@code amount},
+     * {@code receiptId} tùy chọn, {@code clientRequestId} chống double-submit...).</p>
+     * <p><b>Kết quả:</b> HTTP {@code 201 Created} cùng {@link SupplierPaymentResponseDTO} vừa tạo.</p>
+     * <p><b>Được gọi từ:</b> Modal thanh toán trong {@code suppliers.js} ({@code #supplierPayForm}) và {@code inventory.js}.</p>
+     *
+     * @param dto     dữ liệu tạo phiếu thanh toán
+     * @param session phiên HTTP chứa {@code loggedInUser}
+     * @return thông tin phiếu thanh toán vừa được ghi nhận
+     */
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public SupplierPaymentResponseDTO createPayment(
@@ -82,6 +144,13 @@ public class SupplierPaymentController {
         return paymentService.createPayment(dto, user.getUserId());
     }
 
+    /**
+     * Kiểm tra phiên đăng nhập và trích xuất đối tượng {@link User} từ {@link HttpSession}.
+     * Ném HTTP {@code 401 Unauthorized} nếu chưa đăng nhập hoặc thông tin tài khoản không hợp lệ.
+     *
+     * @param session phiên HTTP hiện tại
+     * @return đối tượng {@link User} đang đăng nhập
+     */
     private User requireUser(HttpSession session) {
         Object value = session != null ? session.getAttribute("loggedInUser") : null;
         if (!(value instanceof User user) || user.getUserId() == null) {
@@ -90,11 +159,24 @@ public class SupplierPaymentController {
         return user;
     }
 
+    /**
+     * Chuyển đổi {@link IllegalArgumentException} thành HTTP {@code 400 Bad Request} dạng JSON {@code {"message": "..."}}.
+     *
+     * @param ex ngoại lệ tham số/nghiệp vụ
+     * @return phản hồi JSON chứa thông báo lỗi
+     */
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<Map<String, String>> handleBadRequest(IllegalArgumentException ex) {
         return ResponseEntity.badRequest().body(Map.of("message", ex.getMessage()));
     }
 
+    /**
+     * Chuyển đổi {@link ResponseStatusException} (400/401/403/404...) thành phản hồi JSON {@code {"message": "..."}}
+     * giữ nguyên mã trạng thái HTTP gốc.
+     *
+     * @param ex ngoại lệ có mã trạng thái HTTP
+     * @return phản hồi JSON chứa thông điệp lỗi
+     */
     @ExceptionHandler(ResponseStatusException.class)
     public ResponseEntity<Map<String, String>> handleResponseStatus(ResponseStatusException ex) {
         String msg = ex.getReason() != null ? ex.getReason() : "Không thể xử lý yêu cầu thanh toán nhà cung cấp.";

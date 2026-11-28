@@ -8,7 +8,6 @@ import org.junit.jupiter.api.Test;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -16,7 +15,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class InventoryPdfGeneratorTest {
 
     @Test
-    @DisplayName("generateReceiptPdf - Generate valid %PDF-1.4 receipt PDF with signature/debt and %%EOF footer")
+    @DisplayName("generateReceiptPdf - Generate valid %PDF-1.4 receipt PDF with debt summary and %%EOF footer")
     void generateReceiptPdf_generatesValidPdfBytes() {
         StockReceiptResponseDTO receipt = new StockReceiptResponseDTO(
                 1L, "PN-2026-001", 1L, 10L, LocalDate.of(2026, 11, 10), new BigDecimal("2500000")
@@ -29,8 +28,6 @@ class InventoryPdfGeneratorTest {
         receipt.setNotes("Nhập đợt 1");
         receipt.setPaidAmount(new BigDecimal("1000000"));
         receipt.setRemainingDebt(new BigDecimal("1500000"));
-        receipt.setSignedByName("Nguyễn Văn Kho");
-        receipt.setSignedAt(LocalDateTime.of(2026, 11, 10, 15, 0));
 
         StockReceiptResponseDTO.ItemDetail item = new StockReceiptResponseDTO.ItemDetail(
                 1L, 100L, "VT-01", "Composite 3M Z350 XT", "Ống", "LO-01",

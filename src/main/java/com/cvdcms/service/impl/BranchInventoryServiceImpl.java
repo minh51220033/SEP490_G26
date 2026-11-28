@@ -11,7 +11,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Xử lý nghiệp vụ tìm kiếm tồn kho theo cơ sở.
+ * Triển khai nghiệp vụ tìm kiếm và tổng hợp tồn kho vật tư theo cơ sở ({@link BranchInventoryService}).
+ * <p>Được gọi từ {@link com.cvdcms.controller.BranchInventoryController#getInventory}.</p>
  */
 @Service
 public class BranchInventoryServiceImpl
@@ -19,13 +20,26 @@ public class BranchInventoryServiceImpl
 
     private final BranchInventoryRepository inventoryRepository;
 
+    /**
+     * Khởi tạo service với repository tồn kho cơ sở.
+     *
+     * @param inventoryRepository repository truy vấn bảng {@code branch_inventory}
+     */
     public BranchInventoryServiceImpl(
             BranchInventoryRepository inventoryRepository) {
         this.inventoryRepository = inventoryRepository;
     }
 
     /**
-     * Tìm kiếm tồn kho theo cơ sở, từ khóa và trạng thái tồn kho thấp.
+     * Tìm kiếm tồn kho phân trang theo cơ sở, từ khóa và trạng thái tồn kho thấp.
+     * <p>Xử lý: kiểm tra hợp lệ {@code branchId} và {@code pageable} → chuẩn hóa từ khóa tìm kiếm
+     * → truy vấn {@link BranchInventoryRepository#searchByBranch} → ánh xạ sang {@link InventoryItemDTO}.</p>
+     *
+     * @param branchId mã cơ sở (&gt; 0)
+     * @param keyword  từ khóa tìm kiếm mã/tên/nhóm vật tư (tùy chọn)
+     * @param lowStock {@code true} để chỉ lọc vật tư chạm ngưỡng tối thiểu (tùy chọn)
+     * @param pageable cấu hình phân trang và sắp xếp
+     * @return trang {@link InventoryItemDTO} phục vụ bảng tồn kho
      */
     @Override
     @Transactional(readOnly = true)

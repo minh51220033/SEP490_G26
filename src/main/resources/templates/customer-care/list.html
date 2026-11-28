@@ -509,7 +509,7 @@
                 }
             </style>
 
-            <!-- 1. TIÊU ĐỀ TRANG & NOTIFICATION CENTER -->
+            <!-- 1. TIÊU ĐỀ TRANG, TRẠNG THÁI WEBSOCKET, CHỌN CHI NHÁNH, NOTIFICATION CENTER & NÚT TẠO MỚI -->
             <div class="d-flex flex-wrap flex-xl-nowrap align-items-center justify-content-between gap-3 mb-4">
                 <div>
                     <div class="dv-page-title">
@@ -562,7 +562,7 @@
                 </div>
             </div>
 
-            <!-- 2. 4 THẺ KPI SUMMARY CARDS -->
+            <!-- 2. 4 THẺ KPI SUMMARY CARDS (Tổng mở, Quá hạn, Hôm nay, Chờ Bác sĩ - click chuyển nhanh tab tương ứng) -->
             <div class="row g-3 mb-4" aria-label="Chỉ số tổng quan chăm sóc khách hàng">
                 <div class="col-xl-3 col-sm-6">
                     <div class="dv-kpi-card position-relative" id="kpiCardTotal" data-kpi-tab="ALL" role="button" tabindex="0" style="--kpi-accent: #0284c7;">
@@ -624,7 +624,7 @@
             <!-- THÔNG BÁO HỆ THỐNG -->
             <p id="message" class="notice" role="status" aria-live="polite" hidden></p>
 
-            <!-- 3. BỘ LỌC TÌM KIẾM, CHẾ ĐỘ XEM & TABS TRẠNG THÁI -->
+            <!-- 3. THANH CÔNG CỤ TÌM KIẾM, CHUYỂN CHẾ ĐỘ XEM (DANH SÁCH/Ô LỊCH), BỘ LỌC NÂNG CAO & TABS TRẠNG THÁI -->
             <div class="dv-toolbar-card" id="filterToolbarSection">
                 <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
                     <!-- Tìm kiếm từ khóa -->
@@ -753,7 +753,7 @@
                 </div>
             </div>
 
-            <!-- 4. KHỐI BẢNG DỮ LIỆU THÔNG MINH (ĐỒNG BỘ DOCTOR/DAILY-VISITS) -->
+            <!-- 4. BẢNG DỮ LIỆU CÔNG VIỆC CSKH (Cột cố định Mã CV/Bệnh nhân/Thao tác, tùy biến cột & phân trang MISA AMIS) -->
             <div class="dv-grid-card" id="tasksPanel">
                 <!-- Thanh công cụ phía trên bảng -->
                 <div class="dv-grid-topbar">
@@ -1359,9 +1359,8 @@
 </div>
 
 <!-- ========================================================================= -->
-<!-- MODAL 4: BÁC SĨ NHẬP PHẢN HỒI CHUYÊN MÔN (SCR-44.5)                       -->
+<!-- MODAL 4: MỞ LẠI CÔNG VIỆC ĐÃ HOÀN THÀNH (CHỈ ADMIN - LƯU AUDIT LOG)       -->
 <!-- ========================================================================= -->
-<!-- MODAL: MỞ LẠI CÔNG VIỆC ĐÃ HOÀN THÀNH (CHỈ ADMIN) -->
 <div id="reopenModal" class="cc-modal-backdrop modal-backdrop" hidden>
     <div class="cc-modal-dialog modal-dialog" role="dialog" aria-modal="true" aria-labelledby="reopenModalTitle">
         <div class="cc-modal-content modal-content">
@@ -1392,6 +1391,9 @@
     </div>
 </div>
 
+<!-- ========================================================================= -->
+<!-- MODAL 5: BÁC SĨ NHẬP PHẢN HỒI CHUYÊN MÔN (SCR-44.5 - nextStatus)          -->
+<!-- ========================================================================= -->
 <div id="doctorResponseModal" class="cc-modal-backdrop modal-backdrop" hidden>
     <div class="cc-modal-dialog modal-dialog modal-lg" role="dialog" aria-modal="true" aria-labelledby="doctorResponseModalTitle">
         <div class="cc-modal-content modal-content">
@@ -1433,7 +1435,9 @@
     </div>
 </div>
 
-<!-- MODAL XEM ĐẦY ĐỦ NỘI DUNG CHẨN ĐOÁN, LỜI DẶN & GHI CHÚ -->
+<!-- ========================================================================= -->
+<!-- MODAL 6: XEM ĐẦY ĐỦ NỘI DUNG CHẨN ĐOÁN, LỜI DẶN & GHI CHÚ CSKH            -->
+<!-- ========================================================================= -->
 <div id="ccContentPreviewModal" class="cc-modal-backdrop modal-backdrop" hidden>
     <div class="cc-modal-dialog modal-dialog" role="dialog" aria-modal="true" aria-labelledby="ccPreviewModalTitle">
         <div class="cc-modal-content modal-content">
@@ -1454,7 +1458,9 @@
     </div>
 </div>
 
-<!-- MODAL XEM THÊM CÔNG VIỆC TRONG NGÀY TRÊN LỊCH -->
+<!-- ========================================================================= -->
+<!-- MODAL 7: XEM THÊM & LỌC DANH SÁCH CÔNG VIỆC TRONG NGÀY TRÊN LỊCH          -->
+<!-- ========================================================================= -->
 <div id="ccDayTasksModal" class="cc-modal-backdrop modal-backdrop" hidden>
     <div class="cc-modal-dialog modal-dialog modal-lg" style="max-width: 920px;" role="dialog" aria-modal="true" aria-labelledby="ccDayTasksModalTitle">
         <div class="cc-modal-content modal-content">
