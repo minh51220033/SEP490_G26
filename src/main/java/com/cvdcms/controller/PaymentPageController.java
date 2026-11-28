@@ -42,6 +42,10 @@ import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 
+/**
+ * [Phân hệ]: Thu ngân & Quản lý Thanh toán, Ví tạm ứng, Hoàn tiền, Công nợ
+ * [Vai trò]: Controller chính (`/payments`) điều phối toàn bộ màn hình nghiệp vụ thu ngân gồm Tổng quan thu ngân/bệnh nhân, Lịch sử thu tiền, In biên lai, Ví tạm ứng, Hoàn tiền, Công nợ và các API JSON hỗ trợ form thu/hoàn.
+ */
 @Controller
 @RequestMapping("/payments")
 public class PaymentPageController {
@@ -72,14 +76,23 @@ public class PaymentPageController {
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private SupplierPaymentRepository supplierPaymentRepository;
 
+    /**
+     * [Hàm hỗ trợ]: Tiêm `CashierOverviewService` phục vụ kiểm thử hoặc cấu hình phụ thuộc tùy chọn.
+     */
     public void setCashierOverviewService(com.cvdcms.service.CashierOverviewService cashierOverviewService) {
         this.cashierOverviewService = cashierOverviewService;
     }
 
+    /**
+     * [Hàm hỗ trợ]: Tiêm `InvoiceService` phục vụ tính toán chỉ số tài chính tổng quan trên dashboard thu ngân.
+     */
     public void setInvoiceService(com.cvdcms.service.InvoiceService invoiceService) {
         this.invoiceService = invoiceService;
     }
 
+    /**
+     * [Hàm hỗ trợ]: Khởi tạo controller thu ngân với các service thanh toán, hoàn tiền, công nợ và các repository nền tảng.
+     */
     @org.springframework.beans.factory.annotation.Autowired
     public PaymentPageController(
             PaymentService paymentService,
@@ -103,6 +116,9 @@ public class PaymentPageController {
         this.staffBranchAssignmentRepository = staffBranchAssignmentRepository;
     }
 
+    /**
+     * [Hàm hỗ trợ]: Constructor mở rộng kèm `TreatmentPlanRepository` phục vụ kiểm thử hoặc khởi tạo thủ công.
+     */
     public PaymentPageController(
             PaymentService paymentService,
             RefundService refundService,
@@ -120,6 +136,9 @@ public class PaymentPageController {
         this.treatmentPlanRepository = treatmentPlanRepository;
     }
 
+    /**
+     * [Hàm hỗ trợ]: Đẩy trạng thái menu đang chọn (`activeMenu`) và thông tin tài khoản phiên đăng nhập vào `Model` để render layout sidebar.
+     */
     private void populateUserAndSidebar(Model model, HttpSession session, String activeMenu) {
         model.addAttribute("activeMenu", activeMenu);
         if (session != null) {
@@ -129,6 +148,9 @@ public class PaymentPageController {
         }
     }
 
+    /**
+     * [Hàm hỗ trợ]: Trích xuất `userId` của người đang đăng nhập từ `HttpSession` hoặc ném `AccessDeniedException` nếu chưa đăng nhập.
+     */
     private Long getCurrentUserId(HttpSession session) {
         if (session != null && session.getAttribute("loggedInUser") instanceof User u && u.getUserId() != null) {
             return u.getUserId();
@@ -136,10 +158,16 @@ public class PaymentPageController {
         throw new AccessDeniedException("Chưa đăng nhập. Vui lòng đăng nhập để tiếp tục.");
     }
 
+    /**
+     * [Hàm hỗ trợ]: Kiểm tra tài khoản hiện tại có vai trò Admin đang hoạt động (được phép xem/thao tác toàn hệ thống) hay không.
+     */
     private boolean isFinanceAdminOrAccountant(Long userId) {
         return userId != null && userRepository.hasActiveAdminRole(userId);
     }
 
+    /**
+     * [Hàm hỗ trợ]: Xác định danh sách chi nhánh mà người dùng được phép xem dữ liệu tài chính (Admin lấy toàn bộ; nhân sự khác lấy theo phân công `ACTIVE` hoặc chi nhánh gốc).
+     */
     private List<Branch> resolveAllowedBranches(Long userId) {
         if (isFinanceAdminOrAccountant(userId)) {
             return branchRepository.findAll();
@@ -157,6 +185,9 @@ public class PaymentPageController {
         return branchRepository.findAllById(branchIds);
     }
 
+    /**
+     * [Hàm hỗ trợ]: Chuẩn hóa và kiểm tra quyền truy cập đối với `requestedBranchId`; Admin giữ nguyên giá trị lọc, nhân sự chi nhánh tự động chọn chi nhánh phân công đầu tiên nếu bỏ trống và ném `AccessDeniedException` nếu truy cập ngoài phạm vi.
+     */
     private Long resolveBranchId(Long requestedBranchId, Long userId) {
         if (isFinanceAdminOrAccountant(userId)) {
             return requestedBranchId;
@@ -180,10 +211,16 @@ public class PaymentPageController {
         return requestedBranchId;
     }
 
+    /**
+     * [Hàm hỗ trợ]: Quy đổi giá trị tiền `BigDecimal` bị `null` về `BigDecimal.ZERO` để tránh `NullPointerException`.
+     */
     private static BigDecimal safeMoney(BigDecimal val) {
         return val != null ? val : BigDecimal.ZERO;
     }
 
+    /**
+     * [Hàm hỗ trợ]: Định dạng nhãn khoảng thời gian lọc (`Hôm nay`, `Ngày dd/MM/yyyy`, khoảng ngày hoặc `Toàn thời gian`) để hiển thị trên thanh tóm tắt bộ lọc.
+     */
     private static String formatFilterPeriodLabel(LocalDate from, LocalDate to) {
         LocalDate today = LocalDate.now();
         if (from != null && to != null) {
@@ -204,6 +241,9 @@ public class PaymentPageController {
         return "Toàn thời gian";
     }
 
+    /**
+     * [Hàm hỗ trợ]: Tra cứu tên chi nhánh đang được lọc từ danh sách chi nhánh được phép hoặc trả về `"Tất cả cơ sở"`.
+     */
     private static String resolveFilterBranchLabel(Long branchId, List<Branch> allowedBranches) {
         if (branchId != null && allowedBranches != null) {
             for (Branch b : allowedBranches) {
@@ -215,7 +255,10 @@ public class PaymentPageController {
         return "Tất cả cơ sở";
     }
 
-    // SCR-22.3: Lịch sử các đợt thanh toán
+    /**
+     * [Chức năng]: Hiển thị màn hình lịch sử các đợt thanh toán (`GET /payments`, view `finance/payments/list`).
+     * [Mục đích]: Hỗ trợ thu ngân/kế toán tra cứu và phân trang toàn bộ phiếu thu theo phạm vi chi nhánh được phân công, loại thanh toán (`PAYMENT`/`ADVANCE_DEPOSIT`), phương thức thanh toán, từ khóa và khoảng ngày, đồng thời tính tổng tiền thực thu theo đúng bộ lọc.
+     */
     @GetMapping
     public String listPayments(
             @RequestParam(required = false) Long branchId,
@@ -274,7 +317,9 @@ public class PaymentPageController {
         return "finance/payments/list";
     }
 
-    // Overload for backward compatibility
+    /**
+     * [Hàm hỗ trợ]: Overload giữ tương thích ngược cho `patientFinancialDashboard` (không truyền bộ lọc danh sách chờ và trạng thái thanh toán hóa đơn).
+     */
     public String patientFinancialDashboard(
             Long profileId,
             Long patientId,
@@ -291,6 +336,9 @@ public class PaymentPageController {
                 null, invoiceFromDate, invoiceToDate, paymentFromDate, paymentToDate, model, session);
     }
 
+    /**
+     * [Hàm hỗ trợ]: Overload giữ tương thích ngược cho `patientFinancialDashboard` (có `keyword` và `pendingPageNumber`, chưa lọc trạng thái hóa đơn).
+     */
     public String patientFinancialDashboard(
             Long profileId,
             Long patientId,
@@ -309,6 +357,9 @@ public class PaymentPageController {
                 null, invoiceFromDate, invoiceToDate, paymentFromDate, paymentToDate, model, session);
     }
 
+    /**
+     * [Hàm hỗ trợ]: Overload giữ tương thích ngược cho `patientFinancialDashboard` (chưa truyền các bộ lọc mở rộng theo chi nhánh/ngày/trạng thái chờ).
+     */
     public String patientFinancialDashboard(
             Long profileId,
             Long patientId,
@@ -335,7 +386,10 @@ public class PaymentPageController {
         );
     }
 
-    // SCR-22.1: Dashboard tài chính theo bệnh nhân
+    /**
+     * [Chức năng]: Hiển thị màn hình Tổng quan Thu ngân và Dashboard tài chính chi tiết theo bệnh nhân (`GET /payments/dashboard`, `/payments/patient/{profileId}`, view `finance/payments/dashboard`).
+     * [Mục đích]: Khi chưa chọn bệnh nhân: tổng hợp KPI doanh thu thực thu, hoàn tiền, thực thu ròng khách hàng, chỉ số hóa đơn và danh sách bệnh nhân chờ lập hóa đơn/thu tiền từ `CashierOverviewService` theo đúng chi nhánh phân quyền; khi đã chọn bệnh nhân: tải tổng hợp công nợ (`DebtService`), ví tạm ứng, danh sách hóa đơn/giao dịch phân trang theo ngày, kế hoạch điều trị và lịch sử hoàn tiền.
+     */
     @GetMapping({"/dashboard", "/patient/{profileId}"})
     public String patientFinancialDashboard(
             @PathVariable(required = false) Long profileId,
@@ -758,6 +812,10 @@ public class PaymentPageController {
         return "finance/payments/dashboard";
     }
 
+    /**
+     * [Chức năng]: Điều hướng đường dẫn tạo thanh toán cũ (`GET /payments/create`) sang trang chi tiết hóa đơn hoặc trang lập hóa đơn mới.
+     * [Mục đích]: Gom luồng thu tiền về trực tiếp trang chi tiết hóa đơn (`/invoices/{invoiceId}`) nếu đã có hóa đơn, hoặc về màn hình tạo hóa đơn (`/invoices/create`) nếu chưa lập hóa đơn.
+     */
     @GetMapping("/create")
     public String createPaymentForm(
             @RequestParam(required = false) Long invoiceId,
@@ -772,6 +830,10 @@ public class PaymentPageController {
         return "redirect:/invoices/create";
     }
 
+    /**
+     * [Chức năng]: Xử lý form ghi nhận một đợt thanh toán hóa đơn (`POST /payments/create`).
+     * [Mục đích]: Lấy ID thu ngân hiện tại, gọi `paymentService.processPayment` (hỗ trợ thu một phần hoặc thu đủ, trừ ví cọc/chuyển khoản/tiền mặt, phân bổ FIFO và chống ghi trùng theo `idempotencyKey`), gửi flash message và chuyển hướng về `returnUrl` hoặc trang chi tiết hóa đơn.
+     */
     @PostMapping("/create")
     public String processPayment(
             @ModelAttribute PaymentRequestDTO request,
@@ -799,6 +861,10 @@ public class PaymentPageController {
         }
     }
 
+    /**
+     * [Chức năng]: API JSON trả về danh sách các hóa đơn còn công nợ (`UNPAID`/`PARTIAL`) của một bệnh nhân trong phạm vi chi nhánh được phép (`GET /payments/api/patients/{profileId}/unpaid-invoices`).
+     * [Mục đích]: Phục vụ modal thu nợ nhanh và các dropdown chọn hóa đơn cần thanh toán, đảm bảo thu ngân chỉ nhìn thấy hóa đơn thuộc chi nhánh mình quản lý.
+     */
     @GetMapping("/api/patients/{profileId}/unpaid-invoices")
     @ResponseBody
     public org.springframework.http.ResponseEntity<?> getPatientUnpaidInvoices(
@@ -835,6 +901,10 @@ public class PaymentPageController {
         }
     }
 
+    /**
+     * [Chức năng]: API JSON trả về các nguồn có thể hoàn tiền của một bệnh nhân gồm số dư ví tạm ứng và danh sách hóa đơn đã có tiền thực thu (`GET /payments/api/patients/{profileId}/refund-sources`).
+     * [Mục đích]: Cung cấp dữ liệu cho modal tạo phiếu hoàn tiền giúp kế toán chọn hoàn từ số dư ví cọc hoặc hoàn từ một hóa đơn cụ thể (`status != CANCELLED` và `paidAmount > 0`) thuộc chi nhánh được phân quyền.
+     */
     @GetMapping("/api/patients/{profileId}/refund-sources")
     @ResponseBody
     public org.springframework.http.ResponseEntity<?> getPatientRefundSources(
@@ -884,6 +954,10 @@ public class PaymentPageController {
         }
     }
 
+    /**
+     * [Chức năng]: Hiển thị trang in biên lai/phiếu thu cho một giao dịch thanh toán (`GET /payments/{id}/receipt`, view `finance/payments/receipt`).
+     * [Mục đích]: Tải chi tiết phiếu thu, kiểm tra quyền truy cập chi nhánh của phiếu thu và đính kèm bảng chi tiết phân bổ FIFO từng dòng (`PaymentAllocationDTO`) để in giao khách hàng.
+     */
     @GetMapping("/{id}/receipt")
     public String printReceipt(
             @PathVariable Long id,
@@ -904,6 +978,10 @@ public class PaymentPageController {
         return "finance/payments/receipt";
     }
 
+    /**
+     * [Chức năng]: Hiển thị danh sách lịch sử nạp tiền tạm ứng vào ví cọc của bệnh nhân (`GET /payments/deposits`, view `finance/payments/deposits`).
+     * [Mục đích]: Lọc và phân trang các phiếu thu loại `ADVANCE_DEPOSIT` theo chi nhánh được phân công, từ khóa, khoảng ngày và tính tổng tiền tạm ứng đã thu; nếu truyền `profileId` thì chuyển thẳng sang trang tạo tạm ứng cho bệnh nhân đó.
+     */
     @GetMapping("/deposits")
     public String listDeposits(
             @RequestParam(required = false) Long profileId,
@@ -968,6 +1046,10 @@ public class PaymentPageController {
         return "finance/payments/deposits";
     }
 
+    /**
+     * [Chức năng]: Hiển thị biểu mẫu nạp tiền tạm ứng mới (`GET /payments/deposits/create`, view `finance/payments/deposit-create`).
+     * [Mục đích]: Nạp danh sách chi nhánh được phép và nếu có `profileId` thì hiển thị sẵn thông tin bệnh nhân cùng lịch sử các lần nạp cọc trước đó.
+     */
     @GetMapping("/deposits/create")
     public String createDepositForm(
             @RequestParam(required = false) Long profileId,
@@ -988,6 +1070,10 @@ public class PaymentPageController {
         return "finance/payments/deposit-create";
     }
 
+    /**
+     * [Chức năng]: Xử lý submit form nạp tiền tạm ứng vào ví cọc bệnh nhân (`POST /payments/deposits`).
+     * [Mục đích]: Kiểm tra an toàn đường dẫn `returnUrl` (chống open redirect), gọi `paymentService.processAdvanceDeposit` để cộng số dư ví tạm ứng và ghi phiếu `TU...`, sau đó chuyển hướng kèm thông báo kết quả.
+     */
     @PostMapping("/deposits")
     public String saveAdvanceDeposit(
             @ModelAttribute PaymentRequestDTO request,
@@ -1032,6 +1118,10 @@ public class PaymentPageController {
         return targetRedirect;
     }
 
+    /**
+     * [Chức năng]: Hiển thị danh sách phiếu hoàn tiền (`GET /payments/refunds`, view `finance/payments/refunds`).
+     * [Mục đích]: Phân trang và lọc lịch sử hoàn tiền theo chi nhánh được phân quyền, phương thức hoàn (`RefundMethod`), từ khóa và khoảng ngày, đồng thời tính tổng số tiền đã hoàn theo bộ lọc hiện hành.
+     */
     @GetMapping("/refunds")
     public String listRefunds(
             @RequestParam(required = false) Long branchId,
@@ -1088,6 +1178,10 @@ public class PaymentPageController {
         return "finance/payments/refunds";
     }
 
+    /**
+     * [Chức năng]: Xử lý submit form lập phiếu hoàn tiền cho bệnh nhân (`POST /payments/refunds`).
+     * [Mục đích]: Gọi `refundService.processRefund` với quyền nhân sự hiện tại và điều hướng về dashboard bệnh nhân (nếu `returnToDashboard=true`), trang chi tiết hóa đơn hoặc danh sách hoàn tiền kèm thông báo flash.
+     */
     @PostMapping("/refunds")
     public String saveRefund(
             @ModelAttribute RefundRequestDTO request,
@@ -1129,6 +1223,10 @@ public class PaymentPageController {
         }
     }
 
+    /**
+     * [Chức năng]: Hiển thị màn hình chi tiết công nợ và các khoản chờ lập hóa đơn/thu tiền của một bệnh nhân (`GET /payments/debts/{profileId}`, view `finance/payments/debt-detail`).
+     * [Mục đích]: Giới hạn dữ liệu theo phạm vi chi nhánh được phép của người dùng, tải chi tiết từ `cashierOverviewService.findDebtDetail` (ném 404 nếu không còn khoản chờ xử lý) cùng danh sách kế hoạch điều trị của bệnh nhân.
+     */
     @GetMapping("/debts/{profileId}")
     public String viewDebtDetail(@PathVariable Long profileId, @RequestParam(required = false) Long branchId,
                                  Model model, HttpSession session) {
@@ -1149,6 +1247,10 @@ public class PaymentPageController {
         return "finance/payments/debt-detail";
     }
 
+    /**
+     * [Chức năng]: Hiển thị danh sách công nợ tổng hợp theo từng bệnh nhân (`GET /payments/debts`, view `finance/payments/debts`).
+     * [Mục đích]: Gọi `debtService.getPatientDebts` để phân trang các bệnh nhân còn nợ trong phạm vi chi nhánh được phép, hỗ trợ lọc theo chi nhánh, trạng thái thanh toán (`UNPAID`/`PARTIAL`), từ khóa và khoảng ngày phát sinh hóa đơn.
+     */
     @GetMapping("/debts")
     public String listDebts(
             @RequestParam(required = false) Long branchId,

@@ -5,12 +5,16 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
 /**
- * Điều hướng trang trung tâm Quản lý danh mục.
- * Mặc định chuyển tiếp đến tab 1 (Danh mục dịch vụ) hoặc tab tương ứng từ tham số.
+ * [Phân hệ]: Danh mục dịch vụ (Quản trị)
+ * [Vai trò]: Controller điều hướng trung tâm quản lý danh mục sang từng màn hình danh mục con tương ứng.
  */
 @Controller
 public class AdminCatalogRedirectController {
 
+    /**
+     * [Chức năng]: Xử lý điều hướng endpoint GET /admin/catalogs và /admin/catalog theo tham số tab.
+     * [Mục đích]: Chuyển tiếp người dùng đến màn hình nhóm dịch vụ, thuốc, mã bệnh ICD-10 hoặc mặc định về danh sách dịch vụ (/admin/services).
+     */
     @GetMapping({"/admin/catalogs", "/admin/catalog"})
     public String catalogHub(@RequestParam(value = "tab", required = false) String tab) {
         if ("categories".equalsIgnoreCase(tab)) {

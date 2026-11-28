@@ -30,6 +30,10 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
+/**
+ * [Phân hệ]: Báo cáo quản trị & Xuất Excel
+ * [Vai trò]: Controller điều hướng màn hình báo cáo tổng quan, tài chính, vận hành và cung cấp API tải file báo cáo Excel (.xlsx) theo phân quyền chi nhánh.
+ */
 @Controller
 @RequestMapping("/admin/reports")
 @RequiredArgsConstructor
@@ -41,6 +45,9 @@ public class AdminReportController {
     private final UserRepository userRepository;
     private final StaffBranchAssignmentRepository staffBranchAssignmentRepository;
 
+    /**
+     * [Hàm hỗ trợ]: Nạp thông tin người dùng đang đăng nhập, vai trò, quyền hạn và trạng thái menu đang chọn vào Model cho thanh điều hướng.
+     */
     private void populateUserAndSidebar(Model model, HttpSession session, String activeMenu) {
         model.addAttribute("activeMenu", activeMenu);
         if (session != null) {
@@ -52,6 +59,9 @@ public class AdminReportController {
         }
     }
 
+    /**
+     * [Hàm hỗ trợ]: Lấy mã người dùng hiện tại từ HttpSession; ném AccessDeniedException nếu phiên chưa đăng nhập.
+     */
     private Long getCurrentUserId(HttpSession session) {
         if (session != null && session.getAttribute("loggedInUser") instanceof User u && u.getUserId() != null) {
             return u.getUserId();
@@ -59,10 +69,17 @@ public class AdminReportController {
         throw new AccessDeniedException("Chưa đăng nhập. Vui lòng đăng nhập để tiếp tục.");
     }
 
+    /**
+     * [Hàm hỗ trợ]: Kiểm tra người dùng hiện tại có vai trò quản trị hệ thống đang hoạt động (xem toàn chuỗi) hay không.
+     */
     private boolean isFinanceAdminOrAccountant(Long userId) {
         return userId != null && userRepository.hasActiveAdminRole(userId);
     }
 
+    /**
+     * [Chức năng]: Xác định danh sách chi nhánh người dùng được phép xem báo cáo.
+     * [Mục đích]: Trả về toàn bộ chi nhánh nếu là quản trị viên; ngược lại lấy các chi nhánh nhân sự được phân công ACTIVE trong staff_branch_assignments hoặc chi nhánh gốc gắn trên tài khoản.
+     */
     private List<Branch> resolveAllowedBranches(Long userId) {
         if (isFinanceAdminOrAccountant(userId)) {
             return branchRepository.findAll();
@@ -80,6 +97,10 @@ public class AdminReportController {
         return branchRepository.findAllById(branchIds);
     }
 
+    /**
+     * [Chức năng]: Xác định tập mã chi nhánh áp dụng để truy vấn dữ liệu báo cáo theo phạm vi quyền.
+     * [Mục đích]: Cho phép quản trị viên xem toàn chuỗi (trả về null) hoặc lọc 1 chi nhánh; với nhân sự thường, xác thực chi nhánh yêu cầu thuộc phạm vi được phân công (ném AccessDeniedException nếu vượt quyền) và mặc định giới hạn trong danh sách chi nhánh được phân công.
+     */
     private Collection<Long> resolveBranchScope(Long requestedBranchId, Long userId, List<Branch> allowedBranches) {
         if (isFinanceAdminOrAccountant(userId)) {
             if (requestedBranchId != null && requestedBranchId > 0) {
@@ -102,6 +123,9 @@ public class AdminReportController {
         return allowedIds;
     }
 
+    /**
+     * [Hàm hỗ trợ]: Tạo nhãn tên chi nhánh hiển thị trên giao diện và tiêu đề file báo cáo Excel tương ứng với phạm vi lọc.
+     */
     private String resolveBranchDisplayName(Long branchId, Collection<Long> branchIds, List<Branch> allowedBranches, boolean isPrivileged) {
         if (branchId != null && branchId > 0) {
             return allowedBranches.stream()
@@ -119,6 +143,10 @@ public class AdminReportController {
         return "Các chi nhánh được phân công (" + allowedBranches.size() + " cơ sở)";
     }
 
+    /**
+     * [Chức năng]: Hiển thị trang báo cáo tổng quan, tài chính và vận hành (GET /admin/reports).
+     * [Mục đích]: Điều hướng Admin về /home kèm tham số lọc để xem dashboard tích hợp; với nhân sự được phân quyền báo cáo, kiểm tra phạm vi chi nhánh, chuẩn hóa khoảng ngày lọc mặc định từ đầu tháng đến hiện tại, gọi ReportService tổng hợp dữ liệu 3 tab (tổng quan, tài chính thực thu trừ hoàn, vận hành) và trả về view admin/reports/index.
+     */
     @GetMapping
     public String viewReports(
             @RequestParam(required = false) Long branchId,
@@ -177,6 +205,10 @@ public class AdminReportController {
         return "admin/reports/index";
     }
 
+    /**
+     * [Chức năng]: Xuất báo cáo quản trị ra file Excel chuẩn .xlsx để tải về (GET /admin/reports/export).
+     * [Mục đích]: Xác thực người dùng và phạm vi chi nhánh được phép truy cập, chuẩn hóa khoảng thời gian lọc, gọi ReportService.exportReportToExcel theo loại báo cáo (OVERVIEW, FINANCIAL, OPERATIONAL, DEBTS) và trả về ResponseEntity kèm header Content-Disposition tải file.
+     */
     @GetMapping("/export")
     public ResponseEntity<byte[]> exportReports(
             @RequestParam(required = false, defaultValue = "OVERVIEW") String reportType,

@@ -32,6 +32,10 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+/**
+ * [Phân hệ]: Dịch vụ thực hiện lâm sàng (Performed Services)
+ * [Vai trò]: Triển khai nghiệp vụ tra cứu danh mục dịch vụ/bác sĩ/trợ thủ, ghi nhận hoàn thành và hủy dịch vụ thực hiện trong ca khám, tự động trừ/hoàn vật tư tiêu hao FEFO, đồng bộ tiến độ kế hoạch điều trị/quy trình lâm sàng và tính hoa hồng dịch vụ.
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -96,23 +100,36 @@ public class PerformedServiceServiceImpl implements PerformedServiceService {
     @jakarta.persistence.PersistenceContext
     private jakarta.persistence.EntityManager entityManager;
 
+    /**
+     * [Hàm hỗ trợ]: Lấy HttpSession hiện tại từ RequestContextHolder nếu đang chạy trong ngữ cảnh HTTP request.
+     */
     private jakarta.servlet.http.HttpSession currentHttpSession() {
         var attrs = org.springframework.web.context.request.RequestContextHolder.getRequestAttributes();
         return attrs instanceof org.springframework.web.context.request.ServletRequestAttributes sra
                 ? sra.getRequest().getSession(false) : null;
     }
 
+    /**
+     * [Hàm hỗ trợ]: Kiểm tra lời gọi hiện tại có đang nằm trong ngữ cảnh HTTP Servlet Request hay không.
+     */
     private boolean isHttpRequestActive() {
         return org.springframework.web.context.request.RequestContextHolder.getRequestAttributes()
                 instanceof org.springframework.web.context.request.ServletRequestAttributes;
     }
 
+    /**
+     * [Hàm hỗ trợ]: Setter gán ServiceCommissionService phục vụ tiêm phụ thuộc thủ công hoặc unit test.
+     */
     public void setServiceCommissionService(com.cvdcms.service.ServiceCommissionService serviceCommissionService) {
         this.serviceCommissionService = serviceCommissionService;
     }
 
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
 
+    /**
+     * [Chức năng]: Lấy toàn bộ dịch vụ nha khoa đang hoạt động thuộc nhóm dịch vụ đang mở.
+     * [Mục đích]: Truy vấn ServiceRepository theo trạng thái ACTIVE sắp xếp theo thứ tự danh mục và tên dịch vụ, lọc bỏ các nhóm dịch vụ bị khóa và chuyển sang ServiceDTO.
+     */
     @Override
     @Transactional(readOnly = true)
     public List<ServiceDTO> getAllActiveServices() {
@@ -123,12 +140,19 @@ public class PerformedServiceServiceImpl implements PerformedServiceService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * [Hàm hỗ trợ]: Xác định hồ sơ nhân sự có phải bác sĩ nha khoa hay không (dựa trên mã BS, chức danh hoặc phòng ban chứa "bác sĩ").
+     */
     private boolean isDoctorProfile(StaffProfile s) {
         return s != null && ((s.getStaffCode() != null && s.getStaffCode().startsWith("BS"))
                 || (s.getPositionTitle() != null && s.getPositionTitle().toLowerCase().contains("bác sĩ"))
                 || (s.getDepartment() != null && s.getDepartment().toLowerCase().contains("bác sĩ")));
     }
 
+    /**
+     * [Chức năng]: Lấy danh sách tất cả bác sĩ đang hoạt động trên toàn hệ thống.
+     * [Mục đích]: Truy vấn StaffProfileRepository trạng thái ACTIVE và lọc qua isDoctorProfile để hiển thị lựa chọn bác sĩ thực hiện thủ thuật.
+     */
     @Override
     @Transactional(readOnly = true)
     public List<StaffProfile> getAvailableDoctors() {
@@ -137,6 +161,10 @@ public class PerformedServiceServiceImpl implements PerformedServiceService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * [Chức năng]: Lấy danh sách bác sĩ đang hoạt động được phép làm việc tại một chi nhánh cụ thể.
+     * [Mục đích]: Kết hợp danh sách phân công chi nhánh còn hiệu lực theo ngày hôm nay trong StaffBranchAssignmentRepository với chi nhánh gốc trên tài khoản User của bác sĩ.
+     */
     @Override
     @Transactional(readOnly = true)
     public List<StaffProfile> getAvailableDoctorsByBranch(Long branchId) {
@@ -162,6 +190,10 @@ public class PerformedServiceServiceImpl implements PerformedServiceService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * [Chức năng]: Lấy danh sách trợ thủ/phụ tá/điều dưỡng nha khoa đang hoạt động.
+     * [Mục đích]: Truy vấn StaffProfileRepository trạng thái ACTIVE và lọc theo mã PT, chức danh trợ thủ/phụ tá/điều dưỡng để bác sĩ chọn người phụ tá trong ca thủ thuật.
+     */
     @Override
     @Transactional(readOnly = true)
     public List<StaffProfile> getAvailableAssistants() {
@@ -172,6 +204,10 @@ public class PerformedServiceServiceImpl implements PerformedServiceService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * [Chức năng]: Lấy danh sách chi tiết các dịch vụ thực hiện thuộc một lượt khám.
+     * [Mục đích]: Truy vấn PerformedServiceRepository.findByVisitIdWithDetails và ánh xạ sang PerformedServiceResponseDTO kèm thông tin quy trình lâm sàng và bước kế hoạch điều trị liên kết.
+     */
     @Override
     @Transactional(readOnly = true)
     public List<PerformedServiceResponseDTO> getPerformedServicesByVisitId(Long visitId) {
@@ -180,6 +216,10 @@ public class PerformedServiceServiceImpl implements PerformedServiceService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * [Chức năng]: Ghi nhận một dịch vụ/thủ thuật đã thực hiện hoàn tất (COMPLETED) trong ca khám.
+     * [Mục đích]: Khóa bi quan bản ghi Visit (và TreatmentPlan/TreatmentPlanItem nếu gắn phác đồ), kiểm tra quy tắc bất biến EMR (BR-EMR-02), trạng thái dịch vụ, quyền/chi nhánh/năng lực lâm sàng của bác sĩ và phòng khám; tự động tính đơn giá (0 đ nếu thuộc phác đồ trả theo đợt, tránh tính trùng hóa đơn) và thành tiền chuẩn backend; cập nhật tiến độ bước/giai đoạn/kế hoạch và quy trình lâm sàng liên kết, trừ tồn kho vật tư tiêu hao FEFO và gọi ServiceCommissionService tính hoa hồng.
+     */
     @Override
     @Transactional
     public PerformedServiceResponseDTO createPerformedService(PerformedServiceRequestDTO requestDTO) {
@@ -387,6 +427,10 @@ public class PerformedServiceServiceImpl implements PerformedServiceService {
         return mapToResponseDTO(saved);
     }
 
+    /**
+     * [Chức năng]: Đồng bộ trạng thái các phiên thực thi quy trình lâm sàng (WorkflowExecution/WorkflowStepExecution) khi một bước kế hoạch điều trị được hoàn thành hoặc hoàn tác.
+     * [Mục đích]: Đối chiếu danh sách TreatmentPlanItem trong cùng giai đoạn với các bước quy trình mẫu, tự động đánh dấu COMPLETED hoặc đặt lại PENDING cho bước quy trình tương ứng và cập nhật trạng thái/bước hiện tại của WorkflowExecution.
+     */
     private void syncWorkflowExecutionsForPlanItem(
             TreatmentPlanItem targetItem,
             boolean markCompleted,
@@ -549,6 +593,9 @@ public class PerformedServiceServiceImpl implements PerformedServiceService {
         }
     }
 
+    /**
+     * [Hàm hỗ trợ]: Chuẩn hóa tên bước thủ thuật (bỏ dấu tiếng Việt, chuyển chữ thường, xóa khoảng trắng thừa) để so khớp giữa Kế hoạch điều trị và Quy trình lâm sàng.
+     */
     private String normalizeStepNamePs(String s) {
         if (s == null) return "";
         return java.text.Normalizer.normalize(s, java.text.Normalizer.Form.NFD)
@@ -557,6 +604,10 @@ public class PerformedServiceServiceImpl implements PerformedServiceService {
                 .trim().toLowerCase(java.util.Locale.ROOT);
     }
 
+    /**
+     * [Chức năng]: Hủy hoặc xóa một dịch vụ thực hiện chưa xuất hóa đơn trong ca khám.
+     * [Mục đích]: Khóa bi quan bản ghi PerformedService, kiểm tra khóa bất biến EMR (BR-EMR-02) và chặn nếu đã xuất hóa đơn còn hiệu lực; hoàn trả tồn kho vật tư tiêu hao đã trừ, hoàn tác trạng thái bước/giai đoạn/kế hoạch điều trị và quy trình lâm sàng liên kết, hủy hoa hồng chờ duyệt, gỡ liên kết chỉ định cận lâm sàng (đưa về WAITING) rồi chuyển CANCELLED (nếu có lịch sử liên kết) hoặc xóa cứng khỏi CSDL.
+     */
     @Override
     @Transactional
     public void cancelPerformedService(Long performedId) {
@@ -668,6 +719,10 @@ public class PerformedServiceServiceImpl implements PerformedServiceService {
         }
     }
 
+    /**
+     * [Chức năng]: Ghi nhận tiêu hao vật tư lâm sàng đi kèm dịch vụ thực hiện và trừ tồn kho chi nhánh theo nguyên tắc FEFO (hết hạn trước xuất trước).
+     * [Mục đích]: Gộp số lượng theo materialId theo thứ tự khóa xác định (TreeMap) để tránh trùng lặp và deadlock, khóa bi quan BranchInventory và MaterialBatch còn hạn, kiểm tra đủ tồn kho, trừ dần từng lô (chuyển OUT_OF_STOCK khi hết), lưu MaterialConsumption và cập nhật tồn kho chi nhánh.
+     */
     private void recordMaterialConsumptions(
             PerformedService saved,
             StaffProfile doctor,
@@ -742,6 +797,10 @@ public class PerformedServiceServiceImpl implements PerformedServiceService {
         }
     }
 
+    /**
+     * [Chức năng]: Hoàn trả toàn bộ vật tư tiêu hao lâm sàng vào kho chi nhánh và từng lô vật tư khi hủy dịch vụ thực hiện.
+     * [Mục đích]: Sắp xếp và khóa bi quan đúng thứ tự BranchInventory trước rồi đến MaterialBatch để tránh deadlock, cộng hoàn lại tồn kho chi nhánh và số lượng còn lại từng lô (cập nhật lại trạng thái ACTIVE hoặc EXPIRED theo hạn dùng), sau đó xóa các bản ghi MaterialConsumption.
+     */
     private void revertMaterialConsumptions(PerformedService ps) {
         if (materialConsumptionRepository == null || ps.getPerformedId() == null) {
             return;
@@ -802,6 +861,9 @@ public class PerformedServiceServiceImpl implements PerformedServiceService {
         materialConsumptionRepository.deleteAll(consumptions);
     }
 
+    /**
+     * [Hàm hỗ trợ]: Chuyển đổi entity Service sang ServiceDTO gồm thông tin nhóm dịch vụ, đơn giá niêm yết và cờ yêu cầu chọn răng/cận lâm sàng.
+     */
     private ServiceDTO mapToServiceDTO(com.cvdcms.entity.Service s) {
         return ServiceDTO.builder()
                 .serviceId(s.getServiceId())
@@ -818,6 +880,9 @@ public class PerformedServiceServiceImpl implements PerformedServiceService {
                 .build();
     }
 
+    /**
+     * [Hàm hỗ trợ]: Ánh xạ entity PerformedService sang PerformedServiceResponseDTO kèm thông tin quy trình lâm sàng mẫu của dịch vụ và bước/giai đoạn kế hoạch điều trị liên kết.
+     */
     private PerformedServiceResponseDTO mapToResponseDTO(PerformedService ps) {
         String statusDisplay = ps.getStatus() == PerformedServiceStatus.COMPLETED ? "Đã hoàn thành" : "Đã hủy";
         String timeStr = ps.getCompletedAt() != null ? ps.getCompletedAt().format(FORMATTER) : "";
@@ -895,6 +960,10 @@ public class PerformedServiceServiceImpl implements PerformedServiceService {
                 .build();
     }
 
+    /**
+     * [Chức năng]: Kiểm tra tính hợp lệ của bác sĩ thực hiện đối với chi nhánh và lượt khám hiện tại.
+     * [Mục đích]: Chấp nhận nếu là bác sĩ chính của ca khám, bác sĩ được cấp quyền khám thay (DoctorCoverGrant) còn hiệu lực hoặc bác sĩ thuộc chi nhánh/có phân công ACTIVE tại chi nhánh của lượt khám; ngược lại ném IllegalArgumentException.
+     */
     private void validateDoctorForVisit(StaffProfile doctor, Visit visit) {
         if (doctor == null || visit == null || visit.getBranch() == null) {
             return;

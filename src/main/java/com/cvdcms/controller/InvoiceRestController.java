@@ -20,6 +20,10 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * [Phân hệ]: Thanh toán & Hóa đơn (REST API)
+ * [Vai trò]: Cung cấp các REST API dưới tiền tố `/api/invoices` phục vụ tính tạm tính hóa đơn thời gian thực (preview chiết khấu/khuyến mãi/voucher/điểm), lấy danh sách dịch vụ lâm sàng chưa lập hóa đơn theo lượt khám và thu tiền nhanh (quick-pay) ngay trên màn hình hóa đơn.
+ */
 @RestController
 @RequestMapping("/api/invoices")
 public class InvoiceRestController {
@@ -47,6 +51,9 @@ public class InvoiceRestController {
         this.staffBranchAssignmentRepository = staffBranchAssignmentRepository;
     }
 
+    /**
+     * [Hàm hỗ trợ]: Lấy `userId` của nhân viên đang đăng nhập từ `HttpSession`; ném `AccessDeniedException` nếu chưa đăng nhập.
+     */
     private Long getCurrentUserId(HttpSession session) {
         if (session != null && session.getAttribute("loggedInUser") instanceof User u && u.getUserId() != null) {
             return u.getUserId();
@@ -54,6 +61,9 @@ public class InvoiceRestController {
         throw new AccessDeniedException("Chưa đăng nhập. Vui lòng đăng nhập để tiếp tục.");
     }
 
+    /**
+     * [Hàm hỗ trợ]: Kiểm tra quyền truy cập dữ liệu theo chi nhánh (`branchId`) của nhân viên; cho qua nếu là Admin đang hoạt động, ngược lại kiểm tra phân công `ACTIVE` trong `StaffBranchAssignment` hoặc chi nhánh mặc định trên `User`.
+     */
     private void verifyBranchAccess(Long userId, Long branchId) {
         if (userId == null) {
             throw new AccessDeniedException("Chưa đăng nhập. Vui lòng đăng nhập để tiếp tục.");
@@ -74,6 +84,10 @@ public class InvoiceRestController {
         }
     }
 
+    /**
+     * [Chức năng]: API `POST /api/invoices/preview` tính toán tạm tính tổng tiền hóa đơn (dịch vụ, thuốc, chiết khấu hạng thẻ, khuyến mãi/voucher, quy đổi điểm Loyalty và số điểm dự kiến tích thêm).
+     * [Mục đích]: Phục vụ giao diện lập hóa đơn cập nhật số tiền real-time khi thu ngân thay đổi dịch vụ/thuốc/ưu đãi; kiểm tra quyền chi nhánh (suy từ `branchId` hoặc `visitId`) nếu có phiên đăng nhập rồi ủy quyền tính toán sang `InvoiceService.calculatePreview`, trả 403 khi sai quyền chi nhánh và 400 khi dữ liệu không hợp lệ.
+     */
     @PostMapping("/preview")
     public ResponseEntity<?> calculatePreview(@RequestBody InvoiceCreateRequestDTO request, HttpSession session) {
         try {
@@ -96,6 +110,10 @@ public class InvoiceRestController {
         }
     }
 
+    /**
+     * [Chức năng]: API `GET /api/invoices/visits/{visitId}/unbilled-services` lấy danh sách dịch vụ lâm sàng đã hoàn thành nhưng chưa lập hóa đơn của một lượt khám.
+     * [Mục đích]: Phục vụ tải động các dòng dịch vụ đủ điều kiện tính tiền cho lượt khám `visitId`; kiểm tra đăng nhập, kiểm tra quyền chi nhánh của ca khám qua `verifyBranchAccess`, sau đó gọi `InvoiceService.getUnbilledPerformedServices`.
+     */
     @GetMapping("/visits/{visitId}/unbilled-services")
     public ResponseEntity<?> getUnbilledServices(@PathVariable Long visitId, HttpSession session) {
         try {
@@ -112,6 +130,10 @@ public class InvoiceRestController {
         }
     }
 
+    /**
+     * [Chức năng]: API `POST /api/invoices/{id}/quick-pay` thực hiện thu tiền nhanh cho hóa đơn theo `id` và trả về kết quả công nợ/trạng thái thanh toán mới nhất.
+     * [Mục đích]: Hỗ trợ thu ngân ghi nhận thanh toán trực tiếp qua AJAX mà không phải chuyển trang; gán `invoiceId` vào request, lấy `cashierUserId` từ session, gọi `PaymentService.processPayment` rồi đọc lại `Invoice` qua `InvoiceService.getInvoiceById` để trả `paymentCode`, `paidAmount`, `remainingDebt` và `paymentStatus`.
+     */
     @PostMapping("/{id}/quick-pay")
     public ResponseEntity<?> quickPay(
             @PathVariable Long id,

@@ -42,6 +42,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+/**
+ * [Phân hệ]: Tài chính - Chi phí hoạt động phòng khám
+ * [Vai trò]: Controller MVC quản lý các trang giao diện danh sách, tạo mới, chỉnh sửa và hủy phiếu chi vận hành (/expenses).
+ */
 @Controller
 @RequestMapping("/expenses")
 public class ExpensePageController {
@@ -72,6 +76,9 @@ public class ExpensePageController {
         this.staffBranchAssignmentRepository = staffBranchAssignmentRepository;
     }
 
+    /**
+     * [Hàm hỗ trợ]: Nạp thông tin người dùng đăng nhập, vai trò và menu đang chọn vào Model cho layout giao diện.
+     */
     private void populateUserAndSidebar(Model model, HttpSession session, String activeMenu) {
         model.addAttribute("activeMenu", activeMenu);
         if (session != null) {
@@ -81,6 +88,9 @@ public class ExpensePageController {
         }
     }
 
+    /**
+     * [Hàm hỗ trợ]: Lấy ID người dùng đang đăng nhập từ HttpSession, ném AccessDeniedException nếu chưa đăng nhập.
+     */
     private Long getCurrentUserId(HttpSession session) {
         if (session != null && session.getAttribute("loggedInUser") instanceof User u && u.getUserId() != null) {
             return u.getUserId();
@@ -88,10 +98,16 @@ public class ExpensePageController {
         throw new AccessDeniedException("Chưa đăng nhập. Vui lòng đăng nhập để tiếp tục.");
     }
 
+    /**
+     * [Hàm hỗ trợ]: Kiểm tra người dùng hiện tại có vai trò Admin đang hoạt động hay không để xem toàn bộ chi nhánh.
+     */
     private boolean isFinanceAdminOrAccountant(Long userId) {
         return userId != null && userRepository.hasActiveAdminRole(userId);
     }
 
+    /**
+     * [Hàm hỗ trợ]: Xác định danh sách chi nhánh người dùng được phép thao tác (toàn bộ nếu là Admin, hoặc theo phân công ACTIVE / chi nhánh mặc định).
+     */
     private List<Branch> resolveAllowedBranches(Long userId) {
         if (isFinanceAdminOrAccountant(userId)) {
             return branchRepository.findAll();
@@ -109,6 +125,10 @@ public class ExpensePageController {
         return branchRepository.findAllById(branchIds);
     }
 
+    /**
+     * [Chức năng]: Hiển thị trang danh sách phiếu chi vận hành kèm bộ lọc đa điều kiện và tổng hợp chi phí toàn phòng khám (GET /expenses).
+     * [Mục đích]: Kiểm tra quyền truy cập chi nhánh, gọi OperatingExpenseService lấy danh sách phân trang và tổng chi phí vận hành hiệu lực, đồng thời tổng hợp thêm chi thanh toán NCC và hoàn tiền bệnh nhân để render trang finance/expenses/list.
+     */
     @GetMapping
     public String listExpenses(
             @RequestParam(required = false) Long branchId,
@@ -246,6 +266,9 @@ public class ExpensePageController {
 
     public record StaffRecipientOption(Long staffId, String staffCode, String fullName, String branchIdsCsv) {}
 
+    /**
+     * [Hàm hỗ trợ]: Tổng hợp danh sách nhân sự đang công tác thuộc các chi nhánh được phép để gợi ý người nhận tiền trên form lập/sửa phiếu chi.
+     */
     private List<StaffRecipientOption> resolveStaffOptions(List<Branch> allowedBranches) {
         if (allowedBranches == null || allowedBranches.isEmpty()) {
             return List.of();
@@ -282,6 +305,9 @@ public class ExpensePageController {
         return options;
     }
 
+    /**
+     * [Hàm hỗ trợ]: Nạp các danh mục dùng chung (chi nhánh, danh mục chi phí, phương thức thanh toán, nhân sự nhận tiền) vào Model cho form phiếu chi.
+     */
     private void populateFormOptions(Model model, Long currentUserId) {
         List<Branch> allowedBranches = resolveAllowedBranches(currentUserId);
         model.addAttribute("branches", allowedBranches);
@@ -290,6 +316,10 @@ public class ExpensePageController {
         model.addAttribute("staffOptions", resolveStaffOptions(allowedBranches));
     }
 
+    /**
+     * [Chức năng]: Hiển thị form lập phiếu chi vận hành thủ công mới (GET /expenses/create).
+     * [Mục đích]: Khởi tạo OperatingExpenseRequestDTO với chi nhánh mặc định theo tham số hoặc chi nhánh đầu tiên được phép, nạp dữ liệu danh mục cho trang finance/expenses/form.
+     */
     @GetMapping("/create")
     public String showCreateForm(
             @RequestParam(required = false) Long branchId,
@@ -313,6 +343,10 @@ public class ExpensePageController {
         return "finance/expenses/form";
     }
 
+    /**
+     * [Chức năng]: Xử lý yêu cầu tạo mới phiếu chi vận hành thủ công (POST /expenses/create).
+     * [Mục đích]: Kiểm tra hợp lệ dữ liệu đầu vào, gọi OperatingExpenseService.createManualExpense để lưu phiếu chi mới và điều hướng về danh sách hoặc tiếp tục tạo phiếu nếu chọn saveAndContinue.
+     */
     @PostMapping("/create")
     public String createExpense(
             @Valid @ModelAttribute("expenseDTO") OperatingExpenseRequestDTO dto,
@@ -346,6 +380,10 @@ public class ExpensePageController {
         }
     }
 
+    /**
+     * [Chức năng]: Hiển thị form chỉnh sửa phiếu chi vận hành thủ công theo ID (GET /expenses/{id}/edit).
+     * [Mục đích]: Tải chi tiết phiếu chi, chặn chỉnh sửa nếu phiếu chi sinh tự động (không phải MANUAL) hoặc đã bị hủy, và đổ dữ liệu hiện tại vào trang finance/expenses/edit.
+     */
     @GetMapping("/{id}/edit")
     public String showEditForm(
             @PathVariable Long id,
@@ -388,6 +426,10 @@ public class ExpensePageController {
         }
     }
 
+    /**
+     * [Chức năng]: Xử lý cập nhật thông tin phiếu chi vận hành thủ công kèm lý do chỉnh sửa (POST /expenses/{id}/edit).
+     * [Mục đích]: Bắt buộc nhập lý do chỉnh sửa, xác thực biểu mẫu và gọi OperatingExpenseService.updateManualExpense để cập nhật bản ghi và lưu nhật ký kiểm toán.
+     */
     @PostMapping("/{id}/edit")
     public String updateExpense(
             @PathVariable Long id,
@@ -427,6 +469,10 @@ public class ExpensePageController {
         }
     }
 
+    /**
+     * [Chức năng]: Xử lý hủy phiếu chi vận hành thủ công theo ID và lý do hủy (POST /expenses/{id}/cancel).
+     * [Mục đích]: Gọi OperatingExpenseService.cancelExpense để đánh dấu hủy mềm phiếu chi và trả thông báo kết quả về trang danh sách /expenses.
+     */
     @PostMapping("/{id}/cancel")
     public String cancelExpense(
             @PathVariable Long id,

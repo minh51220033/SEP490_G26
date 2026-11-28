@@ -23,6 +23,10 @@ import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.*;
 
+/**
+ * [Phân hệ]: Tài chính - Tính toán và đồng bộ hoa hồng dịch vụ
+ * [Vai trò]: Triển khai nghiệp vụ tính hoa hồng bác sĩ/trợ thủ theo chính sách ưu tiên, hủy hoặc tính lại hoa hồng khi dịch vụ thay đổi và đồng bộ lại dòng bảng lương nháp.
+ */
 @Service
 @Transactional
 public class ServiceCommissionServiceImpl implements ServiceCommissionService {
@@ -43,14 +47,23 @@ public class ServiceCommissionServiceImpl implements ServiceCommissionService {
     @Autowired(required = false)
     private PayrollService payrollService;
 
+    /**
+     * [Hàm hỗ trợ]: Gán PayrollPeriodRepository phục vụ tiêm phụ thuộc tùy chọn và kiểm thử đơn vị.
+     */
     public void setPayrollPeriodRepository(PayrollPeriodRepository payrollPeriodRepository) {
         this.payrollPeriodRepository = payrollPeriodRepository;
     }
 
+    /**
+     * [Hàm hỗ trợ]: Gán PayrollItemRepository phục vụ tiêm phụ thuộc tùy chọn và kiểm thử đơn vị.
+     */
     public void setPayrollItemRepository(PayrollItemRepository payrollItemRepository) {
         this.payrollItemRepository = payrollItemRepository;
     }
 
+    /**
+     * [Hàm hỗ trợ]: Gán PayrollService phục vụ tiêm phụ thuộc tùy chọn và gọi tính lại dòng lương nháp.
+     */
     public void setPayrollService(PayrollService payrollService) {
         this.payrollService = payrollService;
     }
@@ -66,11 +79,18 @@ public class ServiceCommissionServiceImpl implements ServiceCommissionService {
         this.invoiceItemRepository = invoiceItemRepository;
     }
 
+    /**
+     * [Chức năng]: Tính và tạo bản ghi hoa hồng PENDING cho bác sĩ chính và trợ thủ của một dịch vụ đã hoàn thành (COMPLETED).
+     * [Mục đích]: Được gọi khi hoàn tất dịch vụ lâm sàng hoặc chốt hóa đơn để tự động ghi nhận hoa hồng vào bảng service_commissions.
+     */
     @Override
     public void calculateCommissionsForPerformedService(PerformedService ps) {
         calculateAndReturnCommissions(ps);
     }
 
+    /**
+     * [Hàm hỗ trợ]: Kiểm tra dịch vụ ở trạng thái COMPLETED, tính doanh thu cơ sở và tạo hoa hồng cho bác sĩ chính và trợ thủ (nếu khác bác sĩ chính), trả về danh sách bản ghi vừa tạo.
+     */
     private List<ServiceCommission> calculateAndReturnCommissions(PerformedService ps) {
         if (ps == null || ps.getPerformedId() == null || ps.getService() == null) {
             return List.of();
@@ -107,6 +127,10 @@ public class ServiceCommissionServiceImpl implements ServiceCommissionService {
             Map<Long, PayrollPeriod> lockedDraftPeriodsById
     ) {}
 
+    /**
+     * [Chức năng]: Hủy các bản ghi hoa hồng chưa chi trả gắn với một dịch vụ thực hiện và cập nhật lại các dòng lương nháp (DRAFT) bị ảnh hưởng.
+     * [Mục đích]: Đảm bảo khi hủy/điều chỉnh dịch vụ lâm sàng, hoa hồng chưa chốt được gỡ bỏ an toàn và tổng lương/tạm ứng của dòng lương nháp được tính toán lại qua PayrollService.
+     */
     @Override
     public void cancelPendingCommissionsForPerformedService(Long performedId) {
         DraftBindingContext ctx = cancelAndCaptureDraftBindings(performedId);
@@ -115,6 +139,9 @@ public class ServiceCommissionServiceImpl implements ServiceCommissionService {
         }
     }
 
+    /**
+     * [Hàm hỗ trợ]: Khóa theo thứ tự toàn cục (PayrollPeriod -> ServiceCommission), chặn sửa/hủy nếu hoa hồng đã PAID hoặc gắn kỳ SUBMITTED/APPROVED/PAID, xóa hoa hồng PENDING và lưu ngữ cảnh dòng lương DRAFT cần tính lại.
+     */
     private DraftBindingContext cancelAndCaptureDraftBindings(Long performedId) {
         if (performedId == null || serviceCommissionRepository == null) {
             return new DraftBindingContext(Set.of(), Map.of(), Map.of());
@@ -206,6 +233,10 @@ public class ServiceCommissionServiceImpl implements ServiceCommissionService {
         return new DraftBindingContext(draftItemIdsToRecalc, preservedItemsByStaffId, lockedDraftPeriods);
     }
 
+    /**
+     * [Chức năng]: Tính lại toàn bộ hoa hồng của một dịch vụ thực hiện sau khi sửa bác sĩ/trợ thủ/giá và gắn lại vào kỳ lương nháp (DRAFT) tương ứng.
+     * [Mục đích]: Hủy hoa hồng cũ kèm lưu ngữ cảnh kỳ lương nháp, sinh lại hoa hồng mới, tự động liên kết lại với PayrollItem nháp phù hợp và gọi PayrollService.recalculateDraftItemAfterCommissionChange cho tất cả dòng bị ảnh hưởng.
+     */
     @Override
     public void recalculateCommissionsForPerformedService(PerformedService performedService) {
         if (performedService == null || performedService.getPerformedId() == null) {
@@ -241,6 +272,9 @@ public class ServiceCommissionServiceImpl implements ServiceCommissionService {
         }
     }
 
+    /**
+     * [Hàm hỗ trợ]: Xác định dòng lương DRAFT mục tiêu để gắn lại hoa hồng mới (ưu tiên dòng lương cũ của nhân sự hoặc tìm theo kỳ lương DRAFT cùng chi nhánh/tháng/năm).
+     */
     private PayrollItem resolveRebindTargetItem(
             PerformedService ps,
             ServiceCommission sc,
@@ -275,6 +309,10 @@ public class ServiceCommissionServiceImpl implements ServiceCommissionService {
         return null;
     }
 
+    /**
+     * [Chức năng]: Đảm bảo tất cả dịch vụ thực hiện thuộc một hóa đơn đã được tính hoa hồng đầy đủ (idempotent).
+     * [Mục đích]: Duyệt các InvoiceItem của hóa đơn và gọi calculateCommissionsForPerformedService cho từng dịch vụ gắn kèm nhằm tránh bỏ sót hoa hồng khi thu ngân thanh toán hóa đơn.
+     */
     @Override
     public void ensureCommissionsForInvoice(Invoice invoice) {
         if (invoice == null || invoice.getInvoiceId() == null || invoiceItemRepository == null) {
@@ -291,6 +329,9 @@ public class ServiceCommissionServiceImpl implements ServiceCommissionService {
         }
     }
 
+    /**
+     * [Hàm hỗ trợ]: Kiểm tra chống trùng lặp, tìm chính sách hoa hồng phù hợp nhất và tạo bản ghi ServiceCommission PENDING nếu số tiền hoa hồng lớn hơn 0.
+     */
     private ServiceCommission createCommissionIfApplicable(
             PerformedService ps,
             StaffProfile staff,
@@ -322,6 +363,9 @@ public class ServiceCommissionServiceImpl implements ServiceCommissionService {
         return serviceCommissionRepository.save(sc);
     }
 
+    /**
+     * [Hàm hỗ trợ]: Tìm chính sách hoa hồng đang kích hoạt (isActive = true) có độ ưu tiên cụ thể cao nhất khớp với nhân sự, vai trò và dịch vụ.
+     */
     private CommissionPolicy findBestPolicy(StaffProfile staff, Long serviceId) {
         if (commissionPolicyRepository == null || staff == null || staff.getStaffId() == null || serviceId == null) {
             return null;
@@ -354,6 +398,9 @@ public class ServiceCommissionServiceImpl implements ServiceCommissionService {
                 .orElse(null);
     }
 
+    /**
+     * [Hàm hỗ trợ]: Tính điểm độ đặc hiệu của chính sách hoa hồng theo trọng số (Nhân sự: +4, Dịch vụ: +2, Vai trò: +1) để chọn chính sách ưu tiên nhất.
+     */
     private int specificityScore(CommissionPolicy cp) {
         int score = 0;
         if (cp.getStaff() != null) {
@@ -368,6 +415,9 @@ public class ServiceCommissionServiceImpl implements ServiceCommissionService {
         return score;
     }
 
+    /**
+     * [Hàm hỗ trợ]: Trích xuất danh sách ID các vai trò (Role) đang hoạt động gắn với tài khoản người dùng của nhân sự.
+     */
     private List<Long> resolveActiveRoleIds(StaffProfile staff) {
         if (staff.getUser() == null || staff.getUser().getRoles() == null) {
             return List.of();
@@ -381,6 +431,9 @@ public class ServiceCommissionServiceImpl implements ServiceCommissionService {
         return ids;
     }
 
+    /**
+     * [Hàm hỗ trợ]: Tính doanh thu cơ sở của dịch vụ thực hiện (ưu tiên finalPrice, nếu trống thì tính đơn giá * số lượng - giảm giá, tối thiểu bằng 0).
+     */
     private BigDecimal resolveRevenueBase(PerformedService ps) {
         if (ps.getFinalPrice() != null) {
             return ps.getFinalPrice().max(BigDecimal.ZERO);
@@ -391,6 +444,9 @@ public class ServiceCommissionServiceImpl implements ServiceCommissionService {
         return unit.multiply(qty).subtract(discount).max(BigDecimal.ZERO);
     }
 
+    /**
+     * [Hàm hỗ trợ]: Tính số tiền hoa hồng theo loại chính sách (số tiền cố định FIXED_AMOUNT hoặc phần trăm PERCENTAGE trên doanh thu cơ sở, làm tròn 2 chữ số thập phân).
+     */
     private BigDecimal calculateAmount(CommissionPolicy policy, BigDecimal revenueBase) {
         BigDecimal value = policy.getCommissionValue();
         if (value == null || value.compareTo(BigDecimal.ZERO) <= 0) {

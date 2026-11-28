@@ -21,6 +21,10 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * [Phân hệ]: Thanh toán chuyển khoản & Sinh mã VietQR theo chi nhánh
+ * [Vai trò]: REST Controller (`/api/finance`) cung cấp danh sách tài khoản ngân hàng hoạt động và thông tin ảnh/nội dung VietQR động cho màn hình thu tiền hóa đơn và nạp tạm ứng.
+ */
 @RestController
 @RequestMapping("/api/finance")
 public class PaymentQrRestController {
@@ -31,6 +35,9 @@ public class PaymentQrRestController {
     private final InvoiceRepository invoiceRepository;
     private final BranchRepository branchRepository;
 
+    /**
+     * [Hàm hỗ trợ]: Khởi tạo REST controller với service tài khoản ngân hàng chi nhánh và các repository xác thực quyền, hóa đơn, chi nhánh.
+     */
     @Autowired
     public PaymentQrRestController(
             BranchBankAccountService branchBankAccountService,
@@ -46,6 +53,9 @@ public class PaymentQrRestController {
         this.branchRepository = branchRepository;
     }
 
+    /**
+     * [Hàm hỗ trợ]: Xác thực người đăng nhập và kiểm tra quyền truy cập dữ liệu tài chính tại chi nhánh mục tiêu (Admin được xem toàn bộ chi nhánh, nhân sự khác phải thuộc chi nhánh được phân công).
+     */
     private void validateUserBranchAccess(HttpSession session, Long targetBranchId) {
         if (session == null || !(session.getAttribute("loggedInUser") instanceof User sessionUser)) {
             throw new AccessDeniedException("Vui lòng đăng nhập để tiếp tục.");
@@ -79,6 +89,10 @@ public class PaymentQrRestController {
         }
     }
 
+    /**
+     * [Chức năng]: Lấy danh sách tùy chọn tài khoản ngân hàng đang hoạt động của một chi nhánh (`GET /api/finance/branches/{branchId}/bank-accounts`).
+     * [Mục đích]: Phục vụ dropdown chọn tài khoản nhận chuyển khoản tại quầy thu ngân sau khi đã kiểm tra quyền truy cập chi nhánh; trả HTTP 403 nếu vượt phạm vi phân công.
+     */
     @GetMapping("/branches/{branchId}/bank-accounts")
     public ResponseEntity<?> getBranchBankAccounts(@PathVariable Long branchId, HttpSession session) {
         try {
@@ -92,6 +106,10 @@ public class PaymentQrRestController {
         return ResponseEntity.ok(accounts);
     }
 
+    /**
+     * [Chức năng]: Sinh thông tin chuyển khoản và đường dẫn ảnh VietQR động theo chi nhánh cho hóa đơn hoặc nạp ví tạm ứng (`GET /api/finance/qr-info`).
+     * [Mục đích]: Luôn đối chiếu `branchId` theo hóa đơn thật trong DB (chặn mâu thuẫn chi nhánh khi có `invoiceId`), bắt buộc xác thực chi nhánh khi nạp tạm ứng, kiểm tra quyền chi nhánh của thu ngân và gọi `branchBankAccountService.getQrInfo` để trả về mã QR đúng tài khoản của chi nhánh.
+     */
     @GetMapping("/qr-info")
     public ResponseEntity<PaymentQrInfoDTO> getQrInfo(
             @RequestParam(required = false) Long branchId,
