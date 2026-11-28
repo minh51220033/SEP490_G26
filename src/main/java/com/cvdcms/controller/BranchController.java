@@ -13,6 +13,7 @@ import com.cvdcms.service.BranchService;
 import com.cvdcms.service.DentalChairService;
 import com.cvdcms.service.RoomService;
 import jakarta.servlet.http.HttpSession;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
@@ -278,7 +279,7 @@ public class BranchController {
         try {
             branchService.activateBranch(id);
             redirectAttributes.addFlashAttribute("successMessage", "Đã kích hoạt chi nhánh.");
-        } catch (IllegalArgumentException ex) {
+        } catch (IllegalArgumentException | IllegalStateException ex) {
             redirectAttributes.addFlashAttribute("errorMessage", ex.getMessage());
         }
         return "redirect:/admin/branches";
@@ -290,8 +291,11 @@ public class BranchController {
         try {
             branchService.deleteBranch(id);
             redirectAttributes.addFlashAttribute("successMessage", "Đã xóa chi nhánh thành công.");
-        } catch (IllegalArgumentException ex) {
+        } catch (IllegalArgumentException | IllegalStateException ex) {
             redirectAttributes.addFlashAttribute("errorMessage", ex.getMessage());
+        } catch (DataIntegrityViolationException ex) {
+            redirectAttributes.addFlashAttribute("errorMessage",
+                    "Không thể xóa chi nhánh vì đang có dữ liệu liên kết (phòng khám, nhân sự, lịch hẹn hoặc hóa đơn). Vui lòng dùng 'Ngừng hoạt động'.");
         }
         return "redirect:/admin/branches";
     }
@@ -385,8 +389,11 @@ public class BranchController {
         try {
             action.run();
             redirectAttributes.addFlashAttribute("successMessage", successMessage);
-        } catch (IllegalArgumentException ex) {
+        } catch (IllegalArgumentException | IllegalStateException ex) {
             redirectAttributes.addFlashAttribute("errorMessage", ex.getMessage());
+        } catch (DataIntegrityViolationException ex) {
+            redirectAttributes.addFlashAttribute("errorMessage",
+                    "Không thể thực hiện thao tác vì dữ liệu đang được liên kết với lượt khám, lịch hẹn hoặc phân công khác.");
         }
         if (targetTabPane != null && !targetTabPane.isBlank()) {
             redirectAttributes.addFlashAttribute("activeTabPane", targetTabPane);

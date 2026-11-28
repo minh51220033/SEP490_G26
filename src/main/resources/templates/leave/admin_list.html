@@ -303,10 +303,10 @@
                             <th data-col="daterange" style="min-width: 220px;">
                                 <div class="dv-th-inner"><span>Thời gian nghỉ</span></div>
                             </th>
-                            <th data-col="shift" style="min-width: 160px;">
+                            <th data-col="shift" style="min-width: 205px;">
                                 <div class="dv-th-inner"><span>Ca trực</span></div>
                             </th>
-                            <th data-col="type" style="min-width: 180px;">
+                            <th data-col="type" style="min-width: 150px;">
                                 <div class="dv-th-inner"><span>Loại nghỉ</span></div>
                             </th>
                             <th data-col="reason" style="min-width: 240px;">
@@ -318,8 +318,8 @@
                             <th data-col="status" style="min-width: 160px;">
                                 <div class="dv-th-inner"><span>Trạng thái</span></div>
                             </th>
-                            <th data-col="actions" class="text-center" style="min-width: 260px;">
-                                <div class="dv-th-inner justify-content-center"><span>Nút ấn nhanh</span></div>
+                            <th data-col="actions" class="text-center" style="min-width: 160px;">
+                                <div class="dv-th-inner justify-content-center"><span>Thao tác</span></div>
                             </th>
                             <th class="dv-floating-actions-track"></th>
                         </tr>
@@ -386,30 +386,37 @@
                             </td>
 
                             <!-- 5. Ca trực -->
-                            <td data-col="shift" style="min-width: 160px;">
-                                <span th:if="${r.shift != null}" class="chip chip--role" style="max-width: 150px;"
+                            <td data-col="shift" style="min-width: 205px;">
+                                <span th:if="${r.shift != null}"
+                                      class="badge bg-light text-dark border fw-semibold d-inline-flex align-items-center gap-1 text-nowrap px-2 py-1"
+                                      style="font-size: 12px;"
                                       th:title="${r.shift.shiftName + ' (' + #temporals.format(r.shift.startTime, 'HH:mm') + ' - ' + #temporals.format(r.shift.endTime, 'HH:mm') + ')'}">
-                                    <i class="bi bi-clock me-1"></i>
-                                    <span th:text="${r.shift.shiftName}">Ca sáng</span>
+                                    <i class="bi bi-clock text-secondary"></i>
+                                    <span th:text="${#strings.contains(r.shift.shiftName, ':') ? r.shift.shiftName : (r.shift.shiftName + ' (' + #temporals.format(r.shift.startTime, 'HH:mm') + ' - ' + #temporals.format(r.shift.endTime, 'HH:mm') + ')')}">Ca sáng (08:00 - 12:00)</span>
                                 </span>
-                                <span th:if="${r.shift == null}" class="chip">
-                                    <i class="bi bi-brightness-high me-1"></i>Cả ngày
+                                <span th:if="${r.shift == null}"
+                                      class="badge bg-primary-subtle text-primary border border-primary-subtle fw-semibold d-inline-flex align-items-center gap-1 text-nowrap px-2 py-1"
+                                      style="font-size: 12px;">
+                                    <i class="bi bi-brightness-high"></i> Cả ngày
                                 </span>
                             </td>
 
                             <!-- 6. Loại nghỉ -->
-                            <td data-col="type" style="min-width: 180px;">
-                                <div class="d-flex align-items-center gap-1">
-                                    <span th:if="${r.leaveType.name() == 'ANNUAL'}" class="chip">Phép năm</span>
-                                    <span th:if="${r.leaveType.name() == 'SICK'}" class="chip" style="background: #fffbeb; color: #b45309; border-color: #fde68a;">Nghỉ ốm</span>
-                                    <span th:if="${r.leaveType.name() == 'PERSONAL'}" class="chip chip--role">Việc riêng</span>
-                                    <span th:if="${r.leaveType.name() == 'UNPAID'}" class="chip chip--role">Không lương</span>
-
-                                    <span th:if="${r.isEmergency}" class="chip"
-                                          style="background: #fef2f2; color: #dc2626; border-color: #fecaca;"
-                                          title="Nghỉ đột xuất (Báo trước dưới 3 ngày - Quy tắc R8)">
-                                        <i class="bi bi-lightning-fill"></i>Đột xuất
-                                    </span>
+                            <td data-col="type" style="min-width: 150px;">
+                                <div class="d-flex flex-column align-items-start gap-1">
+                                    <div>
+                                        <span th:if="${r.leaveType.name() == 'ANNUAL'}" class="badge bg-info-subtle text-info-emphasis border border-info-subtle fw-semibold px-2 py-1" style="font-size: 12px;">Phép năm</span>
+                                        <span th:if="${r.leaveType.name() == 'SICK'}" class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle fw-semibold px-2 py-1" style="font-size: 12px;">Nghỉ ốm</span>
+                                        <span th:if="${r.leaveType.name() == 'PERSONAL'}" class="badge bg-light text-dark border fw-semibold px-2 py-1" style="font-size: 12px;">Việc riêng</span>
+                                        <span th:if="${r.leaveType.name() == 'UNPAID'}" class="badge bg-secondary-subtle text-secondary-emphasis border border-secondary-subtle fw-semibold px-2 py-1" style="font-size: 12px;">Không lương</span>
+                                    </div>
+                                    <div th:if="${r.isEmergency}"
+                                         class="text-danger fw-semibold d-inline-flex align-items-center gap-1 text-nowrap"
+                                         style="font-size: 11.5px;"
+                                         title="Nghỉ đột xuất (Báo trước dưới 3 ngày - Quy tắc R8)">
+                                        <i class="bi bi-lightning-fill"></i>
+                                        <span>Đột xuất (&lt; 3 ngày)</span>
+                                    </div>
                                 </div>
                             </td>
 
@@ -823,12 +830,12 @@
             doctor: 220,
             branch: 170,
             daterange: 195,
-            shift: 155,
-            type: 170,
+            shift: 215,
+            type: 150,
             reason: 220,
             submitted: 150,
             status: 160,
-            actions: 170
+            actions: 160
         };
 
         let currentWidths = loadColWidths();

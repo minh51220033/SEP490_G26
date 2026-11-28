@@ -22,8 +22,8 @@
 
 
                 <!-- TIÊU ĐỀ TRANG ĐỒNG BỘ CHUẨN GỌN GÀNG -->
-                <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-2.5">
-                    <div class="d-flex align-items-center gap-2.5">
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
+                    <div class="d-flex align-items-center gap-2">
                         <div class="dv-header-icon" style="width: 38px; height: 38px; font-size: 18px; border-radius: 10px; background: linear-gradient(135deg, #0284c7, #1d4ed8); color: white;">
                             <i class="bi bi-calendar2-check-fill"></i>
                         </div>
@@ -38,12 +38,12 @@
                     <div class="d-flex align-items-center gap-2">
                         <div th:replace="~{fragments/header :: branchSelectInline}"></div>
                         <a th:href="@{/admin/schedules(branchId=${selectedBranchId})}"
-                           class="btn btn-outline-primary fw-semibold px-3 py-1.5 rounded-3 shadow-xs d-inline-flex align-items-center gap-1.5"
+                           class="btn btn-outline-primary fw-semibold px-3 py-1 rounded-3 shadow-xs d-inline-flex align-items-center gap-2"
                            style="height: 36px; font-size: 13px;">
                             <i class="bi bi-calendar-week"></i> Bảng phân ca tuần
                         </a>
                         <button th:if="${!#lists.isEmpty(records)}" type="button"
-                                class="btn btn-primary fw-bold px-3 py-1.5 rounded-3 shadow-xs d-inline-flex align-items-center gap-1.5 btn-view-all-att"
+                                class="btn btn-primary fw-bold px-3 py-1 rounded-3 shadow-xs d-inline-flex align-items-center gap-2 btn-view-all-att"
                                 style="height: 36px; font-size: 13px; background: linear-gradient(135deg, #0284c7, #1d4ed8); border: none;">
                             <i class="bi bi-clock-history"></i>
                             <span>Nhật ký <span th:text="${selectedBranchId == null ? 'toàn hệ thống' : 'toàn cơ sở'}">toàn cơ sở</span> (<span th:text="${#lists.size(records)}">0</span> lượt)</span>
@@ -55,7 +55,7 @@
                 <nav th:replace="~{fragments/hr_tabs :: hrTabs('attendance')}"></nav>
 
                 <!-- 4 THẺ KPI TỔNG QUAN (KÍCH THƯỚC CHUẨN GỌN MISA AMIS) -->
-                <div th:if="${summary != null}" class="row g-2.5 mb-2.5">
+                <div th:if="${summary != null}" class="row g-3 mb-3">
                     <div class="col-xl-3 col-sm-6">
                         <div class="dv-kpi-card active-kpi" style="--kpi-accent: #0284c7; padding: 12px 16px;">
                             <div>
@@ -110,7 +110,7 @@
 
                 <!-- TOOLBAR / BỘ LỌC ĐỒNG BỘ GỌN GÀNG -->
                 <div class="dv-toolbar-card" style="padding: 10px 16px; margin-bottom: 12px;">
-                    <form th:action="@{/admin/attendance}" method="get" id="attFilterForm" class="d-flex flex-wrap align-items-center justify-content-between gap-2.5">
+                    <form th:action="@{/admin/attendance}" method="get" id="attFilterForm" class="d-flex flex-wrap align-items-center justify-content-between gap-2">
                         <input type="hidden" id="monthInput" name="month" th:value="${month}">
                         <div class="d-flex flex-wrap align-items-center gap-2 flex-grow-1">
                             <!-- Ô tìm kiếm chuẩn gọn -->
@@ -120,13 +120,13 @@
                             </div>
 
                             <!-- Nút bấm Tìm kiếm -->
-                            <button type="button" id="btnAttSearch" class="btn btn-primary fw-bold px-3 d-inline-flex align-items-center gap-1.5 rounded-3 shadow-xs" style="height: 36px; font-size: 13px;">
+                            <button type="button" id="btnAttSearch" class="btn btn-primary fw-bold px-3 d-inline-flex align-items-center gap-2 rounded-3 shadow-xs" style="height: 36px; font-size: 13px;">
                                 <i class="bi bi-search"></i>
                                 <span>Tìm kiếm</span>
                             </button>
 
                             <!-- Nút Lọc nâng cao -->
-                            <button type="button" class="btn btn-outline-secondary fw-semibold px-3 py-1 rounded-3 d-inline-flex align-items-center gap-1.5" data-bs-toggle="modal" data-bs-target="#advancedFilterModal" style="height: 36px; font-size: 13px;">
+                            <button type="button" class="btn btn-outline-secondary fw-semibold px-3 py-1 rounded-3 d-inline-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#advancedFilterModal" style="height: 36px; font-size: 13px;">
                                 <i class="bi bi-funnel"></i> Lọc nâng cao
                                 <span id="advFilterBadge" class="badge bg-primary text-white rounded-pill" style="display: none;">1</span>
                             </button>
@@ -143,9 +143,9 @@
                         </div>
 
                         <!-- Bộ điều hướng tháng gọn gàng -->
-                        <div class="d-flex gap-1.5 align-items-center">
+                        <div class="d-flex gap-2 align-items-center">
                             <a th:href="@{/admin/attendance(branchId=${selectedBranchId}, month=${prevMonth})}"
-                               class="btn btn-outline-secondary fw-semibold px-2.5 py-1 rounded-3 d-inline-flex align-items-center gap-1" style="height: 36px; font-size: 13px;">
+                               class="btn btn-outline-secondary fw-semibold px-3 py-1 rounded-3 d-inline-flex align-items-center gap-1" style="height: 36px; font-size: 13px;">
                                 <i class="bi bi-chevron-left"></i> Tháng trước
                             </a>
                             <a th:href="@{/admin/attendance(branchId=${selectedBranchId})}"
@@ -154,7 +154,7 @@
                                 Tháng này (<span th:text="${#temporals.format(month.atDay(1), 'MM/yyyy')}">11/2026</span>)
                             </a>
                             <a th:href="@{/admin/attendance(branchId=${selectedBranchId}, month=${nextMonth})}"
-                               class="btn btn-outline-secondary fw-semibold px-2.5 py-1 rounded-3 d-inline-flex align-items-center gap-1" style="height: 36px; font-size: 13px;">
+                               class="btn btn-outline-secondary fw-semibold px-3 py-1 rounded-3 d-inline-flex align-items-center gap-1" style="height: 36px; font-size: 13px;">
                                 Tháng sau <i class="bi bi-chevron-right"></i>
                             </a>
                         </div>
@@ -170,13 +170,13 @@
                 <section th:if="${branches != null and !#lists.isEmpty(branches)}" class="staff-table-card">
                     <!-- THANH THÔNG TIN BẢNG & TÙY BIẾN CỘT -->
                     <div class="dv-grid-topbar" style="padding: 10px 16px !important;">
-                        <div class="d-flex align-items-center gap-2.5 flex-wrap">
+                        <div class="d-flex align-items-center gap-2 flex-wrap">
                             <div class="fw-bold text-dark" style="font-size: 13.5px;">
                                 Hiển thị <span class="text-primary fw-bolder" id="visibleStaffCount" th:text="${#lists.size(staffSummary)}">0</span> nhân sự
                                 <span class="text-muted mx-1">•</span>
                                 <span class="text-secondary fw-semibold" th:text="'Tháng ' + ${#temporals.format(month.atDay(1), 'MM/yyyy')}">Tháng 11/2026</span>
                             </div>
-                            <span class="badge rounded-pill px-2.5 py-1"
+                            <span class="badge rounded-pill px-3 py-1"
                                   style="background: #f0f9ff; color: #0369a1; border: 1px solid #bae6fd; font-size: 11.5px; font-weight: 600;">
                                 <i class="bi bi-hand-index-thumb me-1"></i>Di chuột vào dòng để hiện nút Thao tác nhanh
                             </span>
@@ -185,7 +185,7 @@
                         <!-- Bên phải: Nút Tùy biến cột -->
                         <div class="d-flex align-items-center gap-2">
                             <div class="custom-col-dropdown position-relative d-inline-block">
-                                <button type="button" class="btn btn-white bg-white border fw-bold px-2.5 py-1 rounded-3 d-inline-flex align-items-center gap-1.5 shadow-xs"
+                                <button type="button" class="btn btn-white bg-white border fw-bold px-3 py-1 rounded-3 d-inline-flex align-items-center gap-2 shadow-xs"
                                         style="height: 32px; font-size: 12.5px; border-color: #cbd5e1 !important; color: #0f172a;"
                                         id="btnToggleCustomColumns" title="Tùy chỉnh cột">
                                     <i class="bi bi-layout-three-columns text-primary"></i>
@@ -330,7 +330,7 @@
                                              th:text="${!#strings.isEmpty(s.fullName) ? #strings.toUpperCase(#strings.substring(s.fullName, 0, 1)) : 'N'}">N</div>
                                         <div class="d-flex flex-column justify-content-center">
                                              <span class="dv-patient-name" style="font-size: 13.5px !important;" th:text="${s.fullName}">Họ tên</span>
-                                            <div class="text-secondary small fw-semibold mt-0.5" style="font-size: 11.5px;">
+                                            <div class="text-secondary small fw-semibold mt-1" style="font-size: 11.5px;">
                                                 <i class="bi bi-person-badge me-1 text-muted"></i><span th:text="${s.staffCode}">NV0001</span>
                                             </div>
                                         </div>
@@ -339,7 +339,7 @@
 
                                 <!-- 3. Ngày công (Thực tế / Lịch) -->
                                 <td data-col="workDays" class="text-center" style="min-width: 170px;">
-                                    <span class="badge rounded-pill px-2.5 py-1 fw-bold"
+                                    <span class="badge rounded-pill px-3 py-1 fw-bold"
                                           th:style="${s.workDays == 0} ? 'background:#fef2f2;color:#dc2626;font-size:12px;border:1px solid #fecaca;' : (${s.workDays >= s.scheduledDays} ? 'background:#ecfdf5;color:#059669;font-size:12px;border:1px solid #a7f3d0;' : 'background:#eff6ff;color:#1d4ed8;font-size:12px;border:1px solid #bfdbfe;')">
                                         <span th:text="${s.workDays}">0</span> / <span th:text="${s.scheduledDays} + ' ngày'">0 ngày</span>
                                     </span>
@@ -424,6 +424,18 @@
                                     </div>
                                 </td>
                             </tr>
+                            <tr th:if="${!#lists.isEmpty(staffSummary)}" id="attNoMatchRow" style="display: none;">
+                                <td colspan="9" class="p-0 border-0 text-center" style="text-align: center !important; background: #ffffff;">
+                                    <div class="account-empty-state d-flex flex-column align-items-center justify-content-center text-center py-4 px-4 w-100">
+                                        <div class="account-empty-icon d-inline-flex align-items-center justify-content-center rounded-circle mb-2"
+                                             style="width: 48px; height: 48px; background: #f1f5f9; color: #64748b; font-size: 20px;">
+                                            <i class="bi bi-search"></i>
+                                        </div>
+                                        <h6 class="fw-bold text-dark mb-1">Không tìm thấy nhân sự phù hợp</h6>
+                                        <p class="text-muted mb-0 small">Thử đổi từ khóa tìm kiếm hoặc điều chỉnh bộ lọc chuyên cần.</p>
+                                    </div>
+                                </td>
+                            </tr>
                             </tbody>
                         </table>
                     </div>
@@ -457,6 +469,7 @@
                     <div class="mb-3">
                         <label for="advBranchId" class="form-label small fw-semibold text-muted">Chi nhánh</label>
                         <select id="advBranchId" class="form-select">
+                            <option value="" th:selected="${selectedBranchId == null}">Toàn hệ thống</option>
                             <option th:each="b : ${branches}" th:value="${b.branchId}" th:text="${b.branchName}"
                                     th:selected="${selectedBranchId != null and selectedBranchId == b.branchId}">
                             </option>
@@ -514,7 +527,7 @@
     </div>
 
     <!-- ==================== POPUP 2: MODAL CHI TIẾT LƯỢT CHẤM CÔNG ==================== -->
-    <div th:if="${selectedBranchId != null}" class="modal fade" id="staffAttendanceDetailModal" tabindex="-1"
+    <div class="modal fade" id="staffAttendanceDetailModal" tabindex="-1"
         aria-labelledby="staffAttendanceDetailModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
             <div class="modal-content border-0 shadow">
@@ -548,6 +561,7 @@
                                 <tr>
                                     <th class="ps-3 col-modal-staff">Nhân viên</th>
                                     <th class="ps-3">Ngày</th>
+                                    <th th:if="${selectedBranchId == null}">Chi nhánh</th>
                                     <th>Giờ vào (Check-in)</th>
                                     <th>Giờ ra (Check-out)</th>
                                     <th>Thời gian làm</th>
@@ -557,20 +571,24 @@
                             </thead>
                             <tbody>
                                 <tr id="modalEmptyRow" style="display: none;">
-                                    <td colspan="7" class="text-center text-muted py-5">
+                                    <td th:colspan="${selectedBranchId == null ? 8 : 7}" class="text-center text-muted py-5">
                                         <i class="bi bi-inbox fs-2 d-block mb-2 text-secondary opacity-50"></i>
                                         Không có lượt chấm công nào.
                                     </td>
                                 </tr>
                                 <tr th:each="r : ${records}" class="modal-att-record-row"
-                                    th:data-staff-code="${r.staff.staffCode}">
+                                    th:data-staff-code="${r.staff != null ? r.staff.staffCode : ''}">
                                     <td class="ps-3 col-modal-staff">
-                                        <div class="fw-semibold" th:text="${r.staff.fullName}">Họ tên</div>
-                                        <div class="staff-sub text-muted small" th:text="${r.staff.staffCode}">NV0001
+                                        <div class="fw-semibold" th:text="${r.staff != null ? r.staff.fullName : '-'}">Họ tên</div>
+                                        <div class="staff-sub text-muted small" th:text="${r.staff != null ? r.staff.staffCode : ''}">NV0001
                                         </div>
                                     </td>
                                     <td class="ps-3 fw-medium" th:text="${#temporals.format(r.workDate, 'dd/MM/yyyy')}">
                                         01/01/2026</td>
+                                    <td th:if="${selectedBranchId == null}">
+                                        <span class="badge rounded-pill text-bg-light border fw-semibold"
+                                              th:text="${r.branch != null ? (r.branch.branchCode != null and !#strings.isEmpty(r.branch.branchCode) ? r.branch.branchCode : r.branch.branchName) : '-'}">CN01</span>
+                                    </td>
                                     <td>
                                         <span class="fw-medium"
                                             th:text="${r.checkInAt != null ? #temporals.format(r.checkInAt, 'HH:mm:ss') : '-'}">-</span>
@@ -598,10 +616,10 @@
                                             <i class="bi bi-wifi-off me-1"></i>Khác mạng
                                         </span>
                                     </td>
-                                    <td class="pe-3">
+                                    <td class="pe-3" th:with="stName=${r.status != null ? r.status.name() : 'ABSENT'}">
                                         <span class="status-badge"
-                                            th:classappend="'status-badge--' + ${#strings.toLowerCase(r.status.name())}"
-                                            th:text="${r.status.name() == 'ON_TIME' ? 'Đúng giờ' : (r.status.name() == 'LATE' ? 'Đi muộn' : (r.status.name() == 'EARLY_LEAVE' ? 'Về sớm' : (r.status.name() == 'ON_LEAVE' ? 'Nghỉ phép' : 'Vắng mặt')))}">Đúng
+                                            th:classappend="'status-badge--' + ${#strings.toLowerCase(stName)}"
+                                            th:text="${stName == 'ON_TIME' ? 'Đúng giờ' : (stName == 'LATE' ? 'Đi muộn' : (stName == 'EARLY_LEAVE' ? 'Về sớm' : (stName == 'ON_LEAVE' ? 'Nghỉ phép' : 'Vắng mặt')))}">Đúng
                                             giờ</span>
                                     </td>
                                 </tr>
@@ -646,17 +664,19 @@
                 const tbody = document.getElementById('attSummaryTbody');
                 if (!tbody) return;
 
+                const noMatchRow = document.getElementById('attNoMatchRow');
                 const rows = Array.from(tbody.querySelectorAll('.att-filter-row'));
                 let visible = 0;
 
                 rows.forEach(function (row) {
-                    const text = row.textContent.toLowerCase();
+                    const fullName = (row.getAttribute('data-full-name') || '').toLowerCase();
+                    const staffCode = (row.getAttribute('data-staff-code') || '').toLowerCase();
                     const workDays = parseInt(row.getAttribute('data-work-days') || '0', 10);
                     const schedDays = parseInt(row.getAttribute('data-scheduled-days') || '0', 10);
                     const late = parseInt(row.getAttribute('data-late') || '0', 10);
                     const early = parseInt(row.getAttribute('data-early') || '0', 10);
 
-                    let match = (!q || text.includes(q));
+                    let match = (!q || fullName.includes(q) || staffCode.includes(q));
                     if (match && statusFilter === 'FULL') {
                         match = workDays > 0 && workDays >= schedDays;
                     } else if (match && statusFilter === 'LATE_OR_EARLY') {
@@ -691,6 +711,11 @@
                         if (sttSpan) sttSpan.textContent = String(idx++);
                     }
                 });
+
+                if (noMatchRow) {
+                    tbody.appendChild(noMatchRow);
+                    noMatchRow.style.display = visible === 0 ? '' : 'none';
+                }
 
                 if (visibleStaffCount) visibleStaffCount.textContent = String(visible);
 
@@ -733,8 +758,8 @@
                     const curBranch = branchSelect ? branchSelect.value : '';
                     const curMonth = monthInput ? monthInput.value : '';
 
-                    if ((newBranch && newBranch !== curBranch) || (newMonth && newMonth !== curMonth)) {
-                        if (branchSelect && newBranch) branchSelect.value = newBranch;
+                    if (newBranch !== curBranch || (newMonth && newMonth !== curMonth)) {
+                        if (branchSelect) branchSelect.value = newBranch;
                         if (monthInput && newMonth) monthInput.value = newMonth;
                         if (filterForm) filterForm.submit();
                         return;
@@ -749,6 +774,8 @@
 
             if (btnResetAdv) {
                 btnResetAdv.addEventListener('click', function () {
+                    if (advBranchId && branchSelect) advBranchId.value = branchSelect.value;
+                    if (advMonth && monthInput) advMonth.value = monthInput.value;
                     if (advAttStatus) advAttStatus.value = '';
                     if (advSort) advSort.value = 'fullName';
                     if (advDirection) advDirection.value = 'asc';

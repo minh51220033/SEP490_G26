@@ -472,6 +472,9 @@ public class StaffScheduleController {
             ra.addFlashAttribute("successMessage", "Đã phân công " + created.size() + " bác sĩ vào phòng trực.");
         } catch (IllegalArgumentException | IllegalStateException ex) {
             ra.addFlashAttribute("errorMessage", ex.getMessage());
+        } catch (ResponseStatusException ex) {
+            ra.addFlashAttribute("errorMessage",
+                    ex.getReason() != null && !ex.getReason().isBlank() ? ex.getReason() : ex.getMessage());
         }
         return redirectWeek(branchId, workDate);
     }
@@ -493,6 +496,9 @@ public class StaffScheduleController {
             ra.addFlashAttribute("successMessage", "Đã gỡ bác sĩ khỏi phòng trực trong ca.");
         } catch (IllegalArgumentException | IllegalStateException ex) {
             ra.addFlashAttribute("errorMessage", ex.getMessage());
+        } catch (ResponseStatusException ex) {
+            ra.addFlashAttribute("errorMessage",
+                    ex.getReason() != null && !ex.getReason().isBlank() ? ex.getReason() : ex.getMessage());
         }
         return redirectWeek(branchId, week);
     }
@@ -515,6 +521,9 @@ public class StaffScheduleController {
             ra.addFlashAttribute("successMessage", "Đã chuyển bác sĩ sang phòng trực mới.");
         } catch (IllegalArgumentException | IllegalStateException ex) {
             ra.addFlashAttribute("errorMessage", ex.getMessage());
+        } catch (ResponseStatusException ex) {
+            ra.addFlashAttribute("errorMessage",
+                    ex.getReason() != null && !ex.getReason().isBlank() ? ex.getReason() : ex.getMessage());
         }
         return redirectWeek(branchId, week);
     }
@@ -538,7 +547,7 @@ public class StaffScheduleController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate week,
             @RequestParam Long replacementStaffId,
             @RequestParam(required = false, defaultValue = "false") boolean overrideRoomPermission,
-            @RequestParam String replacementReason,
+            @RequestParam(required = false) String replacementReason,
             RedirectAttributes ra,
             HttpSession session) {
         if (!isLoggedIn(session)) {
@@ -548,13 +557,16 @@ public class StaffScheduleController {
         User user = (User) session.getAttribute("loggedInUser");
         try {
             DoctorShiftAssignmentService.ReplacementResult res = doctorShiftAssignmentService.replaceDoctorInShift(
-                    id, replacementStaffId, overrideRoomPermission, replacementReason,
+                    id, replacementStaffId, overrideRoomPermission, replacementReason != null ? replacementReason : "",
                     user != null ? user.getUserId() : null);
             String msg = "Đã thay thế bác sĩ trực. Chuyển giao: " + res.transferredAppointments()
                     + " lịch hẹn; Cần điều phối riêng (NEEDS_REASSIGNMENT): " + res.needsReassignmentAppointments() + " lịch hẹn.";
             ra.addFlashAttribute("successMessage", msg);
         } catch (IllegalArgumentException | IllegalStateException ex) {
             ra.addFlashAttribute("errorMessage", ex.getMessage());
+        } catch (ResponseStatusException ex) {
+            ra.addFlashAttribute("errorMessage",
+                    ex.getReason() != null && !ex.getReason().isBlank() ? ex.getReason() : ex.getMessage());
         }
         return redirectWeek(branchId, week);
     }

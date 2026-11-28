@@ -581,6 +581,7 @@
 <div class="modal fade" id="editAssignmentModal" tabindex="-1" aria-labelledby="editAssignmentModalTitle" aria-hidden="true">
     <div class="modal-dialog">
         <form class="modal-content" id="editAssignmentForm" method="post">
+            <input type="hidden" th:if="${_csrf != null}" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
             <div class="modal-header">
                 <h5 class="modal-title" id="editAssignmentModalTitle">Sửa phân công chi nhánh</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>

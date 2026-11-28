@@ -132,7 +132,7 @@ public class WorkShiftController {
         try {
             workShiftService.create(branchId, shiftCode, shiftName, startTime, endTime);
             ra.addFlashAttribute("successMessage", "Tạo ca '" + shiftName.trim() + "' thành công.");
-        } catch (IllegalArgumentException e) {
+        } catch (IllegalArgumentException | IllegalStateException e) {
             ra.addFlashAttribute("errorMessage", e.getMessage());
         }
         return "redirect:/admin/work-shifts?branchId=" + branchId;
@@ -153,7 +153,7 @@ public class WorkShiftController {
         try {
             workShiftService.update(id, shiftCode, shiftName, startTime, endTime);
             ra.addFlashAttribute("successMessage", "Cập nhật ca thành công.");
-        } catch (IllegalArgumentException e) {
+        } catch (IllegalArgumentException | IllegalStateException e) {
             ra.addFlashAttribute("errorMessage", e.getMessage());
         }
         return "redirect:/admin/work-shifts?branchId=" + branchId;
@@ -172,7 +172,7 @@ public class WorkShiftController {
             ra.addFlashAttribute("successMessage",
                     "Ca '" + s.getShiftName() + "' đã được " +
                     (Boolean.TRUE.equals(s.getIsActive()) ? "bật" : "tắt") + ".");
-        } catch (IllegalArgumentException e) {
+        } catch (IllegalArgumentException | IllegalStateException e) {
             ra.addFlashAttribute("errorMessage", e.getMessage());
         }
         return "redirect:/admin/work-shifts?branchId=" + branchId;
@@ -208,7 +208,7 @@ public class WorkShiftController {
         try {
             workShiftService.updateSessionWindow(id, startTime, endTime);
             ra.addFlashAttribute("successMessage", "Cập nhật khung giờ ca khám và đồng bộ ca làm thành công.");
-        } catch (IllegalArgumentException e) {
+        } catch (IllegalArgumentException | IllegalStateException e) {
             ra.addFlashAttribute("errorMessage", e.getMessage());
         }
         return "redirect:/admin/work-shifts?branchId=" + branchId;
@@ -230,7 +230,7 @@ public class WorkShiftController {
             };
             ra.addFlashAttribute("successMessage",
                     label + " đã được " + (Boolean.TRUE.equals(w.getIsActive()) ? "bật nhận lịch hẹn" : "tắt nhận lịch hẹn") + ".");
-        } catch (IllegalArgumentException e) {
+        } catch (IllegalArgumentException | IllegalStateException e) {
             ra.addFlashAttribute("errorMessage", e.getMessage());
         }
         return "redirect:/admin/work-shifts?branchId=" + branchId;
@@ -244,7 +244,7 @@ public class WorkShiftController {
         try {
             workShiftService.syncSessionWindowsFromShifts(branchId);
             ra.addFlashAttribute("successMessage", "Đã đồng bộ khung giờ và trạng thái các ca khám theo ca làm việc hiện tại.");
-        } catch (IllegalArgumentException e) {
+        } catch (IllegalArgumentException | IllegalStateException e) {
             ra.addFlashAttribute("errorMessage", e.getMessage());
         }
         return "redirect:/admin/work-shifts?branchId=" + branchId;

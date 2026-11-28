@@ -44,13 +44,13 @@ public class AdminLeaveController {
 
     @GetMapping("/admin/leave-requests")
     public String adminLeaveList(@RequestParam(required = false) Long branchId,
-                                 @RequestParam(required = false) LeaveStatus status,
-                                 @RequestParam(required = false) Long staffId,
-                                 @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
-                                 @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
-                                 @RequestParam(required = false) String keyword,
-                                 Model model,
-                                 HttpSession session) {
+            @RequestParam(required = false) LeaveStatus status,
+            @RequestParam(required = false) Long staffId,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+            @RequestParam(required = false) String keyword,
+            Model model,
+            HttpSession session) {
         User user = getSessionUser(session);
         if (user == null) {
             return "redirect:/login";
@@ -62,7 +62,8 @@ public class AdminLeaveController {
         List<Branch> branches = branchService.getActiveBranches();
         model.addAttribute("branches", branches);
 
-        // Mặc định ban đầu của màn Duyệt nghỉ phép là Toàn hệ thống (trừ khi người dùng chủ động chọn chi nhánh trên URL)
+        // Mặc định ban đầu của màn Duyệt nghỉ phép là Toàn hệ thống (trừ khi người dùng
+        // chủ động chọn chi nhánh trên URL)
         if (branchId != null) {
             Long checkId = branchId;
             Branch chosen = branches.stream().filter(b -> b.getBranchId().equals(checkId)).findFirst().orElse(null);
@@ -89,8 +90,7 @@ public class AdminLeaveController {
 
         // Danh sách đơn xin nghỉ theo bộ lọc
         List<LeaveRequest> requests = leaveService.filterAdminLeaveRequests(
-                branchId, status, staffId, startDate, endDate, keyword
-        );
+                branchId, status, staffId, startDate, endDate, keyword);
         model.addAttribute("requests", requests);
 
         // Số liệu tổng hợp (Badge counter)
@@ -119,22 +119,24 @@ public class AdminLeaveController {
 
     @PostMapping("/admin/leave-requests/{id}/approve")
     public String approveLeaveRequest(@PathVariable("id") Long leaveId,
-                                      @RequestParam(required = false) String reviewNote,
-                                      RedirectAttributes ra,
-                                      HttpSession session) {
+            @RequestParam(required = false) String reviewNote,
+            RedirectAttributes ra,
+            HttpSession session) {
         User user = getSessionUser(session);
         if (user == null) {
             return "redirect:/login";
         }
 
         try {
-            int affectedAppointments = leaveService.approveLeaveRequest(leaveId, user.getUserId(), reviewNote);
-            String successMsg = "Đã phê duyệt đơn nghỉ phép #" + leaveId + " thành công! Lịch làm việc của Bác sĩ đã chuyển sang trạng thái Nghỉ phép.";
-            if (affectedAppointments > 0) {
-                successMsg += " Hệ thống giữ nguyên " + affectedAppointments + " lịch hẹn bị ảnh hưởng để chờ điều phối (NEEDS_REASSIGNMENT), đồng thời gửi thông báo cho lễ tân và bệnh nhân để đổi bác sĩ hoặc đề xuất dời lịch.";
+            int cancelledAppointments = leaveService.approveLeaveRequest(leaveId, user.getUserId(), reviewNote);
+            String successMsg = "Đã phê duyệt đơn nghỉ phép #" + leaveId
+                    + " thành công! Lịch làm việc của Bác sĩ đã chuyển sang trạng thái Nghỉ phép.";
+            if (cancelledAppointments > 0) {
+                successMsg += " Hệ thống đã tự động hủy " + cancelledAppointments
+                        + " lịch hẹn bị ảnh hưởng, gửi thông báo cho bệnh nhân và báo lễ tân dời lịch.";
             }
             ra.addFlashAttribute("successMessage", successMsg);
-        } catch (IllegalArgumentException e) {
+        } catch (IllegalArgumentException | IllegalStateException e) {
             ra.addFlashAttribute("errorMessage", e.getMessage());
         }
 
@@ -147,7 +149,7 @@ public class AdminLeaveController {
 
     @PostMapping("/admin/leave-requests/{id}/reject")
     public String rejectLeaveRequest(@PathVariable("id") Long leaveId,
-                                     @RequestParam String reviewNote,
+                                     @RequestParam(required = false) String reviewNote,
                                      RedirectAttributes ra,
                                      HttpSession session) {
         User user = getSessionUser(session);
@@ -158,7 +160,7 @@ public class AdminLeaveController {
         try {
             leaveService.rejectLeaveRequest(leaveId, user.getUserId(), reviewNote);
             ra.addFlashAttribute("successMessage", "Đã từ chối đơn nghỉ phép #" + leaveId + ".");
-        } catch (IllegalArgumentException e) {
+        } catch (IllegalArgumentException | IllegalStateException e) {
             ra.addFlashAttribute("errorMessage", e.getMessage());
         }
 
@@ -172,13 +174,18 @@ public class AdminLeaveController {
     @GetMapping("/admin/leave-requests/{id}/affected-appointments")
     @ResponseBody
     public ResponseEntity<List<Map<String, Object>>> getAffectedAppointments(@PathVariable("id") Long leaveId,
-                                                                             HttpSession session) {
+            HttpSession session) {
         User user = getSessionUser(session);
         if (user == null) {
             return ResponseEntity.status(401).build();
         }
 
-        List<Appointment> list = leaveService.getAffectedAppointments(leaveId);
+        List<Appointment> list;
+        try {
+            list = leaveService.getAffectedAppointments(leaveId);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.notFound().build();
+        }
         List<Map<String, Object>> response = new ArrayList<>();
         for (Appointment a : list) {
             Map<String, Object> map = new LinkedHashMap<>();
@@ -198,4 +205,3 @@ public class AdminLeaveController {
         return ResponseEntity.ok(response);
     }
 }
-

@@ -48,9 +48,19 @@
 .att-stat--early strong { color: #b36b00; }
 
 /* ---------- Badge trạng thái chấm công ---------- */
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+}
 .status-badge--on_time     { background: #e3f6ed; color: #14744b; }
 .status-badge--late        { background: #fde4e0; color: #b4351f; }
 .status-badge--early_leave { background: #fff3d6; color: #8a5a00; }
+.status-badge--on_leave    { background: #e0f2fe; color: #0369a1; }
 .status-badge--absent      { background: #eceff4; color: #5b6578; }
 
 .net-ok { color: #14744b; }
