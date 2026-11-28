@@ -210,7 +210,7 @@ public class PermissionDataInitializer implements ApplicationRunner {
                         modified |= syncSystemRolePermissions(role, permissionMap, Set.of(
                                 "FINANCE_DASHBOARD", "INVOICE_CREATE", "PAYMENT_COLLECT", "FINANCE_DEPOSIT",
                                 "FINANCE_DEBT", "REFUND_MANAGE", "FINANCE_EXPENSES", "FINANCE_PAYROLL",
-                                "FINANCE_PAYROLL_ADVANCES", "FINANCE_OWNER_DISTRIBUTIONS",
+                                "FINANCE_PAYROLL_ADVANCES", "FINANCE_COMMISSION_CONFIG", "FINANCE_OWNER_DISTRIBUTIONS",
                                 "FINANCE_REPORTS", "REPORT_FINANCIAL", "REPORT_DEBTS", "REPORT_OPERATIONAL",
                                 "SCHEDULE_MY", "HR_MY_ATTENDANCE", "HR_LEAVE_REQUESTS"
                         ));

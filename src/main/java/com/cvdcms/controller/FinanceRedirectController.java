@@ -110,13 +110,27 @@ public class FinanceRedirectController {
         }
         boolean isAdmin = Boolean.TRUE.equals(session.getAttribute("isAdmin"));
         List<String> roleNames = extractList(session.getAttribute("roleNames"));
+        if (roleNames.isEmpty() && user.getUserId() != null) {
+            roleNames = userRepository.findActiveRoleNamesByUserId(user.getUserId());
+        }
+        if (!isAdmin) {
+            isAdmin = roleNames.stream().anyMatch(r -> "ADMIN".equalsIgnoreCase(r) || "ROLE_ADMIN".equalsIgnoreCase(r));
+        }
+        boolean isKeToan = roleNames.stream().anyMatch(r ->
+                "KE_TOAN".equalsIgnoreCase(r)
+                        || "ROLE_KE_TOAN".equalsIgnoreCase(r)
+                        || "ACCOUNTANT".equalsIgnoreCase(r)
+                        || "ROLE_ACCOUNTANT".equalsIgnoreCase(r));
         List<String> perms = extractList(session.getAttribute("permissionCodes"));
         if (perms.isEmpty() && user.getUserId() != null) {
             perms = userRepository.findActivePermissionCodesByUserId(user.getUserId());
         }
 
-        if (isAdmin || perms.contains("FINANCE_EXPENSES")) {
+        if (isAdmin || isKeToan || perms.contains("FINANCE_EXPENSES")) {
             return "redirect:/expenses";
+        }
+        if (perms.contains("SUPPLIER_MANAGE") || perms.contains("FINANCE_DASHBOARD")) {
+            return "redirect:/supplier-payments";
         }
         if (perms.contains("FINANCE_PAYROLL")) {
             return "redirect:/payroll";

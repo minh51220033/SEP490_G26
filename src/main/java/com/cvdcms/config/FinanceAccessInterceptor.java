@@ -165,15 +165,17 @@ public class FinanceAccessInterceptor implements HandlerInterceptor {
             request.setAttribute("isFinanceAdmin", Boolean.FALSE);
             request.setAttribute("currentUserActiveBranchIds", activeBranchIds);
 
-            // Chặn kế toán can thiệp cấu hình hoa hồng hoặc duyệt/từ chối tạm ứng nếu chưa được cấp quyền
+            // Chặn nhân sự không phải Kế toán / Admin can thiệp cấu hình hoa hồng hoặc duyệt/từ chối tạm ứng nếu chưa được cấp quyền
             if ((uri.contains("/payroll/commission-config") || uri.contains("/payroll/config"))
+                    && !isKeToan
                     && !userRepository.hasActivePermission(userId, "FINANCE_COMMISSION_CONFIG")) {
-                response.sendError(HttpServletResponse.SC_FORBIDDEN, "Chỉ Quản trị viên hoặc nhân sự được cấp quyền mới có thể chỉnh sửa cấu hình hoa hồng.");
+                response.sendError(HttpServletResponse.SC_FORBIDDEN, "Chỉ Quản trị viên, Kế toán hoặc nhân sự được cấp quyền mới có thể chỉnh sửa cấu hình hoa hồng.");
                 return false;
             }
             if (uri.matches(".*/payroll/advances/\\d+/(approve|reject).*")
+                    && !isKeToan
                     && !userRepository.hasActivePermission(userId, "FINANCE_PAYROLL_ADVANCES")) {
-                response.sendError(HttpServletResponse.SC_FORBIDDEN, "Chỉ Quản trị viên hoặc nhân sự được cấp quyền mới có thể duyệt tạm ứng lương.");
+                response.sendError(HttpServletResponse.SC_FORBIDDEN, "Chỉ Quản trị viên, Kế toán hoặc nhân sự được cấp quyền mới có thể duyệt tạm ứng lương.");
                 return false;
             }
 

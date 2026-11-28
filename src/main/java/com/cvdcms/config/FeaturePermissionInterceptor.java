@@ -76,9 +76,15 @@ public class FeaturePermissionInterceptor implements HandlerInterceptor {
 
         boolean isDoctor = roleNames != null && roleNames.stream()
                 .anyMatch(r -> "BAC_SI".equalsIgnoreCase(r) || "ROLE_BAC_SI".equalsIgnoreCase(r));
+        boolean isKeToan = roleNames != null && roleNames.stream()
+                .anyMatch(r -> "KE_TOAN".equalsIgnoreCase(r)
+                        || "ROLE_KE_TOAN".equalsIgnoreCase(r)
+                        || "ACCOUNTANT".equalsIgnoreCase(r)
+                        || "ROLE_ACCOUNTANT".equalsIgnoreCase(r));
 
         boolean allowed = hasAnyPermission(activePermissionCodes, requiredAnyOf)
-                || (isDoctor && requiredAnyOf.contains("MEDICAL_RECORD_VIEW"));
+                || (isDoctor && requiredAnyOf.contains("MEDICAL_RECORD_VIEW"))
+                || (isKeToan && isFinanceUri(uri));
         if (!allowed) {
             denyAccess(request, response, session, uri, String.join(" / ", requiredAnyOf));
             return false;
@@ -431,6 +437,7 @@ public class FeaturePermissionInterceptor implements HandlerInterceptor {
                 || uri.startsWith("/invoices")
                 || uri.startsWith("/payments")
                 || uri.startsWith("/expenses")
+                || uri.startsWith("/supplier-payments")
                 || uri.startsWith("/payroll")
                 || uri.startsWith("/admin/reports")
                 || uri.startsWith("/api/finance")
