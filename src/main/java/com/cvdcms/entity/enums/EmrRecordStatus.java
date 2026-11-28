@@ -5,7 +5,7 @@ public enum EmrRecordStatus {
     READY_TO_LOCK("Sẵn sàng khóa"),
     PATIENT_SIGNATURE_PENDING("Chờ bác sĩ ký (hồ sơ cũ)"),
     DOCTOR_SIGNATURE_PENDING("Chờ bác sĩ ký"),
-    SIGNED("Đã ký thử"),
+    SIGNED("Đã chốt & Khóa"),
     AMENDMENT_DRAFT("Bản sửa đổi");
 
     private final String displayName;

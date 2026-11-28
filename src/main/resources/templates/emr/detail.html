@@ -60,7 +60,7 @@
                                             th:style="${detail.record.status.name() == 'SIGNED' ? 'background:#16a34a;' : (detail.record.status.name() == 'LOCKED' ? 'background:#64748b;' : 'background:#0284c7;')}"
                                             style="width: 7px; height: 7px;"></span>
                                         <span
-                                            th:text="${detail.record.status.name() == 'SIGNED' ? 'Đã ký số' : (detail.record.status.name() == 'LOCKED' ? 'Đã khóa' : 'Đang mở')}">Đang
+                                            th:text="${detail.record.status.name() == 'SIGNED' ? 'Đã chốt &amp; Khóa' : (detail.record.status.name() == 'LOCKED' ? 'Đã khóa' : 'Đang mở')}">Đang
                                             mở</span>
                                     </span>
                                 </div>
@@ -78,35 +78,24 @@
                             </div>
                         </div>
 
-                        <!-- Cụm nút tác vụ Sub-header: Đóng HSBA, Ký số, In, Lịch sử -->
+                        <!-- Cụm nút tác vụ Sub-header: Chốt & Khóa HSBA, In, Lịch sử -->
                         <div class="emr-sub-header__actions">
-                            <!-- Nút Đóng HSBA / Khóa phiên bản trực tiếp -->
+                            <!-- Nút Chốt & Khóa HSBA trực tiếp -->
                             <form th:if="${detail.canLock}" method="post"
                                 th:action="@{/emr/records/{id}/lock(id=${detail.record.id})}" class="m-0">
                                 <button
                                     class="btn btn-outline-danger d-inline-flex align-items-center gap-1.5 shadow-sm rounded-3 fw-bold"
                                     type="submit">
-                                    <i class="bi bi-lock-fill"></i> Đóng HSBA
+                                    <i class="bi bi-lock-fill"></i> Chốt &amp; Khóa HSBA
                                 </button>
                             </form>
 
-                            <!-- Nút Ký số ngay trực tiếp -->
-                            <form th:if="${detail.canDoctorSign}" method="post"
-                                th:action="@{/emr/records/{id}/doctor-sign(id=${detail.record.id})}" class="m-0">
-                                <input type="hidden" name="confirmed" value="true">
-                                <button
-                                    class="btn btn-primary d-inline-flex align-items-center gap-1.5 shadow-sm rounded-3 fw-bold"
-                                    type="submit">
-                                    <i class="bi bi-pen-fill"></i> Ký số
-                                </button>
-                            </form>
-
-                            <!-- Nút Mở Drawer Lịch sử & Ký số -->
+                            <!-- Nút Mở Drawer Lịch sử & Phiên bản -->
                             <button
                                 class="btn btn-outline-secondary d-inline-flex align-items-center gap-1.5 rounded-3 fw-bold"
                                 type="button" data-bs-toggle="offcanvas" data-bs-target="#emrHistoryDrawer"
                                 aria-controls="emrHistoryDrawer">
-                                <i class="bi bi-clock-history"></i> Lịch sử / Ký số
+                                <i class="bi bi-clock-history"></i> Lịch sử &amp; Phiên bản
                             </button>
 
                             <!-- Dropdown Tác vụ khác -->
@@ -286,7 +275,7 @@
                                                     <i class="bi bi-shield-check tree-icon"></i>
                                                     <div class="tree-text">
                                                         <span class="tree-name">Thông tin xác thực hồ sơ</span>
-                                                        <span class="tree-sub">Tờ 5 • Toàn vẹn &amp; Chữ ký số</span>
+                                                        <span class="tree-sub">Tờ 5 • Toàn vẹn &amp; Xác thực</span>
                                                     </div>
                                                     <i class="bi bi-chevron-right tree-arrow"></i>
                                                 </button>
@@ -596,136 +585,31 @@
                                             placeholder="" style="width: 220px;">
                                     </div>
 
-                                    <!-- Chữ ký / Con dấu bìa -->
+                                    <!-- Chữ ký / Con dấu bìa (In bản giấy ký tay) -->
                                     <div class="moh-signature-grid emr-cover-signature-grid">
                                         <div class="moh-signature-block">
                                             <span class="signer-title">BÁC SĨ ĐIỀU TRỊ</span>
                                             <span class="signer-sub">(Ký và ghi rõ họ tên)</span>
-                                            <div th:if="${detail.record.status.name() == 'SIGNED'}"
-                                                class="emr-digital-stamp-box">
-                                                <div class="emr-stamp-badge"><i class="bi bi-patch-check-fill"></i> ĐÃ
-                                                    KÝ SỐ ĐIỆN TỬ</div>
-                                                <div th:if="${cover != null and cover['doctorSignatureUrl'] != null and !cover['doctorSignatureUrl'].isEmpty()}"
-                                                    class="my-1">
-                                                    <img th:src="${cover['doctorSignatureUrl']}" alt="Chữ ký Bác sĩ"
-                                                        style="max-height: 60px; max-width: 180px; object-fit: contain;">
-                                                </div>
-                                                <div class="emr-stamp-signer"
-                                                    th:text="|BS. ${@emrViewText.effective(cover, 'doctorName', visit['doctorName'] ?: detail.record.doctorName)}|">
-                                                    BS. Lê Minh Cường</div>
-                                                <div class="emr-stamp-org"
-                                                    th:text="${@emrViewText.effective(cover, 'healthFacility', visit['branchName'])}">
-                                                    CV-DCMS</div>
-                                                <div class="emr-stamp-standard">Hợp lệ Thông tư 46/2018/TT-BYT</div>
-                                            </div>
-                                            <div th:unless="${detail.record.status.name() == 'SIGNED'}"
-                                                class="pt-2 text-center w-100">
-                                                <!-- VÙNG CHỮ KÝ BÁC SĨ ĐIỀU TRỊ -->
-                                                <div class="emr-signature-visual-box my-2 d-flex flex-column align-items-center justify-content-center"
-                                                    style="min-height: 80px;">
-                                                    <div id="doctorSignImgWrapper"
-                                                        th:style="${cover != null and cover['doctorSignatureUrl'] != null and !cover['doctorSignatureUrl'].isEmpty()} ? '' : 'display:none;'">
-                                                        <img id="doctorSignImg"
-                                                            th:src="${cover != null ? cover['doctorSignatureUrl'] : ''}"
-                                                            alt="Chữ ký Bác sĩ"
-                                                            style="max-height: 70px; max-width: 200px; object-fit: contain;">
-                                                        <div class="mt-1">
-                                                            <button type="button"
-                                                                class="btn btn-link btn-sm text-danger p-0 emr-hide-print"
-                                                                style="font-size: 11px;"
-                                                                onclick="openEmrSignModal('doctor')">
-                                                                <i class="bi bi-arrow-repeat"></i> Ký lại
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                    <div id="doctorSignBtnWrapper"
-                                                        th:style="${cover != null and cover['doctorSignatureUrl'] != null and !cover['doctorSignatureUrl'].isEmpty()} ? 'display:none;' : ''">
-                                                        <button type="button" class="emr-btn-sign emr-hide-print"
-                                                            onclick="openEmrSignModal('doctor')">
-                                                            <i class="bi bi-pen-fill"></i>
-                                                            <span>Ký tên</span>
-                                                        </button>
-                                                    </div>
-                                                    <input type="hidden" name="doctorSignatureUrl"
-                                                        id="doctorSignatureUrl"
-                                                        th:value="${cover != null ? cover['doctorSignatureUrl'] : ''}">
-                                                </div>
-
+                                            <div class="pt-2 text-center w-100">
+                                                <div class="my-2" style="min-height: 72px;"></div>
                                                 <div class="d-flex justify-content-center w-100">
                                                     <input type="text" name="doctorName"
                                                         class="emr-inline-input fw-bold text-center w-100"
                                                         th:value="${@emrViewText.effective(cover, 'doctorName', visit['doctorName'] ?: detail.record.doctorName ?: '')}"
                                                         placeholder="" style="max-width: 100%;">
                                                 </div>
-                                                <div class="text-muted fst-italic small pt-1" id="doctorSignStatus"
-                                                    th:text="${cover != null and cover['doctorSignatureUrl'] != null and !cover['doctorSignatureUrl'].isEmpty()} ? '(Đã ký điện tử)' : '(Bản chưa ký số)'">
-                                                    (Bản chưa ký số)
-                                                </div>
                                             </div>
                                         </div>
                                         <div class="moh-signature-block">
                                             <span class="signer-title">ĐẠI DIỆN CƠ SỞ KHÁM CHỮA BỆNH</span>
-                                            <span class="signer-sub">(Ký, đóng dấu hoặc chứng thực số)</span>
-                                            <div th:if="${detail.record.status.name() == 'SIGNED'}"
-                                                class="emr-digital-stamp-box"
-                                                style="border-color: #0284c7 !important; background: #f0f9ff !important;">
-                                                <div class="emr-stamp-badge" style="color: #0284c7;"><i
-                                                        class="bi bi-shield-check"></i> CHỨNG THỰC BỆNH ÁN ĐIỆN TỬ</div>
-                                                <div th:if="${cover != null and cover['facilityDirectorSignatureUrl'] != null and !cover['facilityDirectorSignatureUrl'].isEmpty()}"
-                                                    class="my-1">
-                                                    <img th:src="${cover['facilityDirectorSignatureUrl']}"
-                                                        alt="Chữ ký Đại diện cơ sở"
-                                                        style="max-height: 60px; max-width: 180px; object-fit: contain;">
-                                                </div>
-                                                <div class="emr-stamp-signer"
-                                                    th:text="${@emrViewText.effective(cover, 'facilityDirector', '')}">
-                                                    CV-DCMS</div>
-                                                <div class="emr-stamp-standard"
-                                                    style="color: #0284c7; border-color: #bae6fd;">Mã xác thực: HỢP LỆ
-                                                    TOÀN VẸN</div>
-                                            </div>
-                                            <div th:unless="${detail.record.status.name() == 'SIGNED'}"
-                                                class="pt-2 text-center w-100">
-                                                <!-- VÙNG CHỮ KÝ ĐẠI DIỆN CƠ SỞ -->
-                                                <div class="emr-signature-visual-box my-2 d-flex flex-column align-items-center justify-content-center"
-                                                    style="min-height: 80px;">
-                                                    <div id="facilitySignImgWrapper"
-                                                        th:style="${cover != null and cover['facilityDirectorSignatureUrl'] != null and !cover['facilityDirectorSignatureUrl'].isEmpty()} ? '' : 'display:none;'">
-                                                        <img id="facilitySignImg"
-                                                            th:src="${cover != null ? cover['facilityDirectorSignatureUrl'] : ''}"
-                                                            alt="Chữ ký Đại diện cơ sở"
-                                                            style="max-height: 70px; max-width: 200px; object-fit: contain;">
-                                                        <div class="mt-1">
-                                                            <button type="button"
-                                                                class="btn btn-link btn-sm text-danger p-0 emr-hide-print"
-                                                                style="font-size: 11px;"
-                                                                onclick="openEmrSignModal('facility')">
-                                                                <i class="bi bi-arrow-repeat"></i> Ký lại
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                    <div id="facilitySignBtnWrapper"
-                                                        th:style="${cover != null and cover['facilityDirectorSignatureUrl'] != null and !cover['facilityDirectorSignatureUrl'].isEmpty()} ? 'display:none;' : ''">
-                                                        <button type="button" class="emr-btn-sign emr-hide-print"
-                                                            onclick="openEmrSignModal('facility')">
-                                                            <i class="bi bi-pen-fill"></i>
-                                                            <span>Ký tên</span>
-                                                        </button>
-                                                    </div>
-                                                    <input type="hidden" name="facilityDirectorSignatureUrl"
-                                                        id="facilityDirectorSignatureUrl"
-                                                        th:value="${cover != null ? cover['facilityDirectorSignatureUrl'] : ''}">
-                                                </div>
-
+                                            <span class="signer-sub">(Ký, ghi rõ họ tên và đóng dấu)</span>
+                                            <div class="pt-2 text-center w-100">
+                                                <div class="my-2" style="min-height: 72px;"></div>
                                                 <div class="d-flex justify-content-center w-100">
                                                     <input type="text" name="facilityDirector"
                                                         class="emr-inline-input fw-bold text-center w-100"
                                                         th:value="${@emrViewText.effective(cover, 'facilityDirector', '')}"
                                                         placeholder="" style="max-width: 100%;">
-                                                </div>
-                                                <div class="text-muted fst-italic small pt-1" id="facilitySignStatus"
-                                                    th:text="${cover != null and cover['facilityDirectorSignatureUrl'] != null and !cover['facilityDirectorSignatureUrl'].isEmpty()} ? '(Đã chứng thực)' : '(Chờ chứng thực)'">
-                                                    (Chờ chứng thực)
                                                 </div>
                                             </div>
                                         </div>
@@ -1351,149 +1235,32 @@
                                         </div>
                                     </div>
 
-                                    <!-- CHỮ KÝ VÀ CON DẤU ĐIỆN TỬ CUỐI BỆNH ÁN MS: BA-18 -->
+                                    <!-- CHỮ KÝ TAY CUỐI BỆNH ÁN MS: BA-18 -->
                                     <div class="moh-signature-grid">
                                         <div class="moh-signature-block">
                                             <span class="signer-title">BÁC SĨ KHÁM BỆNH</span>
                                             <span class="signer-sub">(Ký và ghi rõ họ tên)</span>
-
-                                            <!-- NẾU ĐÃ KÝ SỐ: HIỂN THỊ CON DẤU XANH LÁ HỢP LỆ -->
-                                            <div th:if="${detail.record.status.name() == 'SIGNED'}"
-                                                class="emr-digital-stamp-box">
-                                                <div class="emr-stamp-badge"><i class="bi bi-patch-check-fill"></i> ĐÃ
-                                                    KÝ SỐ</div>
-                                                <div th:if="${dental != null and dental['doctorSignatureUrl'] != null and !dental['doctorSignatureUrl'].isEmpty()}"
-                                                    class="my-1">
-                                                    <img th:src="${dental['doctorSignatureUrl']}" alt="Chữ ký Bác sĩ"
-                                                        style="max-height: 60px; max-width: 180px; object-fit: contain;">
-                                                </div>
-                                                <div class="emr-stamp-signer"
-                                                    th:text="|BS. ${@emrViewText.effective(dental, 'doctorName', visit['doctorName'] ?: detail.record.doctorName)}|">
-                                                    BS. Lê Minh Cường</div>
-                                                <div class="emr-stamp-org"
-                                                    th:text="|Cơ sở: ${visit['branchName'] ?: detail.record.branchName}|">
-                                                    Nha khoa CV-DCMS</div>
-                                                <div class="emr-stamp-time"
-                                                    th:text="|Ngày ký: ${detail.record.updatedAt != null ? #temporals.format(detail.record.updatedAt, 'dd/MM/yyyy HH:mm:ss') : 'Đã chứng thực'}|">
-                                                    17/10/2026</div>
-                                                <div class="emr-stamp-hash" th:if="${detail.contentHash != null}"
-                                                    th:text="|SHA-256: ${#strings.substring(detail.contentHash, 0, 20)}...|">
-                                                    SHA-256</div>
-                                                <div class="emr-stamp-standard">Chứng thư CVDCMS_INTERNAL_CA · Chuẩn TT
-                                                    46/2018/TT-BYT</div>
-                                            </div>
-
-                                            <!-- NẾU CHƯA KÝ SỐ VÀ ĐANG CHỈNH SỬA / MỞ -->
-                                            <div th:unless="${detail.record.status.name() == 'SIGNED'}" class="pt-2 text-center w-100">
-                                                <!-- VÙNG CHỮ KÝ BÁC SĨ KHÁM BỆNH -->
-                                                <div class="emr-signature-visual-box my-2 d-flex flex-column align-items-center justify-content-center"
-                                                    style="min-height: 80px;">
-                                                    <div id="dentalDoctorSignImgWrapper"
-                                                        th:style="${dental != null and dental['doctorSignatureUrl'] != null and !dental['doctorSignatureUrl'].isEmpty()} ? '' : 'display:none;'">
-                                                        <img id="dentalDoctorSignImg"
-                                                            th:src="${dental != null ? dental['doctorSignatureUrl'] : ''}"
-                                                            alt="Chữ ký Bác sĩ"
-                                                            style="max-height: 70px; max-width: 200px; object-fit: contain;">
-                                                        <div class="mt-1">
-                                                            <button type="button"
-                                                                class="btn btn-link btn-sm text-danger p-0 emr-hide-print"
-                                                                style="font-size: 11px;"
-                                                                onclick="openEmrSignModal('dentalDoctor')">
-                                                                <i class="bi bi-arrow-repeat"></i> Ký lại
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                    <div id="dentalDoctorSignBtnWrapper"
-                                                        th:style="${dental != null and dental['doctorSignatureUrl'] != null and !dental['doctorSignatureUrl'].isEmpty()} ? 'display:none;' : ''">
-                                                        <button type="button" class="emr-btn-sign emr-hide-print"
-                                                            onclick="openEmrSignModal('dentalDoctor')">
-                                                            <i class="bi bi-pen-fill"></i>
-                                                            <span>Ký tên</span>
-                                                        </button>
-                                                    </div>
-                                                    <input type="hidden" name="doctorSignatureUrl"
-                                                        id="dentalDoctorSignatureUrl"
-                                                        th:value="${dental != null ? dental['doctorSignatureUrl'] : ''}">
-                                                </div>
-
+                                            <div class="pt-2 text-center w-100">
+                                                <div class="my-2" style="min-height: 72px;"></div>
                                                 <div class="d-flex justify-content-center w-100">
                                                     <input type="text" name="doctorName"
                                                         class="emr-inline-input fw-bold text-center w-100"
                                                         th:value="${@emrViewText.effective(dental, 'doctorName', visit['doctorName'] ?: detail.record.doctorName ?: '')}"
                                                         placeholder="" style="max-width: 100%;">
                                                 </div>
-                                                <div class="text-muted fst-italic small pt-1" id="dentalDoctorSignStatus"
-                                                    th:text="${dental != null and dental['doctorSignatureUrl'] != null and !dental['doctorSignatureUrl'].isEmpty()} ? '(Đã ký điện tử)' : '(Bản chưa ký số)'">
-                                                    (Bản chưa ký số)
-                                                </div>
                                             </div>
                                         </div>
 
                                         <div class="moh-signature-block">
                                             <span class="signer-title">ĐẠI DIỆN CƠ SỞ KHÁM CHỮA BỆNH</span>
-                                            <span class="signer-sub">(Ký, đóng dấu hoặc chứng thực số)</span>
-
-                                            <div th:if="${detail.record.status.name() == 'SIGNED'}"
-                                                class="emr-digital-stamp-box"
-                                                style="border-color: #0284c7 !important; background: #f0f9ff !important;">
-                                                <div class="emr-stamp-badge" style="color: #0284c7;"><i
-                                                        class="bi bi-shield-check"></i> CHỨNG THỰC BỆNH ÁN ĐIỆN TỬ</div>
-                                                <div th:if="${dental != null and dental['facilityDirectorSignatureUrl'] != null and !dental['facilityDirectorSignatureUrl'].isEmpty()}"
-                                                    class="my-1">
-                                                    <img th:src="${dental['facilityDirectorSignatureUrl']}"
-                                                        alt="Chữ ký Đại diện cơ sở"
-                                                        style="max-height: 60px; max-width: 180px; object-fit: contain;">
-                                                </div>
-                                                <div class="emr-stamp-signer"
-                                                    th:text="${@emrViewText.effective(dental, 'facilityDirector', visit['branchName'] ?: 'Nha khoa CV-DCMS')}">
-                                                    CV-DCMS</div>
-                                                <div class="emr-stamp-standard"
-                                                    style="color: #0284c7; border-color: #bae6fd;">Hồ sơ đã khóa &amp;
-                                                    toàn vẹn nội dung</div>
-                                            </div>
-
-                                            <div th:unless="${detail.record.status.name() == 'SIGNED'}"
-                                                class="pt-2 text-center w-100">
-                                                <!-- VÙNG CHỮ KÝ ĐẠI DIỆN CƠ SỞ -->
-                                                <div class="emr-signature-visual-box my-2 d-flex flex-column align-items-center justify-content-center"
-                                                    style="min-height: 80px;">
-                                                    <div id="dentalFacilitySignImgWrapper"
-                                                        th:style="${dental != null and dental['facilityDirectorSignatureUrl'] != null and !dental['facilityDirectorSignatureUrl'].isEmpty()} ? '' : 'display:none;'">
-                                                        <img id="dentalFacilitySignImg"
-                                                            th:src="${dental != null ? dental['facilityDirectorSignatureUrl'] : ''}"
-                                                            alt="Chữ ký Đại diện cơ sở"
-                                                            style="max-height: 70px; max-width: 200px; object-fit: contain;">
-                                                        <div class="mt-1">
-                                                            <button type="button"
-                                                                class="btn btn-link btn-sm text-danger p-0 emr-hide-print"
-                                                                style="font-size: 11px;"
-                                                                onclick="openEmrSignModal('dentalFacility')">
-                                                                <i class="bi bi-arrow-repeat"></i> Ký lại
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                    <div id="dentalFacilitySignBtnWrapper"
-                                                        th:style="${dental != null and dental['facilityDirectorSignatureUrl'] != null and !dental['facilityDirectorSignatureUrl'].isEmpty()} ? 'display:none;' : ''">
-                                                        <button type="button" class="emr-btn-sign emr-hide-print"
-                                                            onclick="openEmrSignModal('dentalFacility')">
-                                                            <i class="bi bi-pen-fill"></i>
-                                                            <span>Ký tên</span>
-                                                        </button>
-                                                    </div>
-                                                    <input type="hidden" name="facilityDirectorSignatureUrl"
-                                                        id="dentalFacilityDirectorSignatureUrl"
-                                                        th:value="${dental != null ? dental['facilityDirectorSignatureUrl'] : ''}">
-                                                </div>
-
+                                            <span class="signer-sub">(Ký, ghi rõ họ tên và đóng dấu)</span>
+                                            <div class="pt-2 text-center w-100">
+                                                <div class="my-2" style="min-height: 72px;"></div>
                                                 <div class="d-flex justify-content-center w-100">
                                                     <input type="text" name="facilityDirector"
                                                         class="emr-inline-input fw-bold text-center w-100"
                                                         th:value="${@emrViewText.effective(dental, 'facilityDirector', '')}"
                                                         placeholder="" style="max-width: 100%;">
-                                                </div>
-                                                <div class="text-muted fst-italic small pt-1" id="dentalFacilitySignStatus"
-                                                    th:text="${dental != null and dental['facilityDirectorSignatureUrl'] != null and !dental['facilityDirectorSignatureUrl'].isEmpty()} ? '(Đã chứng thực)' : '(Chờ chứng thực)'">
-                                                    (Chờ chứng thực)
                                                 </div>
                                             </div>
                                         </div>
@@ -1749,10 +1516,9 @@
                                     </div>
                                 </div>
                                 <div th:if="${#lists.isEmpty(detail.signatures)}"
-                                    class="alert alert-warning border-0 rounded-3 d-flex align-items-center gap-2">
-                                    <i class="bi bi-exclamation-circle-fill fs-5"></i>
-                                    <span>Bệnh án chưa có chữ ký số. Bác sĩ điều trị cần kiểm tra hồ sơ và thực hiện ký
-                                        số.</span>
+                                    class="alert alert-info border-0 rounded-3 d-flex align-items-center gap-2">
+                                    <i class="bi bi-printer-fill fs-5"></i>
+                                    <span>Bệnh án sử dụng bản in giấy ký tay trực tiếp. Sau khi Chốt &amp; Khóa, vui lòng in hồ sơ để Bác sĩ và Bệnh nhân ký xác nhận.</span>
                                 </div>
                             </article>
                         </section>
@@ -1767,7 +1533,7 @@
                     <div class="emr-drawer-header d-flex justify-content-between align-items-center">
                         <h5 class="offcanvas-title fw-bold text-dark d-flex align-items-center gap-2"
                             id="emrHistoryDrawerLabel">
-                            <i class="bi bi-clock-history text-primary"></i> Lịch sử &amp; Chứng thực số
+                            <i class="bi bi-clock-history text-primary"></i> Lịch sử &amp; Phiên bản
                         </h5>
                         <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
                     </div>

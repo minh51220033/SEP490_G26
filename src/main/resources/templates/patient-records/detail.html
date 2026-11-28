@@ -2176,13 +2176,13 @@
                                     </div>
                                     <div class="col-md-3">
                                         <label class="dv-adv-label"><i class="bi bi-activity text-primary"></i> Trạng
-                                            thái ký duyệt</label>
+                                            thái bệnh án</label>
                                         <select class="form-select dv-adv-control" id="emrStatusFilter"
                                             onchange="setEmrStatusFilter(this.value, null); updateAdvFilterBadge('emr');">
                                             <option value="">Tất cả trạng thái</option>
                                             <option value="DRAFT">Đang mở / Bản nháp</option>
-                                            <option value="PENDING">Chờ ký số</option>
-                                            <option value="SIGNED">Đã ký số &amp; Khóa</option>
+                                            <option value="PENDING">Sẵn sàng chốt</option>
+                                            <option value="SIGNED">Đã chốt &amp; Khóa</option>
                                         </select>
                                     </div>
                                 </div>
@@ -2197,7 +2197,7 @@
                                     <i class="bi bi-file-earmark-medical-fill me-1"></i>Danh sách Hồ sơ bệnh án (Chuẩn
                                     Bộ Y Tế MS: BA-18)
                                 </span>
-                                <small class="text-muted">Lưu trữ phiên bản, chữ ký số và liên kết trực tiếp với đợt
+                                <small class="text-muted">Lưu trữ phiên bản và liên kết trực tiếp với đợt
                                     khám</small>
                             </div>
                             <div class="dv-table-scroll-container">
@@ -2296,10 +2296,6 @@
                                                         target="_blank" class="dv-equal-btn-secondary" title="In BA-18">
                                                         <i class="bi bi-printer"></i>
                                                     </a>
-                                                    <a th:href="@{/emr/records/{id}#sign(id=${emr.id})}"
-                                                        class="dv-equal-btn-secondary" title="Ký số">
-                                                        <i class="bi bi-pen text-success"></i>
-                                                    </a>
                                                 </div>
                                             </td>
                                             <td class="dv-floating-actions-track">
@@ -2313,11 +2309,6 @@
                                                         target="_blank" class="dv-equal-btn-secondary" title="In BA-18">
                                                         <i class="bi bi-printer"></i>
                                                         <span>In BA-18</span>
-                                                    </a>
-                                                    <a th:href="@{/emr/records/{id}#sign(id=${emr.id})}"
-                                                        class="dv-equal-btn-secondary" title="Ký số">
-                                                        <i class="bi bi-pen text-success"></i>
-                                                        <span>Ký số</span>
                                                     </a>
                                                 </div>
                                             </td>
