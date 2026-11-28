@@ -2159,7 +2159,7 @@
                         opt.value = String(doc.id);
                         opt.setAttribute('data-name', doc.name);
                         const spec = doc.specialty ? ` · ${doc.specialty}` : '';
-                        opt.textContent = `${doc.name}${spec} (Còn ${doc.remaining} chỗ)`;
+                        opt.textContent = `${doc.name}${spec}`;
                         doctorSelect.appendChild(opt);
                     });
 
@@ -2168,7 +2168,7 @@
                         doctorSelect.value = String(targetDoctorId);
                         if (noticeEl) {
                             noticeEl.className = 'cv-drawer__notice is-success';
-                            noticeEl.innerHTML = '<i class="bi bi-check-circle-fill me-1"></i> Bác sĩ <strong>' + (targetDoctorName || 'được chọn') + '</strong> có lịch trực trong buổi này. Còn ' + data.remainingBranch + ' chỗ tiếp nhận.';
+                            noticeEl.innerHTML = '<i class="bi bi-check-circle-fill me-1"></i> Bác sĩ <strong>' + (targetDoctorName || 'được chọn') + '</strong> có lịch trực trong buổi này.';
                             noticeEl.style.display = 'block';
                         }
                     } else if (targetDoctorId) {
@@ -2180,9 +2180,8 @@
                         }
                     } else {
                         if (noticeEl) {
-                            noticeEl.className = 'cv-drawer__notice is-success';
-                            noticeEl.innerHTML = '<i class="bi bi-calendar-check-fill me-1"></i> Buổi khám còn <strong>' + data.remainingBranch + ' chỗ</strong> với ' + doctors.length + ' bác sĩ đang trực. Bạn có thể chọn bác sĩ đích danh hoặc để lễ tân điều phối.';
-                            noticeEl.style.display = 'block';
+                            noticeEl.innerHTML = '';
+                            noticeEl.style.display = 'none';
                         }
                     }
                 }

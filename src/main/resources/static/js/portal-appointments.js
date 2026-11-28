@@ -549,7 +549,7 @@
                 return;
             }
 
-            result.doctors.forEach(d => doctor.appendChild(option(d.id, `${d.name}${d.specialty ? ' · ' + d.specialty : ''} (còn ${d.remaining} chỗ)`)));
+            result.doctors.forEach(d => doctor.appendChild(option(d.id, `${d.name}${d.specialty ? ' · ' + d.specialty : ''}`)));
             const desiredDoc = current?.requestedDoctorId || (!appliedInitialDoctorPreselect ? preSelectedDoctorId : '');
             if (desiredDoc && result.doctors.some(d => String(d.id) === String(desiredDoc))) {
                 doctor.value = String(desiredDoc);
@@ -558,8 +558,8 @@
 
             doctor.disabled = false;
             available = true; button.disabled = false;
-            message.innerHTML = `<i class="bi bi-check-circle-fill fs-5 me-2 text-success"></i><span>Buổi khám còn <strong>${result.remainingBranch} chỗ</strong>. Bạn có thể chọn bác sĩ chỉ định hoặc để hệ thống phân bổ phù hợp.</span>`;
-            message.className = 'appointment-availability is-success d-flex align-items-center';
+            message.innerHTML = '';
+            message.className = 'appointment-availability d-none';
             await loadSlots(token);
         }
 
