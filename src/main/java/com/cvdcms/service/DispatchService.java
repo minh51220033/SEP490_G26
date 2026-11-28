@@ -50,6 +50,12 @@ public class DispatchService {
     @Autowired(required = false)
     private com.cvdcms.service.ClinicQueueCoordinatorService queueCoordinator;
 
+    @Autowired(required = false)
+    private com.cvdcms.service.DoctorClinicalCapabilityService capabilityService;
+
+    @Autowired(required = false)
+    private com.cvdcms.repository.DoctorShiftAssignmentRepository doctorShiftAssignments;
+
     public void setClock(Clock clock) {
         this.clock = clock != null ? clock : Clock.system(ZONE);
     }
@@ -318,31 +324,46 @@ public class DispatchService {
         if (available.isEmpty()) {
             throw fail(HttpStatus.CONFLICT, "Chi nhánh hiện không có bác sĩ nào đang trong ca trực tiếp nhận khám.");
         }
+        Long targetServiceId = resolveServiceIdForVisit(visit);
+        List<StaffProfile> serviceEligible = filterDoctorsByServiceCapability(branchId, available, targetServiceId, today, now);
         Long requestedDoctor = requestedDoctor(visit);
         boolean isEmergency = visit.getVisitType() == VisitType.EMERGENCY;
         boolean preserveUnavailableRequestedDoctor = false;
         if (doctorId == null) {
+            List<StaffProfile> pool = serviceEligible;
             Long existingDoctorId = visit.getPrimaryDoctor() != null ? visit.getPrimaryDoctor().getStaffId() : null;
-            if (existingDoctorId != null && available.stream().anyMatch(d -> d.getStaffId().equals(existingDoctorId))) {
+            if (existingDoctorId != null && pool.stream().anyMatch(d -> d.getStaffId().equals(existingDoctorId))) {
                 doctorId = existingDoctorId;
-            } else if (isEmergency) {
-                doctorId = findEmergencyDoctor(available, branchId, today, visitId);
+            } else if (isEmergency && !pool.isEmpty()) {
+                doctorId = findEmergencyDoctor(pool, branchId, today, visitId);
             } else if (requestedDoctor != null) {
                 doctorId = requestedDoctor;
                 if (available.stream().noneMatch(d -> d.getStaffId().equals(requestedDoctor))) {
                     preserveUnavailableRequestedDoctor = true;
                 }
             } else {
-                doctorId = available.stream()
+                doctorId = pool.stream()
                         .min(Comparator.comparingLong((StaffProfile d) -> load(d.getStaffId(), branchId, today, visitId))
                                 .thenComparing(StaffProfile::getStaffId))
                         .map(StaffProfile::getStaffId)
-                        .orElseThrow(() -> fail(HttpStatus.CONFLICT, "Không có bác sĩ khả dụng để tự phân công."));
+                        .orElseThrow(() -> fail(HttpStatus.CONFLICT,
+                                "Hiện không có bác sĩ trực phù hợp chuyên môn dịch vụ này tại chi nhánh."));
             }
         }
         final Long selectedDoctor = doctorId;
         if (!preserveUnavailableRequestedDoctor && available.stream().noneMatch(d -> d.getStaffId().equals(selectedDoctor)))
             throw fail(HttpStatus.CONFLICT, "Bác sĩ không có phân công hoặc ca làm việc hợp lệ tại chi nhánh.");
+        if (!preserveUnavailableRequestedDoctor && selectedDoctor != null && capabilityService != null) {
+            if (targetServiceId != null) {
+                var cap = capabilityService.checkDoctorServicePermission(branchId, selectedDoctor, targetServiceId);
+                if (!cap.allowed()) {
+                    throw fail(HttpStatus.CONFLICT, cap.message());
+                }
+            } else if (!capabilityService.canDoctorServeGeneralExamVisit(branchId, selectedDoctor)) {
+                throw fail(HttpStatus.CONFLICT,
+                        "Bác sĩ được chọn chỉ phụ trách chuyên môn cận lâm sàng, không tiếp nhận lượt khám tổng quát này.");
+            }
+        }
         Long previousDoctor = visit.getPrimaryDoctor() == null ? null : visit.getPrimaryDoctor().getStaffId();
         boolean overridesRequest = requestedDoctor != null && !requestedDoctor.equals(doctorId);
         boolean transfersQueue = previousDoctor != null && !previousDoctor.equals(doctorId);
@@ -369,18 +390,11 @@ public class DispatchService {
         StaffProfile doctor = doctors.findById(doctorId).orElseThrow(() -> fail(HttpStatus.NOT_FOUND, "Không tìm thấy bác sĩ."));
         Long effectiveRoom = roomId;
         if (chairId == null) {
-            // Tự động tìm ghế khả dụng đầu tiên tại chi nhánh (ưu tiên thuộc phòng đã chọn nếu có)
-            List<DentalChair> branchChairs = chairs.findByBranchBranchIdOrderByChairCode(branchId);
-            for (DentalChair c : branchChairs) {
-                if (c.getStatus() == ChairStatus.AVAILABLE && c.getRoom() != null
-                        && c.getRoom().getStatus() == RoomStatus.ACTIVE
-                        && (effectiveRoom == null || effectiveRoom.equals(c.getRoom().getRoomId()))
-                        && visits.occupiedChair(c.getChairId(), visitId, Set.of(VisitStatus.IN_EXAM, VisitStatus.IN_TREATMENT)) == 0
-                        && tickets.countHoldingChair(branchId, today, c.getChairId(), visitId) == 0) {
-                    chairId = c.getChairId();
-                    effectiveRoom = c.getRoom().getRoomId();
-                    break;
-                }
+            // Tự động tìm ghế khả dụng tuân thủ phân ca ghế/phòng của bác sĩ và yêu cầu phòng của dịch vụ
+            DentalChair pickedChair = pickChairForDoctorAtDispatch(branchId, visitId, doctorId, effectiveRoom, targetServiceId, today, now);
+            if (pickedChair != null) {
+                chairId = pickedChair.getChairId();
+                effectiveRoom = pickedChair.getRoom().getRoomId();
             }
         }
         if (chairId != null) {
@@ -505,20 +519,16 @@ public class DispatchService {
             throw fail(HttpStatus.BAD_REQUEST, "Cấp số ưu tiên cần ghi lý do từ 10 đến 255 ký tự.");
         }
 
-        // Tự động tìm và gán ghế khả dụng nếu ca khám chưa có ghế hoặc phòng
+        // Tự động tìm và gán ghế khả dụng tuân thủ phân ca ghế/phòng của bác sĩ nếu ca khám chưa có ghế hoặc phòng
         if (visit.getChairId() == null || visit.getRoomId() == null) {
-            List<DentalChair> branchChairs = chairs.findByBranchBranchIdOrderByChairCode(branchId);
-            for (DentalChair c : branchChairs) {
-                if (c.getStatus() == ChairStatus.AVAILABLE && c.getRoom() != null
-                        && c.getRoom().getStatus() == RoomStatus.ACTIVE
-                        && (visit.getRoomId() == null || visit.getRoomId().equals(c.getRoom().getRoomId()))
-                        && visits.occupiedChair(c.getChairId(), visit.getVisitId(), Set.of(VisitStatus.IN_EXAM, VisitStatus.IN_TREATMENT)) == 0
-                        && tickets.countHoldingChair(branchId, day, c.getChairId(), visit.getVisitId()) == 0) {
-                    visit.setChairId(c.getChairId());
-                    visit.setRoomId(c.getRoom().getRoomId());
-                    visits.save(visit);
-                    break;
-                }
+            Long docIdForChair = visit.getPrimaryDoctor() != null ? visit.getPrimaryDoctor().getStaffId() : null;
+            Long svcIdForChair = resolveServiceIdForVisit(visit);
+            DentalChair picked = pickChairForDoctorAtDispatch(
+                    branchId, visit.getVisitId(), docIdForChair, visit.getRoomId(), svcIdForChair, day, LocalTime.now(clock));
+            if (picked != null) {
+                visit.setChairId(picked.getChairId());
+                visit.setRoomId(picked.getRoom().getRoomId());
+                visits.save(visit);
             }
         }
 
@@ -627,6 +637,157 @@ public class DispatchService {
                 t.getVisit().getPrimaryDoctor() == null ? "Chưa gán" : t.getVisit().getPrimaryDoctor().getFullName(),
                 t.getStatus(), t.getIsPriority(), t.getIsEmergency());
     }
+    private Long resolveServiceIdForVisit(Visit visit) {
+        if (visit == null || visit.getAppointmentId() == null) {
+            return null;
+        }
+        return appointments.findById(visit.getAppointmentId())
+                .map(Appointment::getService)
+                .map(com.cvdcms.entity.Service::getServiceId)
+                .orElse(null);
+    }
+
+    private List<StaffProfile> filterDoctorsByServiceCapability(Long branchId, List<StaffProfile> available,
+                                                              Long targetServiceId, LocalDate day, LocalTime now) {
+        if (available == null || available.isEmpty()) {
+            return List.of();
+        }
+        List<DoctorShiftAssignment> branchShifts = doctorShiftAssignments != null
+                ? doctorShiftAssignments.findActiveByBranchAndDateWithDetails(branchId, day)
+                : List.of();
+        boolean hasShiftRoomAssigns = branchShifts != null && !branchShifts.isEmpty();
+        return available.stream().filter(doc -> {
+            Long docId = doc.getStaffId();
+            if (capabilityService != null) {
+                if (targetServiceId != null) {
+                    if (!capabilityService.checkDoctorServicePermission(branchId, docId, targetServiceId).allowed()) {
+                        return false;
+                    }
+                } else if (!capabilityService.canDoctorServeGeneralExamVisit(branchId, docId)) {
+                    return false;
+                }
+            }
+            if (hasShiftRoomAssigns) {
+                DoctorShiftAssignment activeShift = findActiveShiftForDoctor(branchShifts, docId, now);
+                if (activeShift == null) {
+                    return false;
+                }
+                if (activeShift.getRoom() != null) {
+                    if (targetServiceId == null
+                            && (activeShift.getRoom().getRoomType() == RoomType.XRAY
+                            || activeShift.getRoom().getRoomType() == RoomType.LAB)) {
+                        return false;
+                    }
+                    if (targetServiceId != null && capabilityService != null
+                            && !capabilityService.doesRoomMatchServiceRequirement(activeShift.getRoom(), targetServiceId)) {
+                        return false;
+                    }
+                }
+            }
+            return true;
+        }).toList();
+    }
+
+    private DoctorShiftAssignment findActiveShiftForDoctor(List<DoctorShiftAssignment> branchShifts, Long doctorId, LocalTime now) {
+        if (branchShifts == null || doctorId == null) {
+            return null;
+        }
+        for (DoctorShiftAssignment dsa : branchShifts) {
+            if (dsa.getStaff() == null || !Objects.equals(doctorId, dsa.getStaff().getStaffId())) {
+                continue;
+            }
+            WorkShift sh = dsa.getShift();
+            if (sh != null && sh.getStartTime() != null && sh.getEndTime() != null
+                    && sh.getStartTime().isBefore(sh.getEndTime())) {
+                if (!now.isBefore(sh.getStartTime()) && !now.isAfter(sh.getEndTime())) {
+                    return dsa;
+                }
+            } else {
+                return dsa;
+            }
+        }
+        return null;
+    }
+
+    private DentalChair pickChairForDoctorAtDispatch(Long branchId, Long visitId, Long doctorId,
+                                                     Long preferredRoomId, Long targetServiceId,
+                                                     LocalDate day, LocalTime now) {
+        List<DentalChair> branchChairs = chairs.findByBranchBranchIdOrderByChairCode(branchId);
+        if (branchChairs.isEmpty()) {
+            return null;
+        }
+        Set<Long> restrictedRoomIds = capabilityService != null
+                ? capabilityService.resolveRestrictedRoomIds(branchId, doctorId, targetServiceId)
+                : null;
+        if (restrictedRoomIds != null && restrictedRoomIds.isEmpty()) {
+            return null;
+        }
+        List<DoctorShiftAssignment> branchShifts = doctorShiftAssignments != null
+                ? doctorShiftAssignments.findActiveByBranchAndDateWithDetails(branchId, day)
+                : List.of();
+        boolean hasShiftRoomAssigns = branchShifts != null && !branchShifts.isEmpty();
+        Set<Long> chairsPinnedToOtherDoctors = new HashSet<>();
+        for (DoctorShiftAssignment dsa : branchShifts) {
+            if (dsa.getChair() == null || dsa.getChair().getChairId() == null || dsa.getStaff() == null) {
+                continue;
+            }
+            if (Objects.equals(doctorId, dsa.getStaff().getStaffId())) {
+                continue;
+            }
+            WorkShift sh = dsa.getShift();
+            if (sh != null && sh.getStartTime() != null && sh.getEndTime() != null
+                    && sh.getStartTime().isBefore(sh.getEndTime())
+                    && (now.isBefore(sh.getStartTime()) || now.isAfter(sh.getEndTime()))) {
+                continue;
+            }
+            chairsPinnedToOtherDoctors.add(dsa.getChair().getChairId());
+        }
+        if (hasShiftRoomAssigns) {
+            DoctorShiftAssignment activeShift = findActiveShiftForDoctor(branchShifts, doctorId, now);
+            if (activeShift == null) {
+                return null;
+            }
+            if (activeShift.getChair() != null && activeShift.getChair().getChairId() != null) {
+                DentalChair pinned = chairs.findById(activeShift.getChair().getChairId()).orElse(activeShift.getChair());
+                if (pinned.getStatus() == ChairStatus.AVAILABLE && pinned.getRoom() != null
+                        && pinned.getRoom().getStatus() == RoomStatus.ACTIVE
+                        && (restrictedRoomIds == null || restrictedRoomIds.contains(pinned.getRoom().getRoomId()))
+                        && visits.occupiedChair(pinned.getChairId(), visitId, Set.of(VisitStatus.IN_EXAM, VisitStatus.IN_TREATMENT)) == 0
+                        && tickets.countHoldingChair(branchId, day, pinned.getChairId(), visitId) == 0) {
+                    return pinned;
+                }
+                return null;
+            }
+            Long shiftRoomId = activeShift.getRoom() != null ? activeShift.getRoom().getRoomId() : null;
+            if (shiftRoomId == null || (restrictedRoomIds != null && !restrictedRoomIds.contains(shiftRoomId))) {
+                return null;
+            }
+            for (DentalChair c : branchChairs) {
+                if (c.getStatus() == ChairStatus.AVAILABLE && c.getRoom() != null
+                        && c.getRoom().getStatus() == RoomStatus.ACTIVE
+                        && Objects.equals(shiftRoomId, c.getRoom().getRoomId())
+                        && !chairsPinnedToOtherDoctors.contains(c.getChairId())
+                        && visits.occupiedChair(c.getChairId(), visitId, Set.of(VisitStatus.IN_EXAM, VisitStatus.IN_TREATMENT)) == 0
+                        && tickets.countHoldingChair(branchId, day, c.getChairId(), visitId) == 0) {
+                    return c;
+                }
+            }
+            return null;
+        }
+        for (DentalChair c : branchChairs) {
+            if (c.getStatus() == ChairStatus.AVAILABLE && c.getRoom() != null
+                    && c.getRoom().getStatus() == RoomStatus.ACTIVE
+                    && !chairsPinnedToOtherDoctors.contains(c.getChairId())
+                    && (restrictedRoomIds == null || restrictedRoomIds.contains(c.getRoom().getRoomId()))
+                    && (preferredRoomId == null || preferredRoomId.equals(c.getRoom().getRoomId()))
+                    && visits.occupiedChair(c.getChairId(), visitId, Set.of(VisitStatus.IN_EXAM, VisitStatus.IN_TREATMENT)) == 0
+                    && tickets.countHoldingChair(branchId, day, c.getChairId(), visitId) == 0) {
+                return c;
+            }
+        }
+        return null;
+    }
+
     private List<StaffProfile> findAvailableDoctors(Long branchId, LocalDate day, LocalTime now) {
         List<StaffProfile> eligible = doctors.eligible(branchId, day);
         if (eligible.isEmpty()) return List.of();

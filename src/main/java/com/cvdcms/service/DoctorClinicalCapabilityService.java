@@ -143,7 +143,9 @@ public class DoctorClinicalCapabilityService {
 
     /**
      * Kiểm tra quyền dịch vụ chuyên môn của bác sĩ.
-     * Quy tắc tương thích ngược: nếu bác sĩ chưa từng được cấu hình dòng phân quyền nào trong DB thì vẫn cho phép.
+     * Nếu bác sĩ đã được cấu hình danh sách dịch vụ, hoặc dịch vụ đã được phân quyền cho ít nhất 1 bác sĩ khác trong hệ thống,
+     * thì bắt buộc bác sĩ phải có bản ghi ACTIVE còn hiệu lực cho dịch vụ đó.
+     * Chỉ giữ tương thích ngược (cho phép) khi cả bác sĩ lẫn dịch vụ đều chưa có dòng phân quyền nào trong DB.
      */
     public CapabilityCheckResult checkDoctorServicePermission(Long doctorId, Long serviceId) {
         return checkDoctorServicePermission(null, doctorId, serviceId);
@@ -153,12 +155,26 @@ public class DoctorClinicalCapabilityService {
         if (doctorId == null || serviceId == null || doctorServicePermissionRepo == null) {
             return CapabilityCheckResult.ok();
         }
+        LocalDate today = LocalDate.now();
         List<DoctorServicePermission> allPerms = doctorServicePermissionRepo
                 .findByStaffStaffIdOrderByPermissionIdAsc(doctorId);
         if (allPerms == null || allPerms.isEmpty()) {
-            return CapabilityCheckResult.ok();
+            List<DoctorServicePermission> servicePerms = doctorServicePermissionRepo
+                    .findByServiceServiceIdAndStatusOrderByPermissionIdAsc(serviceId, DoctorServicePermissionStatus.ACTIVE);
+            boolean serviceIsExplicitlyRestricted = servicePerms != null && servicePerms.stream()
+                    .anyMatch(p -> (branchId == null || p.getBranch() == null || Objects.equals(branchId, p.getBranch().getBranchId()))
+                            && isWithinEffectiveDates(p.getEffectiveFrom(), p.getEffectiveTo(), today));
+            if (!serviceIsExplicitlyRestricted) {
+                return CapabilityCheckResult.ok();
+            }
+            return new CapabilityCheckResult(
+                    false,
+                    false,
+                    true,
+                    "SERVICE_PERMISSION_DENIED",
+                    "Bác sĩ hiện tại chưa được phân quyền chuyên môn cho dịch vụ này. Vui lòng chọn bác sĩ phù hợp."
+            );
         }
-        LocalDate today = LocalDate.now();
         boolean permitted = allPerms.stream()
                 .anyMatch(p -> p.getStatus() == DoctorServicePermissionStatus.ACTIVE
                         && p.getService() != null
@@ -175,6 +191,52 @@ public class DoctorClinicalCapabilityService {
                 "SERVICE_PERMISSION_DENIED",
                 "Bác sĩ hiện tại chưa được phân quyền chuyên môn cho dịch vụ này (hoặc quyền đã hết hiệu lực). Vui lòng chuyển BS chuyên môn."
         );
+    }
+
+    /**
+     * Kiểm tra bác sĩ có đủ điều kiện tiếp nhận lượt khám tổng quát / vãng lai (chưa chỉ định dịch vụ cụ thể) hay không.
+     * Chặn các bác sĩ chỉ được phân quyền cận lâm sàng (X-quang / Xét nghiệm) hoặc chỉ trực phòng XRAY/LAB nhận bệnh nhân khám thường.
+     */
+    public boolean canDoctorServeGeneralExamVisit(Long branchId, Long doctorId) {
+        if (doctorId == null) {
+            return false;
+        }
+        LocalDate today = LocalDate.now();
+        if (doctorServicePermissionRepo != null) {
+            List<DoctorServicePermission> allPerms = doctorServicePermissionRepo
+                    .findByStaffStaffIdOrderByPermissionIdAsc(doctorId);
+            if (allPerms != null && !allPerms.isEmpty()) {
+                boolean hasClinicalNonParaclinicalPermission = allPerms.stream()
+                        .anyMatch(p -> p.getStatus() == DoctorServicePermissionStatus.ACTIVE
+                                && p.getService() != null
+                                && (branchId == null || p.getBranch() == null || Objects.equals(branchId, p.getBranch().getBranchId()))
+                                && isWithinEffectiveDates(p.getEffectiveFrom(), p.getEffectiveTo(), today)
+                                && !Boolean.TRUE.equals(p.getService().getIsParaclinical())
+                                && p.getService().getServiceType() != ServiceType.XRAY
+                                && p.getService().getServiceType() != ServiceType.LAB);
+                if (!hasClinicalNonParaclinicalPermission) {
+                    return false;
+                }
+            }
+        }
+        if (branchId != null && doctorRoomAssignmentRepo != null) {
+            List<DoctorRoomAssignment> allRooms = doctorRoomAssignmentRepo
+                    .findByBranchBranchIdAndStaffStaffIdOrderByAssignmentIdAsc(branchId, doctorId);
+            if (allRooms != null && !allRooms.isEmpty()) {
+                List<Room> activeRooms = allRooms.stream()
+                        .filter(a -> a.getStatus() == DoctorAssignmentStatus.ACTIVE
+                                && a.getRoom() != null
+                                && a.getRoom().getStatus() == RoomStatus.ACTIVE
+                                && isWithinEffectiveDates(a.getEffectiveFrom(), a.getEffectiveTo(), today))
+                        .map(DoctorRoomAssignment::getRoom)
+                        .toList();
+                if (!activeRooms.isEmpty() && activeRooms.stream()
+                        .allMatch(r -> r.getRoomType() == RoomType.XRAY || r.getRoomType() == RoomType.LAB)) {
+                    return false;
+                }
+            }
+        }
+        return true;
     }
 
     private boolean isWithinEffectiveDates(LocalDate from, LocalDate to, LocalDate today) {

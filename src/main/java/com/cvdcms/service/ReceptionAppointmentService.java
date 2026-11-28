@@ -77,6 +77,9 @@ public class ReceptionAppointmentService {
     @Autowired(required = false)
     private com.cvdcms.service.ResourceAvailabilityService resourceAvailabilityService;
 
+    @Autowired(required = false)
+    private com.cvdcms.service.DoctorClinicalCapabilityService capabilityService;
+
     @PersistenceContext
     private EntityManager entityManager;
 
@@ -505,6 +508,12 @@ public class ReceptionAppointmentService {
         a.setDoctor(doctor(request.doctorId()));
         a.setIsDoctorRequested(request.doctorId() != null);
         a.setService(service(request.serviceId()));
+        if (a.getDoctor() != null && a.getService() != null && capabilityService != null) {
+            var cap = capabilityService.checkDoctorServicePermission(branch.getBranchId(), a.getDoctor().getStaffId(), a.getService().getServiceId());
+            if (!cap.allowed()) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT, cap.message());
+            }
+        }
 
         a.setInitialSymptoms(notes);
         if (request.durationMinutes() != null && (request.durationMinutes() < 15 || request.durationMinutes() > 240))
@@ -522,8 +531,9 @@ public class ReceptionAppointmentService {
                     request.date(), targetSession, null);
         }
         if (a.getDoctor() == null && expectedTime != null) {
+            Long svcId = a.getService() != null ? a.getService().getServiceId() : null;
             StaffProfile autoAssigned = slots.autoAssignDoctorForSlot(
-                    branch, request.date(), targetSession, expectedTime, a.getDurationMinutes(), null);
+                    branch, request.date(), targetSession, expectedTime, a.getDurationMinutes(), null, svcId);
             if (autoAssigned != null) {
                 a.setDoctor(autoAssigned);
             }

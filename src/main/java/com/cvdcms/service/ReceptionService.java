@@ -75,6 +75,12 @@ public class ReceptionService {
     private com.cvdcms.service.ClinicQueueCoordinatorService queueCoordinator;
 
     @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.cvdcms.service.DoctorClinicalCapabilityService capabilityService;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.cvdcms.repository.DoctorShiftAssignmentRepository doctorShiftAssignments;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
     private StaffProfileRepository staffProfiles;
 
     @org.springframework.beans.factory.annotation.Autowired(required = false)
@@ -973,30 +979,69 @@ public class ReceptionService {
                     ? leaveRequests.findApprovedOn(branch.getBranchId(), day, LeaveStatus.APPROVED)
                     : List.of();
             Set<Long> activeDoctorIds = new HashSet<>();
+            boolean hasAnyBranchAssignments = false;
             if (branchAssignments != null) {
-                for (StaffBranchAssignment sba : branchAssignments.findByBranchAndStatus(branch.getBranchId(), AssignmentStatus.ACTIVE)) {
-                    if (sba.getStaff() != null && sba.getStaff().getStatus() == StaffStatus.ACTIVE && sba.getRole() != null) {
-                        String rName = sba.getRole().getRoleName() != null ? sba.getRole().getRoleName().toUpperCase(Locale.ROOT) : "";
-                        if (rName.contains("BAC_SI") || rName.contains("DOCTOR")) {
-                            activeDoctorIds.add(sba.getStaff().getStaffId());
+                List<StaffBranchAssignment> allActiveAssigns = branchAssignments.findByBranchAndStatus(branch.getBranchId(), AssignmentStatus.ACTIVE);
+                hasAnyBranchAssignments = allActiveAssigns != null && !allActiveAssigns.isEmpty();
+                if (allActiveAssigns != null) {
+                    for (StaffBranchAssignment sba : allActiveAssigns) {
+                        if (sba.getStaff() != null && sba.getStaff().getStatus() == StaffStatus.ACTIVE && sba.getRole() != null) {
+                            String rName = sba.getRole().getRoleName() != null ? sba.getRole().getRoleName().toUpperCase(Locale.ROOT) : "";
+                            if (rName.equals("BAC_SI") || rName.equals("ROLE_BAC_SI") || rName.equals("DOCTOR") || rName.equals("ROLE_DOCTOR")) {
+                                activeDoctorIds.add(sba.getStaff().getStaffId());
+                            }
                         }
                     }
                 }
             }
+            Long targetServiceId = null;
+            if (visit.getAppointmentId() != null) {
+                targetServiceId = appointments.findById(visit.getAppointmentId())
+                        .map(Appointment::getService)
+                        .map(com.cvdcms.entity.Service::getServiceId)
+                        .orElse(null);
+            }
+            List<DoctorShiftAssignment> branchShiftAssigns = doctorShiftAssignments != null
+                    ? doctorShiftAssignments.findActiveByBranchAndDateWithDetails(branch.getBranchId(), day)
+                    : List.of();
+            boolean hasShiftRoomAssigns = branchShiftAssigns != null && !branchShiftAssigns.isEmpty();
             Map<Long, StaffProfile> onDutyDoctors = new LinkedHashMap<>();
             for (StaffSchedule s : todaySchedules) {
                 StaffProfile doc = s.getStaff();
                 WorkShift sh = s.getShift();
                 if (doc == null || sh == null || !Boolean.TRUE.equals(sh.getIsActive())) continue;
                 if (doc.getStatus() != null && doc.getStatus() != StaffStatus.ACTIVE) continue;
-                if (!activeDoctorIds.isEmpty() && !activeDoctorIds.contains(doc.getStaffId())) continue;
+                if (hasAnyBranchAssignments && !activeDoctorIds.contains(doc.getStaffId())) continue;
                 if (now.isBefore(sh.getStartTime()) || now.isAfter(sh.getEndTime())) continue;
                 boolean onLeave = approvedLeaves.stream().anyMatch(l ->
                         l.getStaff() != null && doc.getStaffId().equals(l.getStaff().getStaffId())
                                 && (l.getShift() == null || l.getShift().getShiftId().equals(sh.getShiftId())));
-                if (!onLeave) {
-                    onDutyDoctors.putIfAbsent(doc.getStaffId(), doc);
+                if (onLeave) continue;
+                if (hasShiftRoomAssigns) {
+                    DoctorShiftAssignment dsa = branchShiftAssigns.stream()
+                            .filter(a -> a.getStaff() != null && doc.getStaffId().equals(a.getStaff().getStaffId())
+                                    && a.getShift() != null && a.getShift().getShiftId().equals(sh.getShiftId()))
+                            .findFirst().orElse(null);
+                    if (dsa == null) continue;
+                    if (dsa.getRoom() != null && targetServiceId == null
+                            && (dsa.getRoom().getRoomType() == RoomType.XRAY || dsa.getRoom().getRoomType() == RoomType.LAB)) {
+                        continue;
+                    }
+                    if (dsa.getRoom() != null && targetServiceId != null && capabilityService != null
+                            && !capabilityService.doesRoomMatchServiceRequirement(dsa.getRoom(), targetServiceId)) {
+                        continue;
+                    }
                 }
+                if (capabilityService != null) {
+                    if (targetServiceId != null) {
+                        if (!capabilityService.checkDoctorServicePermission(branch.getBranchId(), doc.getStaffId(), targetServiceId).allowed()) {
+                            continue;
+                        }
+                    } else if (!capabilityService.canDoctorServeGeneralExamVisit(branch.getBranchId(), doc.getStaffId())) {
+                        continue;
+                    }
+                }
+                onDutyDoctors.putIfAbsent(doc.getStaffId(), doc);
             }
             if (onDutyDoctors.isEmpty()) {
                 return;

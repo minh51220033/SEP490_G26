@@ -50,6 +50,8 @@ public class PortalAppointmentService {
     private com.cvdcms.service.ResourceAvailabilityService resourceAvailabilityService;
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private com.cvdcms.service.AppointmentOverlapService overlapService;
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.cvdcms.service.DoctorClinicalCapabilityService capabilityService;
     @PersistenceContext
     private EntityManager entityManager;
 
@@ -337,6 +339,12 @@ public class PortalAppointmentService {
         }
         int durationMinutes = AppointmentSlotService.duration(service);
         StaffProfile assignedDoctor = doctor(request.doctorId());
+        if (assignedDoctor != null && service != null && capabilityService != null) {
+            var cap = capabilityService.checkDoctorServicePermission(branch.getBranchId(), assignedDoctor.getStaffId(), service.getServiceId());
+            if (!cap.allowed()) {
+                throw conflict(cap.message());
+            }
+        }
         LocalTime resolvedTime = slots.resolveFlexibly(branch, request.date(), request.session(), request.doctorId(),
                 durationMinutes, null, request.expectedTime(), AppointmentActorType.PATIENT, allowOverlap);
         if (assignedDoctor != null && resolvedTime == null && !allowOverlap) {
@@ -344,13 +352,14 @@ public class PortalAppointmentService {
                     request.date(), request.session(), null);
         }
         if (assignedDoctor == null && resolvedTime != null) {
+            Long svcId = service != null ? service.getServiceId() : null;
             if (allowOverlap) {
                 assignedDoctor = slots.tryAutoAssignDoctorForSlot(
-                        branch, request.date(), request.session(), resolvedTime, durationMinutes, null)
+                        branch, request.date(), request.session(), resolvedTime, durationMinutes, null, svcId)
                         .orElse(null);
             } else {
                 StaffProfile autoAssigned = slots.autoAssignDoctorForSlot(
-                        branch, request.date(), request.session(), resolvedTime, durationMinutes, null);
+                        branch, request.date(), request.session(), resolvedTime, durationMinutes, null, svcId);
                 if (autoAssigned != null) {
                     assignedDoctor = autoAssigned;
                 }

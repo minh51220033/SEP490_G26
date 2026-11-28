@@ -81,6 +81,8 @@ public class AppointmentSlotService {
     private final LeaveRequestRepository leaveRequests;
     private final VisitRepository visits;
     private final StaffProfileRepository staffProfiles;
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private DoctorClinicalCapabilityService capabilityService;
     private int maxConcurrentPerDoctorSlot = DEFAULT_CONCURRENT_ARRIVALS_PER_DOCTOR;
     private Clock clock = Clock.system(AppointmentPolicyService.CLINIC_ZONE);
     @PersistenceContext
@@ -773,9 +775,24 @@ public class AppointmentSlotService {
             int requiredDuration,
             Long excludeAppointmentId
     ) {
-        return tryAutoAssignDoctorForSlot(branch, date, session, requestedStart, requiredDuration, excludeAppointmentId)
+        return autoAssignDoctorForSlot(branch, date, session, requestedStart, requiredDuration, excludeAppointmentId, null);
+    }
+
+    @Transactional(isolation = Isolation.READ_COMMITTED, noRollbackFor = SlotAlreadyTakenException.class)
+    public StaffProfile autoAssignDoctorForSlot(
+            Branch branch,
+            LocalDate date,
+            PreferredSession session,
+            LocalTime requestedStart,
+            int requiredDuration,
+            Long excludeAppointmentId,
+            Long serviceId
+    ) {
+        return tryAutoAssignDoctorForSlot(branch, date, session, requestedStart, requiredDuration, excludeAppointmentId, serviceId)
                 .orElseThrow(() -> new SlotAlreadyTakenException(
-                        "Không còn bác sĩ nào trống lịch trong khung giờ " + requestedStart + " - " + requestedStart.plusMinutes(requiredDuration) + "."
+                        serviceId != null
+                                ? "Không còn bác sĩ đủ chuyên môn dịch vụ này trống lịch trong khung giờ " + requestedStart + " - " + requestedStart.plusMinutes(requiredDuration) + "."
+                                : "Không còn bác sĩ nào trống lịch trong khung giờ " + requestedStart + " - " + requestedStart.plusMinutes(requiredDuration) + "."
                 ));
     }
 
@@ -787,6 +804,19 @@ public class AppointmentSlotService {
             LocalTime requestedStart,
             int requiredDuration,
             Long excludeAppointmentId
+    ) {
+        return tryAutoAssignDoctorForSlot(branch, date, session, requestedStart, requiredDuration, excludeAppointmentId, null);
+    }
+
+    @Transactional(isolation = Isolation.READ_COMMITTED, noRollbackFor = SlotAlreadyTakenException.class)
+    public java.util.Optional<StaffProfile> tryAutoAssignDoctorForSlot(
+            Branch branch,
+            LocalDate date,
+            PreferredSession session,
+            LocalTime requestedStart,
+            int requiredDuration,
+            Long excludeAppointmentId,
+            Long serviceId
     ) {
         if (branch == null || date == null || requestedStart == null || staffSchedules == null || staffProfiles == null) {
             return java.util.Optional.empty();
@@ -817,6 +847,15 @@ public class AppointmentSlotService {
         }
 
         List<AppointmentPolicyService.DoctorOption> candidates = branchAvailability.doctors().stream()
+                .filter(d -> {
+                    if (capabilityService == null) {
+                        return true;
+                    }
+                    if (serviceId != null) {
+                        return capabilityService.checkDoctorServicePermission(branch.getBranchId(), d.id(), serviceId).allowed();
+                    }
+                    return capabilityService.canDoctorServeGeneralExamVisit(branch.getBranchId(), d.id());
+                })
                 .sorted(Comparator
                         .comparingLong((AppointmentPolicyService.DoctorOption d) -> overlapLoadByDoctor.getOrDefault(d.id(), 0L))
                         .thenComparingLong((AppointmentPolicyService.DoctorOption d) -> sessionLoadByDoctor.getOrDefault(d.id(), 0L))
