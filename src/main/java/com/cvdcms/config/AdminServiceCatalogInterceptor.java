@@ -12,6 +12,10 @@ import org.springframework.web.servlet.HandlerInterceptor;
 
 import java.io.IOException;
 
+/**
+ * [Phân hệ]: Danh mục dịch vụ (Quản trị)
+ * [Vai trò]: Interceptor kiểm tra phiên đăng nhập và phân quyền truy cập các đường dẫn quản trị danh mục dịch vụ trước khi vào Controller.
+ */
 @Component
 public class AdminServiceCatalogInterceptor
                 implements HandlerInterceptor {
@@ -23,6 +27,10 @@ public class AdminServiceCatalogInterceptor
                 this.userRepository = userRepository;
         }
 
+        /**
+         * [Chức năng]: Chặn và xác thực quyền truy cập của người dùng trước khi xử lý các request quản lý danh mục dịch vụ.
+         * [Mục đích]: Chuyển hướng về trang đăng nhập nếu chưa có phiên hợp lệ, trả về mã 403 nếu tài khoản không hợp lệ hoặc không có vai trò Admin hay các quyền quản lý danh mục (CATALOG_MANAGE, CATALOG_SERVICES, CATALOG_SERVICE_CATEGORIES).
+         */
         @Override
         public boolean preHandle(
                         HttpServletRequest request,

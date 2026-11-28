@@ -43,6 +43,10 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
+/**
+ * [Phân hệ]: Danh mục dịch vụ & Nhóm dịch vụ (Quản trị)
+ * [Vai trò]: Controller quản trị toàn bộ danh mục nhóm dịch vụ, dịch vụ/sản phẩm, cấu hình kỹ thuật và tải ảnh dịch vụ tại đường dẫn /admin/services.
+ */
 @Controller
 @RequestMapping("/admin/services")
 public class AdminServiceCatalogController {
@@ -77,6 +81,10 @@ public class AdminServiceCatalogController {
     // 1. DANH SÁCH DỊCH VỤ VÀ NHÓM DANH MỤC
     // =====================================================
 
+    /**
+     * [Chức năng]: Xử lý trang GET /admin/services hiển thị danh sách dịch vụ và sản phẩm có lọc, tìm kiếm và phân trang.
+     * [Mục đích]: Nạp dữ liệu bảng dịch vụ và thống kê tổng quan qua prepareListPage để hiển thị view admin/services/list; tự chuyển hướng nếu tham số tab=categories hoặc có lỗi tham số.
+     */
     @GetMapping
     public String listServices(
             @RequestParam(value = "q", required = false) String keyword,
@@ -109,6 +117,10 @@ public class AdminServiceCatalogController {
     // 1.1 DANH SÁCH NHÓM DỊCH VỤ (TAB 2)
     // =====================================================
 
+    /**
+     * [Chức năng]: Xử lý trang GET /admin/services/categories hiển thị danh sách nhóm dịch vụ theo bộ lọc từ khóa, loại nhóm và trạng thái hoạt động.
+     * [Mục đích]: Chuẩn bị thống kê và danh sách nhóm dịch vụ thông qua prepareCategoryListPage rồi trả về view admin/services/category-list.
+     */
     @GetMapping("/categories")
     public String listCategories(
             @RequestParam(value = "q", required = false) String keyword,
@@ -124,6 +136,10 @@ public class AdminServiceCatalogController {
     // 2. THÊM NHÓM DANH MỤC
     // =====================================================
 
+    /**
+     * [Chức năng]: Xử lý GET /admin/services/categories/create mở trang biểu mẫu độc lập để thêm mới nhóm dịch vụ.
+     * [Mục đích]: Khởi tạo ServiceCategoryDTO rỗng, nạp dữ liệu dùng chung cho form và trả về view admin/services/category-form.
+     */
     @GetMapping("/categories/create")
     public String showCreateCategoryForm(
             Model model,
@@ -133,6 +149,10 @@ public class AdminServiceCatalogController {
         return CATEGORY_FORM_VIEW;
     }
 
+    /**
+     * [Chức năng]: Xử lý POST /admin/services/categories để tạo mới một nhóm dịch vụ từ modal hoặc trang biểu mẫu độc lập.
+     * [Mục đích]: Kiểm tra hợp lệ ServiceCategoryDTO, gọi ServiceCatalogService.createCategory và chuyển hướng kèm thông báo thành công hoặc giữ lại dữ liệu/mở lại modal khi có lỗi.
+     */
     @PostMapping("/categories")
     public String createCategory(
             @Valid @ModelAttribute("categoryForm") ServiceCategoryDTO dto,
@@ -186,6 +206,10 @@ public class AdminServiceCatalogController {
     // 3. MỞ FORM SỬA NHÓM DANH MỤC
     // =====================================================
 
+    /**
+     * [Chức năng]: Xử lý GET /admin/services/categories/{categoryId}/edit mở biểu mẫu chỉnh sửa một nhóm dịch vụ.
+     * [Mục đích]: Tải thực thể ServiceCategory từ ServiceCatalogService, ánh xạ sang ServiceCategoryDTO để render view admin/services/category-form; chuyển hướng về danh sách nhóm nếu ID không hợp lệ.
+     */
     @GetMapping("/categories/{categoryId}/edit")
     public String editCategory(
             @PathVariable Long categoryId,
@@ -222,6 +246,10 @@ public class AdminServiceCatalogController {
     // 4. CẬP NHẬT NHÓM DANH MỤC
     // =====================================================
 
+    /**
+     * [Chức năng]: Xử lý POST /admin/services/categories/{categoryId}/update để cập nhật thông tin một nhóm dịch vụ.
+     * [Mục đích]: Xác minh nhóm tồn tại, kiểm tra validation của ServiceCategoryDTO, gọi ServiceCatalogService.updateCategory và chuyển hướng về danh sách nhóm hoặc trả lại form kèm lỗi.
+     */
     @PostMapping("/categories/{categoryId}/update")
     public String updateCategory(
             @PathVariable Long categoryId,
@@ -270,6 +298,10 @@ public class AdminServiceCatalogController {
     // 5. BẬT / TẮT NHÓM DANH MỤC
     // =====================================================
 
+    /**
+     * [Chức năng]: Xử lý POST /admin/services/categories/{categoryId}/toggle để bật hoặc tắt trạng thái hoạt động của nhóm dịch vụ.
+     * [Mục đích]: Gọi ServiceCatalogService.toggleCategoryStatus và chuyển hướng về /admin/services/categories kèm thông báo kết quả.
+     */
     @PostMapping("/categories/{categoryId}/toggle")
     public String toggleCategoryStatus(
             @PathVariable Long categoryId,
@@ -290,6 +322,10 @@ public class AdminServiceCatalogController {
         return REDIRECT_CATEGORIES;
     }
 
+    /**
+     * [Chức năng]: Xử lý POST /admin/services/categories/{categoryId}/delete để xóa một nhóm dịch vụ chưa chứa dịch vụ con.
+     * [Mục đích]: Xác thực quyền xóa và mã deleteToken trong phiên qua requireDeletePermission, sau đó gọi ServiceCatalogService.deleteCategory và chuyển hướng về danh sách nhóm.
+     */
     @PostMapping("/categories/{categoryId}/delete")
     public String deleteCategory(
             @PathVariable Long categoryId,
@@ -313,6 +349,10 @@ public class AdminServiceCatalogController {
     // 6. MỞ FORM THÊM DỊCH VỤ
     // =====================================================
 
+    /**
+     * [Chức năng]: Xử lý GET /admin/services/create mở biểu mẫu thêm mới dịch vụ hoặc sản phẩm.
+     * [Mục đích]: Khởi tạo ServiceCreateDTO, chuẩn bị danh sách nhóm hoạt động và enum hiển thị qua prepareServiceFormPage rồi trả về view admin/services/form.
+     */
     @GetMapping("/create")
     public String showCreateServiceForm(
             Model model,
@@ -330,6 +370,10 @@ public class AdminServiceCatalogController {
     // 7. LƯU DỊCH VỤ MỚI
     // =====================================================
 
+    /**
+     * [Chức năng]: Xử lý POST /admin/services để tạo mới một dịch vụ hoặc sản phẩm từ modal hoặc biểu mẫu độc lập.
+     * [Mục đích]: Kiểm tra hợp lệ ServiceCreateDTO, gọi ServiceCatalogService.createService và chuyển hướng về danh sách kèm thông báo phù hợp (dịch vụ/sản phẩm) hoặc giữ lại form/mở lại modal khi lỗi.
+     */
     @PostMapping
     public String createService(
             @Valid @ModelAttribute("serviceForm") ServiceCreateDTO dto,
@@ -385,6 +429,10 @@ public class AdminServiceCatalogController {
     // 8. MỞ FORM SỬA DỊCH VỤ
     // =====================================================
 
+    /**
+     * [Chức năng]: Xử lý GET /admin/services/{serviceId}/edit mở biểu mẫu chỉnh sửa thông tin và đơn giá dịch vụ.
+     * [Mục đích]: Tải thực thể Service và ServiceUpdateDTO từ ServiceCatalogService, chuẩn bị dữ liệu form (giữ cả nhóm hiện tại dù đã tắt) và trả về view admin/services/form.
+     */
     @GetMapping("/{serviceId}/edit")
     public String showUpdateServiceForm(
             @PathVariable Long serviceId,
@@ -419,6 +467,10 @@ public class AdminServiceCatalogController {
     // 9. CẬP NHẬT DỊCH VỤ VÀ GIÁ
     // =====================================================
 
+    /**
+     * [Chức năng]: Xử lý POST /admin/services/{serviceId}/update để lưu thay đổi thông tin chung, thời lượng và đơn giá dịch vụ.
+     * [Mục đích]: Kiểm tra dịch vụ tồn tại và validation của ServiceUpdateDTO, gọi ServiceCatalogService.updateService và chuyển hướng về danh sách dịch vụ hoặc hiển thị lại form khi có lỗi.
+     */
     @PostMapping("/{serviceId}/update")
     public String updateService(
             @PathVariable Long serviceId,
@@ -474,6 +526,10 @@ public class AdminServiceCatalogController {
     // 10. BẬT / TẮT DỊCH VỤ
     // =====================================================
 
+    /**
+     * [Chức năng]: Xử lý POST /admin/services/{serviceId}/toggle để chuyển đổi trạng thái hoạt động (ACTIVE/INACTIVE) của dịch vụ.
+     * [Mục đích]: Gọi ServiceCatalogService.toggleServiceStatus và chuyển hướng về /admin/services kèm thông báo thành công hoặc lỗi nghiệp vụ (ví dụ nhóm cha đã tắt).
+     */
     @PostMapping("/{serviceId}/toggle")
     public String toggleServiceStatus(
             @PathVariable Long serviceId,
@@ -494,6 +550,10 @@ public class AdminServiceCatalogController {
         return REDIRECT_LIST;
     }
 
+    /**
+     * [Chức năng]: Xử lý POST /admin/services/{serviceId}/delete để xóa một dịch vụ chưa phát sinh dữ liệu tham chiếu.
+     * [Mục đích]: Kiểm tra quyền xóa và deleteToken qua requireDeletePermission, gọi ServiceCatalogService.deleteService và chuyển hướng về danh sách dịch vụ.
+     */
     @PostMapping("/{serviceId}/delete")
     public String deleteService(
             @PathVariable Long serviceId,
@@ -517,6 +577,10 @@ public class AdminServiceCatalogController {
     // 11. MỞ FORM CẤU HÌNH KỸ THUẬT
     // =====================================================
 
+    /**
+     * [Chức năng]: Xử lý GET /admin/services/{serviceId}/config mở màn hình cấu hình mẫu kết quả cận lâm sàng và yêu cầu kỹ thuật của dịch vụ.
+     * [Mục đích]: Lấy thông tin dịch vụ và ServiceTechnicalConfigDTO từ ServiceCatalogService để hiển thị view admin/services/technical-config.
+     */
     @GetMapping("/{serviceId}/config")
     public String showTechnicalConfigForm(
             @PathVariable Long serviceId,
@@ -553,6 +617,10 @@ public class AdminServiceCatalogController {
     // 12. LƯU CẤU HÌNH KỸ THUẬT
     // =====================================================
 
+    /**
+     * [Chức năng]: Xử lý POST /admin/services/{serviceId}/config để lưu cấu hình mẫu kết quả JSON và yêu cầu kỹ thuật của dịch vụ.
+     * [Mục đích]: Kiểm tra dịch vụ tồn tại và dữ liệu DTO, gọi ServiceCatalogService.updateServiceTechnicalConfig và chuyển hướng lại trang cấu hình kèm thông báo thành công hoặc hiển thị lỗi.
+     */
     @PostMapping("/{serviceId}/config")
     public String updateTechnicalConfig(
             @PathVariable Long serviceId,
@@ -614,6 +682,10 @@ public class AdminServiceCatalogController {
     private static final Set<String> ALLOWED_IMAGE_EXTS = Set.of(
             "jpg", "jpeg", "png", "webp");
 
+    /**
+     * [Chức năng]: API POST /admin/services/upload/image tiếp nhận tải lên hình ảnh đại diện dịch vụ hoặc ảnh chèn trong trình soạn thảo CKEditor.
+     * [Mục đích]: Kiểm tra phiên đăng nhập, phân quyền danh mục, giới hạn dung lượng (5MB), loại MIME, phần mở rộng và chữ ký nhị phân (magic bytes) của ảnh trước khi lưu vào thư mục uploads/services và trả về đường dẫn URL dạng JSON.
+     */
     @PostMapping("/upload/image")
     @ResponseBody
     public ResponseEntity<Map<String, Object>> uploadServiceImage(
@@ -691,6 +763,9 @@ public class AdminServiceCatalogController {
         }
     }
 
+    /**
+     * [Hàm hỗ trợ]: Tách và chuẩn hóa phần mở rộng (viết thường) từ tên tệp gốc khi kiểm tra ảnh tải lên.
+     */
     private String extractExtension(String filename) {
         if (filename == null) {
             return "";
@@ -702,6 +777,9 @@ public class AdminServiceCatalogController {
         return filename.substring(dotIdx + 1).trim().toLowerCase(Locale.ROOT);
     }
 
+    /**
+     * [Hàm hỗ trợ]: Kiểm tra đối chiếu kiểu MIME của tệp tải lên có khớp với phần mở rộng (jpg, jpeg, png, webp) hay không.
+     */
     private boolean isMimeMatchingExt(String mime, String ext) {
         if ("image/jpeg".equals(mime) || "image/jpg".equals(mime)) {
             return "jpg".equals(ext) || "jpeg".equals(ext);
@@ -715,6 +793,9 @@ public class AdminServiceCatalogController {
         return false;
     }
 
+    /**
+     * [Hàm hỗ trợ]: Xác thực chữ ký byte đầu tệp (magic bytes) nhằm đảm bảo dữ liệu tải lên thực sự là ảnh JPEG, PNG hoặc WEBP hợp lệ.
+     */
     private boolean isValidImageSignature(byte[] bytes, String ext) {
         if (bytes == null || bytes.length < 12) {
             return false;
@@ -750,6 +831,9 @@ public class AdminServiceCatalogController {
     // 13. CHUẨN BỊ DỮ LIỆU CHO GIAO DIỆN
     // =====================================================
 
+    /**
+     * [Hàm hỗ trợ]: Nạp toàn bộ dữ liệu thống kê, token xác nhận xóa, kết quả lọc/phân trang dịch vụ và các DTO mặc định cho trang danh sách dịch vụ.
+     */
     private void prepareListPage(
             Model model,
             HttpSession session,
@@ -831,6 +915,9 @@ public class AdminServiceCatalogController {
         model.addAttribute("pageTitle", "Quản lý danh mục - Danh mục dịch vụ & sản phẩm");
     }
 
+    /**
+     * [Hàm hỗ trợ]: Nạp dữ liệu thống kê, token xác nhận xóa, kết quả lọc nhóm dịch vụ và thuộc tính giao diện cho trang danh sách nhóm dịch vụ.
+     */
     private void prepareCategoryListPage(
             Model model,
             HttpSession session,
@@ -868,6 +955,9 @@ public class AdminServiceCatalogController {
         model.addAttribute("pageTitle", "Quản lý danh mục - Nhóm dịch vụ");
     }
 
+    /**
+     * [Hàm hỗ trợ]: Chuẩn bị các thuộc tính Model cần thiết cho màn hình biểu mẫu thêm/sửa nhóm dịch vụ.
+     */
     private void prepareCategoryFormPage(
             Model model,
             HttpSession session,
@@ -880,6 +970,9 @@ public class AdminServiceCatalogController {
         model.addAttribute("pageTitle", categoryEditingId == null ? "Thêm nhóm dịch vụ - Quản lý danh mục" : "Chỉnh sửa nhóm dịch vụ - Quản lý danh mục");
     }
 
+    /**
+     * [Hàm hỗ trợ]: Chuẩn bị danh sách nhóm dịch vụ (bao gồm cả nhóm cũ nếu đang sửa dịch vụ thuộc nhóm đã tắt), enum loại/trạng thái và cờ chế độ chỉnh sửa cho form dịch vụ.
+     */
     private void prepareServiceFormPage(
             Model model,
             HttpSession session,
@@ -923,6 +1016,9 @@ public class AdminServiceCatalogController {
         model.addAttribute("pageTitle", editing ? "Chỉnh sửa dịch vụ - Quản lý danh mục" : "Thêm dịch vụ - Quản lý danh mục");
     }
 
+    /**
+     * [Hàm hỗ trợ]: Nạp thông tin dịch vụ và thuộc tính điều hướng giao diện cho trang cấu hình kỹ thuật dịch vụ.
+     */
     private void prepareTechnicalConfigPage(
             Model model,
             HttpSession session,
@@ -935,6 +1031,9 @@ public class AdminServiceCatalogController {
         model.addAttribute("pageTitle", "Cấu hình kỹ thuật dịch vụ - Quản lý danh mục");
     }
 
+    /**
+     * [Hàm hỗ trợ]: Xác thực người dùng có quyền quản lý danh mục và mã deleteToken gửi lên khớp với token lưu trong phiên trước khi cho phép xóa nhóm hoặc dịch vụ.
+     */
     private void requireDeletePermission(HttpSession session, String deleteToken) {
         Object sessionUser = session.getAttribute("loggedInUser");
 
@@ -956,6 +1055,9 @@ public class AdminServiceCatalogController {
         }
     }
 
+    /**
+     * [Hàm hỗ trợ]: Nạp danh sách vai trò và tên hiển thị người dùng hiện tại từ HttpSession vào Model để hiển thị trên thanh điều hướng.
+     */
     private void addLayoutAttributes(
             HttpSession session,
             Model model) {

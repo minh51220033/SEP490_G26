@@ -23,6 +23,10 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import java.util.Collection;
 import java.util.List;
 
+/**
+ * [Phân hệ]: Thẻ thành viên & Ví điểm tích lũy (Lễ tân / Quản trị)
+ * [Vai trò]: Controller phục vụ tra cứu thẻ thành viên, xem lịch sử biến động điểm và điều chỉnh điểm tích lũy của bệnh nhân tại /reception/memberships.
+ */
 @Controller
 @RequestMapping("/reception/memberships")
 public class ReceptionMembershipController {
@@ -61,6 +65,9 @@ public class ReceptionMembershipController {
         this(loyaltyService, branchRepository, userRepository, staffBranchAssignmentRepository, patientProfileRepository, null);
     }
 
+    /**
+     * [Hàm hỗ trợ]: Nạp các thuộc tính giao diện chung cho khu vực lễ tân quản lý thẻ thành viên vào Model.
+     */
     private void addLayoutAttributes(HttpSession session, Model model) {
         model.addAttribute("activeMenu", "reception-memberships");
         if (session != null) {
@@ -70,6 +77,9 @@ public class ReceptionMembershipController {
         }
     }
 
+    /**
+     * [Hàm hỗ trợ]: Xác thực người dùng đăng nhập và kiểm tra quyền truy cập thẻ thành viên (Admin, RECEPTION_MEMBERSHIPS, PATIENT_PROFILE_MANAGE hoặc CUSTOMER_CARE_MANAGE).
+     */
     private User getAuthenticatedStaff(HttpSession session) {
         if (session == null || !(session.getAttribute("loggedInUser") instanceof User u)) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Vui lòng đăng nhập để tiếp tục.");
@@ -94,6 +104,9 @@ public class ReceptionMembershipController {
         return u;
     }
 
+    /**
+     * [Hàm hỗ trợ]: Lấy danh sách chi nhánh mà nhân viên được phép truy cập dữ liệu (Admin xem tất cả; nhân viên xem theo phân công chi nhánh đang hoạt động).
+     */
     private List<Branch> resolveAllowedBranches(Long userId) {
         boolean isAdmin = userRepository.hasActiveAdminRole(userId);
         if (isAdmin) {
@@ -106,6 +119,10 @@ public class ReceptionMembershipController {
         return branchRepository.findAllById(branchIds);
     }
 
+    /**
+     * [Chức năng]: Xử lý trang GET /reception/memberships để tìm kiếm, lọc và sắp xếp danh sách thẻ thành viên bệnh nhân.
+     * [Mục đích]: Xác thực nhân viên, giới hạn phạm vi chi nhánh theo phân quyền, gọi LoyaltyService.searchMemberCards rồi lọc theo mã hạng, khoảng điểm, mức chi tiêu và sắp xếp trước khi trả về view reception/memberships/search.
+     */
     @GetMapping
     public String searchMemberships(
             @RequestParam(required = false) String keyword,
@@ -221,6 +238,10 @@ public class ReceptionMembershipController {
         return "reception/memberships/search";
     }
 
+    /**
+     * [Chức năng]: Xử lý trang GET /reception/memberships/{profileId} hiển thị chi tiết thẻ thành viên và lịch sử giao dịch điểm của một bệnh nhân.
+     * [Mục đích]: Kiểm tra quyền truy cập theo chi nhánh ưu tiên của bệnh nhân (với tài khoản không phải Admin), tải MemberCardDTO và PointTransaction qua LoyaltyService để render view reception/memberships/detail.
+     */
     @GetMapping("/{profileId}")
     public String viewMemberDetail(
             @PathVariable Long profileId,
@@ -261,6 +282,10 @@ public class ReceptionMembershipController {
         return "reception/memberships/detail";
     }
 
+    /**
+     * [Chức năng]: Xử lý POST /reception/memberships/{profileId}/adjust-points để cộng hoặc trừ điểm thủ công cho ví điểm bệnh nhân.
+     * [Mục đích]: Thực thi quy tắc FT19 chỉ cho phép Admin điều chỉnh điểm, kiểm tra hợp lệ PointAdjustmentDTO, gọi LoyaltyService.adjustPoints và chuyển hướng về trang chi tiết kèm thông báo kết quả.
+     */
     @PostMapping("/{profileId}/adjust-points")
     public String adjustPoints(
             @PathVariable Long profileId,

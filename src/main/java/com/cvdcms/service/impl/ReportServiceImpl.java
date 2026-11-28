@@ -39,6 +39,10 @@ import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 
+/**
+ * [Phân hệ]: Báo cáo quản trị, Tài chính & Xuất Excel
+ * [Vai trò]: Triển khai nghiệp vụ tổng hợp báo cáo tổng quan Dashboard, báo cáo tài chính (thực thu dòng tiền trừ hoàn tiền, không tính trùng ví cọc), báo cáo vận hành, công nợ bệnh nhân và xuất workbook Excel (.xlsx) nhiều sheet.
+ */
 @Service
 @Slf4j
 @Transactional(readOnly = true)
@@ -56,6 +60,9 @@ public class ReportServiceImpl implements ReportService {
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy");
     private static final DateTimeFormatter DATETIME_FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
 
+    /**
+     * [Hàm hỗ trợ]: Constructor tương thích gồm 6 repository cốt lõi (dùng cho test hoặc khởi tạo tối giản không kèm PayrollPeriodRepository/PatientProfileRepository).
+     */
     public ReportServiceImpl(
             InvoiceRepository invoiceRepository,
             PaymentRepository paymentRepository,
@@ -76,6 +83,9 @@ public class ReportServiceImpl implements ReportService {
         );
     }
 
+    /**
+     * [Hàm hỗ trợ]: Constructor chính được Spring tiêm đầy đủ các repository phục vụ truy vấn tổng hợp báo cáo doanh thu, hoàn tiền, chi phí, lịch hẹn, lượt khám và bệnh nhân mới.
+     */
     @Autowired
     public ReportServiceImpl(
             InvoiceRepository invoiceRepository,
@@ -97,6 +107,10 @@ public class ReportServiceImpl implements ReportService {
         this.patientProfileRepository = patientProfileRepository;
     }
 
+    /**
+     * [Chức năng]: Tổng hợp dữ liệu báo cáo Dashboard tổng quan theo danh sách chi nhánh và khoảng thời gian lọc.
+     * [Mục đích]: Tính thực thu dòng tiền ròng = tổng thực thu (Cash/Bank/POS/cọc mới, không tính thanh toán bằng ví cọc) trừ tổng hoàn tiền theo nửa khoảng [startDt, endExclusive); tổng hợp giá trị hóa đơn và công nợ trong kỳ, chi phí vận hành, thặng dư hoạt động (OperatingMargin), số lượt khám/tỷ lệ hoàn tất, biểu đồ diễn biến theo ngày và số bệnh nhân mới.
+     */
     @Override
     public ReportDashboardDTO getDashboardReport(Collection<Long> branchIds, LocalDate startDate, LocalDate endDate, String branchName) {
         LocalDateTime startDt = startDate.atStartOfDay();
@@ -165,12 +179,20 @@ public class ReportServiceImpl implements ReportService {
         return dto;
     }
 
+    /**
+     * [Chức năng]: Đếm số lịch hẹn đang hoạt động trong ngày theo phạm vi chi nhánh.
+     * [Mục đích]: Cung cấp KPI lịch hẹn hôm nay hiển thị trên Dashboard quản trị (mặc định lấy ngày hiện tại nếu tham số date null).
+     */
     @Override
     public long countTodayAppointments(Collection<Long> branchIds, LocalDate date) {
         if (date == null) date = LocalDate.now();
         return appointmentRepository.countActiveAppointmentsByBranchesAndDate(branchIds, date);
     }
 
+    /**
+     * [Chức năng]: Đếm số lượt bệnh nhân đang ở trạng thái chờ khám trong ngày theo phạm vi chi nhánh.
+     * [Mục đích]: Cung cấp KPI bệnh nhân đang chờ tại phòng khám trên Dashboard quản trị thông qua VisitRepository.countWaitingVisitsByBranchesAndDate.
+     */
     @Override
     public long countWaitingPatients(Collection<Long> branchIds, LocalDate date) {
         if (date == null) date = LocalDate.now();
@@ -179,6 +201,10 @@ public class ReportServiceImpl implements ReportService {
         return visitRepository.countWaitingVisitsByBranchesAndDate(branchIds, start, end);
     }
 
+    /**
+     * [Chức năng]: Đếm số lượng bệnh nhân mới đăng ký hồ sơ trong kỳ báo cáo theo phạm vi chi nhánh.
+     * [Mục đích]: Cung cấp chỉ số tăng trưởng bệnh nhân mới trên Dashboard tổng quan thông qua PatientProfileRepository.countNewPatientsByBranchesAndPeriod.
+     */
     @Override
     public long countNewPatients(Collection<Long> branchIds, LocalDate startDate, LocalDate endDate) {
         if (patientProfileRepository == null) {
@@ -189,14 +215,23 @@ public class ReportServiceImpl implements ReportService {
         return patientProfileRepository.countNewPatientsByBranchesAndPeriod(branchIds, startDt, endDt);
     }
 
+    /**
+     * [Hàm hỗ trợ]: Chuẩn hóa danh sách có thể null thành danh sách rỗng bất biến để tránh NullPointerException.
+     */
     private <T> List<T> safeList(List<T> list) {
         return list != null ? list : List.of();
     }
 
+    /**
+     * [Hàm hỗ trợ]: Chuẩn hóa giá trị BigDecimal null về BigDecimal.ZERO.
+     */
     private BigDecimal nz(BigDecimal v) {
         return v != null ? v : BigDecimal.ZERO;
     }
 
+    /**
+     * [Hàm hỗ trợ]: Chuyển đổi an toàn giá trị Object kiểu Number từ truy vấn tổng hợp sang Long.
+     */
     private Long toLong(Object obj) {
         if (obj instanceof Number num) {
             return num.longValue();
@@ -204,14 +239,24 @@ public class ReportServiceImpl implements ReportService {
         return null;
     }
 
+    /**
+     * [Hàm hỗ trợ]: Định dạng tỷ lệ BigDecimal dạng chuỗi gọn (bỏ số 0 dư ở phần thập phân).
+     */
     private String fmtRate(BigDecimal rate) {
         return rate != null ? rate.stripTrailingZeros().toPlainString() : "0";
     }
 
+    /**
+     * [Hàm hỗ trợ]: Định dạng số tiền BigDecimal thành chuỗi có dấu phẩy phân tách hàng nghìn phục vụ diễn giải trên Excel.
+     */
     private String fmtMoney(BigDecimal amt) {
         return String.format(Locale.US, "%,.0f", amt != null ? amt : BigDecimal.ZERO);
     }
 
+    /**
+     * [Chức năng]: Tổng hợp báo cáo tài chính chi tiết gồm doanh số hóa đơn, cơ cấu dòng tiền, hoàn tiền, thực thu thuần trừ hoàn, chi phí vận hành và công nợ bệnh nhân.
+     * [Mục đích]: Phân tách doanh thu dịch vụ/thuốc/phụ thu/giảm giá từ InvoiceRepository; cộng tổng thực thu dòng tiền = Tiền mặt + Chuyển khoản + POS + Nạp cọc mới (loại trừ thanh toán bằng ví cọc để không tính trùng) theo nửa khoảng [startDt, endExclusive); tách tiền hoàn hóa đơn và hoàn số dư ví từ RefundRepository để tính netRevenue = totalCollected - totalRefundAmount; tính chênh lệch thu chi vận hành và tổng hợp danh sách công nợ bệnh nhân hiện tại.
+     */
     @Override
     public FinancialReportDTO getFinancialReport(Collection<Long> branchIds, LocalDate startDate, LocalDate endDate) {
         LocalDateTime startDt = startDate.atStartOfDay();
@@ -287,6 +332,10 @@ public class ReportServiceImpl implements ReportService {
         return dto;
     }
 
+    /**
+     * [Chức năng]: Tổng hợp báo cáo hoạt động vận hành phòng khám và cơ cấu nguồn khách hàng theo kỳ lọc.
+     * [Mục đích]: Thống kê lượt khám theo từng trạng thái (VisitStatus) và tỷ lệ hoàn tất, phân loại theo hình thức tiếp nhận (WALK_IN, APPOINTMENT, EMERGENCY), kênh đặt lịch hẹn (AppointmentSource) và tổng hợp tỷ trọng nguồn khách hàng (customerSource) sắp xếp giảm dần.
+     */
     @Override
     public OperationalReportDTO getOperationalReport(Collection<Long> branchIds, LocalDate startDate, LocalDate endDate) {
         LocalDateTime startDt = startDate.atStartOfDay();
@@ -367,6 +416,10 @@ public class ReportServiceImpl implements ReportService {
         return dto;
     }
 
+    /**
+     * [Chức năng]: Xây dựng chuỗi thống kê theo từng ngày gồm doanh số hóa đơn, thực thu dòng tiền trừ hoàn tiền và số lượt khám.
+     * [Mục đích]: Khởi tạo đầy đủ mọi ngày trong khoảng [startDate, endDate] rồi cộng dồn giá trị hóa đơn, cộng thanh toán thực thu và trừ các khoản hoàn tiền phát sinh theo từng ngày (nửa khoảng [startDt, endExclusive)) để tổng biểu đồ khớp tuyệt đối với KPI thực thu ròng.
+     */
     private List<DailyRevenueStat> buildDailyStats(Collection<Long> branchIds, LocalDate startDate, LocalDate endDate) {
         LocalDateTime startDt = startDate.atStartOfDay();
         LocalDateTime endDt = endDate.atTime(LocalTime.MAX);
@@ -436,6 +489,10 @@ public class ReportServiceImpl implements ReportService {
     // =========================================================================
     // XUẤT BÁO CÁO EXCEL CHUẨN (.XLSX)
     // =========================================================================
+    /**
+     * [Chức năng]: Tạo và xuất file báo cáo Excel (.xlsx) dưới dạng mảng byte theo loại báo cáo yêu cầu.
+     * [Mục đích]: Khởi tạo XSSFWorkbook với bộ style chuẩn, chọn cấu trúc các sheet theo reportType (FINANCIAL, OPERATIONAL, DEBTS hoặc OVERVIEW/ALL gồm đủ 5 sheet tổng hợp và chi tiết) rồi ghi ra ByteArrayOutputStream.
+     */
     @Override
     public byte[] exportReportToExcel(String reportType, Collection<Long> branchIds, LocalDate startDate, LocalDate endDate, String branchName) {
         LocalDateTime startDt = startDate.atStartOfDay();
@@ -484,6 +541,10 @@ public class ReportServiceImpl implements ReportService {
         }
     }
 
+    /**
+     * [Chức năng]: Tạo sheet Excel "Tổng quan Quản trị" chứa các chỉ tiêu KPI tổng quan và bảng diễn biến doanh thu/lượt khám theo ngày.
+     * [Mục đích]: Ghi tiêu đề báo cáo, bảng chỉ tiêu (thực thu ròng trừ hoàn, doanh số hóa đơn, công nợ, lượt khám, chi phí, thặng dư) và bảng chi tiết theo ngày kèm dòng tổng cộng.
+     */
     private void buildDashboardSummarySheet(XSSFWorkbook wb, ExcelStyleRegistry s, ReportDashboardDTO dto, String branchName, LocalDate start, LocalDate end) {
         Sheet sheet = wb.createSheet("Tổng quan Quản trị");
         sheet.setDisplayGridlines(true);
@@ -539,6 +600,10 @@ public class ReportServiceImpl implements ReportService {
         autoSizeColumns(sheet, 4);
     }
 
+    /**
+     * [Chức năng]: Tạo sheet Excel "Tài chính & Dòng tiền" trình bày chi tiết doanh số hóa đơn, dòng tiền theo phương thức, hoàn tiền, thực thu thuần và công nợ.
+     * [Mục đích]: Xuất bảng đối soát kế toán rõ ràng từng khoản mục (dịch vụ, thuốc, phụ thu, giảm trừ, tiền mặt/chuyển khoản/POS/nạp cọc/ví cọc, hoàn hóa đơn/hoàn ví, thực thu thuần trừ hoàn, chi phí vận hành và công nợ).
+     */
     private void buildFinancialSummarySheet(XSSFWorkbook wb, ExcelStyleRegistry s, FinancialReportDTO dto, String branchName, LocalDate start, LocalDate end) {
         Sheet sheet = wb.createSheet("Tài chính & Dòng tiền");
         sheet.setDisplayGridlines(true);
@@ -579,6 +644,10 @@ public class ReportServiceImpl implements ReportService {
         autoSizeColumns(sheet, 4);
     }
 
+    /**
+     * [Chức năng]: Tạo sheet Excel "Chi tiết Hóa đơn" liệt kê toàn bộ hóa đơn viện phí phát sinh trong kỳ báo cáo.
+     * [Mục đích]: Truy vấn InvoiceRepository.findAllInvoicesForReport theo phạm vi chi nhánh và thời gian, xuất chi tiết từng hóa đơn (đã chống formula injection qua sanitize) kèm dòng tổng tiền hóa đơn, đã thu và nợ còn lại.
+     */
     private void buildInvoicesDetailSheet(XSSFWorkbook wb, ExcelStyleRegistry s, Collection<Long> branchIds, LocalDateTime start, LocalDateTime end) {
         Sheet sheet = wb.createSheet("Chi tiết Hóa đơn");
         sheet.setDisplayGridlines(true);
@@ -647,6 +716,10 @@ public class ReportServiceImpl implements ReportService {
         autoSizeColumns(sheet, 12);
     }
 
+    /**
+     * [Chức năng]: Tạo sheet Excel "Công nợ Bệnh nhân" liệt kê chi tiết danh sách bệnh nhân còn dư nợ hiện tại.
+     * [Mục đích]: Xuất thông tin bệnh nhân, số hóa đơn còn nợ, tổng viện phí, đã thanh toán, nợ còn lại, số dư ví cọc và dòng tổng cộng phục vụ đối soát thu hồi công nợ.
+     */
     private void buildDebtsDetailSheet(XSSFWorkbook wb, ExcelStyleRegistry s, List<PatientDebtSummaryDTO> debts, String branchName) {
         Sheet sheet = wb.createSheet("Công nợ Bệnh nhân");
         sheet.setDisplayGridlines(true);
@@ -711,6 +784,10 @@ public class ReportServiceImpl implements ReportService {
         autoSizeColumns(sheet, 10);
     }
 
+    /**
+     * [Chức năng]: Tạo sheet Excel "Vận hành & Nguồn khách" tổng hợp lượt khám theo trạng thái, kênh tiếp nhận/đặt hẹn và cơ cấu nguồn khách hàng.
+     * [Mục đích]: Xuất 3 bảng thống kê vận hành (trạng thái lượt khám, hình thức tiếp nhận & kênh đặt hẹn, nguồn khách hàng theo tỷ trọng phần trăm) từ OperationalReportDTO.
+     */
     private void buildOperationalSummarySheet(XSSFWorkbook wb, ExcelStyleRegistry s, OperationalReportDTO dto, String branchName, LocalDate start, LocalDate end) {
         Sheet sheet = wb.createSheet("Vận hành & Nguồn khách");
         sheet.setDisplayGridlines(true);
@@ -768,6 +845,10 @@ public class ReportServiceImpl implements ReportService {
         autoSizeColumns(sheet, 4);
     }
 
+    /**
+     * [Chức năng]: Tạo sheet Excel "Chi tiết Lượt khám" liệt kê danh sách các lượt khám phát sinh trong kỳ báo cáo.
+     * [Mục đích]: Truy vấn VisitRepository.findAllVisitsForReport và xuất từng lượt khám (mã lượt, thời gian tiếp nhận, chi nhánh, thông tin bệnh nhân, hình thức tiếp nhận, bác sĩ phụ trách, trạng thái và triệu chứng ban đầu).
+     */
     private void buildVisitsDetailSheet(XSSFWorkbook wb, ExcelStyleRegistry s, Collection<Long> branchIds, LocalDateTime start, LocalDateTime end) {
         Sheet sheet = wb.createSheet("Chi tiết Lượt khám");
         sheet.setDisplayGridlines(true);
@@ -812,6 +893,9 @@ public class ReportServiceImpl implements ReportService {
         autoSizeColumns(sheet, 11);
     }
 
+    /**
+     * [Hàm hỗ trợ]: Ghi cụm 3 dòng tiêu đề chuẩn đầu mỗi sheet báo cáo Excel (tên báo cáo, tên hệ thống phòng khám, phạm vi chi nhánh/kỳ lọc/thời điểm xuất) và trả về chỉ số dòng bắt đầu bảng dữ liệu.
+     */
     private int writeReportHeader(Sheet sheet, ExcelStyleRegistry s, String title, String branchName, LocalDate start, LocalDate end) {
         Row titleRow = sheet.createRow(0);
         Cell titleCell = titleRow.createCell(0);
@@ -831,6 +915,9 @@ public class ReportServiceImpl implements ReportService {
         return 4;
     }
 
+    /**
+     * [Hàm hỗ trợ]: Ghi một dòng chỉ tiêu báo cáo gồm tên chỉ tiêu, giá trị (tự chọn định dạng tiền tệ/số nguyên/chuỗi), đơn vị và diễn giải, trả về chỉ số dòng kế tiếp.
+     */
     private int writeMetricRow(Sheet sheet, ExcelStyleRegistry s, int r, String metricName, Object value, String unit, String desc) {
         Row row = sheet.createRow(r);
         createCell(row, 0, metricName, s.textStyle);
@@ -846,18 +933,27 @@ public class ReportServiceImpl implements ReportService {
         return r + 1;
     }
 
+    /**
+     * [Hàm hỗ trợ]: Tạo ô tiêu đề cột cho dòng header của bảng dữ liệu Excel với style truyền vào.
+     */
     private void createHeaderCell(Row row, int col, String value, CellStyle style) {
         Cell cell = row.createCell(col);
         cell.setCellValue(value);
         cell.setCellStyle(style);
     }
 
+    /**
+     * [Hàm hỗ trợ]: Tạo ô văn bản trên Excel (thay thế null bằng chuỗi rỗng) và áp dụng CellStyle.
+     */
     private void createCell(Row row, int col, String value, CellStyle style) {
         Cell cell = row.createCell(col);
         cell.setCellValue(value != null ? value : "");
         cell.setCellStyle(style);
     }
 
+    /**
+     * [Hàm hỗ trợ]: Tạo ô kiểu số thực từ BigDecimal (mặc định 0.0 nếu null) với định dạng tiền tệ/phần trăm.
+     */
     private void createNumericCell(Row row, int col, BigDecimal value, CellStyle style) {
         Cell cell = row.createCell(col);
         if (value != null) {
@@ -868,12 +964,18 @@ public class ReportServiceImpl implements ReportService {
         cell.setCellStyle(style);
     }
 
+    /**
+     * [Hàm hỗ trợ]: Tạo ô kiểu số nguyên từ giá trị long và áp dụng CellStyle.
+     */
     private void createNumericCell(Row row, int col, long value, CellStyle style) {
         Cell cell = row.createCell(col);
         cell.setCellValue(value);
         cell.setCellStyle(style);
     }
 
+    /**
+     * [Hàm hỗ trợ]: Chuyển đổi an toàn giá trị Object trả về từ truy vấn tổng hợp (SUM/COUNT) sang BigDecimal (mặc định 0 khi null hoặc lỗi định dạng).
+     */
     private BigDecimal toBigDecimal(Object obj) {
         if (obj == null) return BigDecimal.ZERO;
         if (obj instanceof BigDecimal bd) return bd;
@@ -885,6 +987,9 @@ public class ReportServiceImpl implements ReportService {
         }
     }
 
+    /**
+     * [Hàm hỗ trợ]: Làm sạch chuỗi trước khi ghi ra ô Excel, thêm dấu nháy đơn ở đầu nếu bắt đầu bằng =, +, -, @ để chống lỗ hổng Excel Formula Injection.
+     */
     private String sanitize(String val) {
         if (val == null) return "";
         val = val.trim();
@@ -894,6 +999,9 @@ public class ReportServiceImpl implements ReportService {
         return val;
     }
 
+    /**
+     * [Hàm hỗ trợ]: Tự động căn chỉnh độ rộng các cột trên sheet Excel kèm khoảng đệm tối thiểu để không bị cắt chữ hoặc hiển thị ###.
+     */
     private void autoSizeColumns(Sheet sheet, int colCount) {
         for (int i = 0; i < colCount; i++) {
             sheet.autoSizeColumn(i);
@@ -902,6 +1010,10 @@ public class ReportServiceImpl implements ReportService {
         }
     }
 
+    /**
+     * [Phân hệ]: Báo cáo quản trị & Xuất Excel
+     * [Vai trò]: Lớp nội bộ quản lý tập trung toàn bộ bộ CellStyle và Font dùng chung cho các sheet trong một XSSFWorkbook.
+     */
     private static class ExcelStyleRegistry {
         final CellStyle titleStyle;
         final CellStyle subtitleStyle;
@@ -917,6 +1029,9 @@ public class ReportServiceImpl implements ReportService {
         final CellStyle totalCurrencyStyle;
         final CellStyle totalIntegerStyle;
 
+        /**
+         * [Hàm hỗ trợ]: Khởi tạo đầy đủ các kiểu định dạng ô (tiêu đề, header, văn bản, ngày, tiền tệ, số nguyên, phần trăm và dòng tổng cộng) cho workbook.
+         */
         ExcelStyleRegistry(XSSFWorkbook wb) {
             DataFormat df = wb.createDataFormat();
 
@@ -1024,6 +1139,9 @@ public class ReportServiceImpl implements ReportService {
             setBorder(totalIntegerStyle, BorderStyle.MEDIUM);
         }
 
+        /**
+         * [Hàm hỗ trợ]: Thiết lập kiểu viền đồng nhất cho cả 4 cạnh (trên, dưới, trái, phải) của một CellStyle.
+         */
         private void setBorder(CellStyle cs, BorderStyle b) {
             cs.setBorderTop(b);
             cs.setBorderBottom(b);

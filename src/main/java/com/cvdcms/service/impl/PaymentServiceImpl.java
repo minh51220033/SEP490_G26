@@ -20,6 +20,10 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+/**
+ * [Phân hệ]: Thu tiền Hóa đơn & Quản lý Ví tạm ứng (Ví cọc)
+ * [Vai trò]: Service lõi xử lý thu tiền một phần/đủ cho hóa đơn (bao gồm trừ ví tạm ứng, lưu snapshot ngân hàng, phân bổ FIFO, chốt quyền lợi/hoa hồng/hoàn tất lượt khám, tích điểm chống cộng trùng), nạp ví tạm ứng và chống ghi trùng giao dịch bằng khóa bi quan cùng `idempotencyKey`/`transactionRef`.
+ */
 @Service
 @Transactional
 public class PaymentServiceImpl implements PaymentService {
@@ -48,6 +52,9 @@ public class PaymentServiceImpl implements PaymentService {
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private com.cvdcms.service.ServiceCommissionService serviceCommissionService;
 
+    /**
+     * [Hàm hỗ trợ]: Constructor chính do Spring tiêm đầy đủ repository và các service liên kết (`LoyaltyService`, `InvoiceService`, `AppointmentLifecycleService`, `PaymentAllocationService`).
+     */
     @org.springframework.beans.factory.annotation.Autowired
     public PaymentServiceImpl(
             PaymentRepository paymentRepository,
@@ -87,7 +94,9 @@ public class PaymentServiceImpl implements PaymentService {
         this.paymentAllocationService = paymentAllocationService;
     }
 
-    /** Constructor compatibility for existing finance tests and callers. */
+    /**
+     * [Hàm hỗ trợ]: Constructor tương thích ngược phục vụ các bài kiểm thử tài chính (không truyền `VisitRepository`, `AppointmentLifecycleService` và `PaymentAllocationService`).
+     */
     public PaymentServiceImpl(
             PaymentRepository paymentRepository,
             InvoiceRepository invoiceRepository,
@@ -111,7 +120,9 @@ public class PaymentServiceImpl implements PaymentService {
                 loyaltyService, invoiceService, null, null, branchBankAccountRepository, null);
     }
 
-    /** Appointment Core compatibility constructor. */
+    /**
+     * [Hàm hỗ trợ]: Constructor tương thích ngược cho phân hệ Appointment Core (có `VisitRepository` và `AppointmentLifecycleService`, không truyền ngân hàng/phân bổ).
+     */
     public PaymentServiceImpl(
             PaymentRepository paymentRepository,
             InvoiceRepository invoiceRepository,
@@ -136,6 +147,9 @@ public class PaymentServiceImpl implements PaymentService {
                 loyaltyService, invoiceService, visitRepository, appointmentLifecycleService, null, null);
     }
 
+    /**
+     * [Hàm hỗ trợ]: Constructor tương thích ngược rút gọn kèm `LoyaltyService` phục vụ kiểm thử đơn vị.
+     */
     public PaymentServiceImpl(
             PaymentRepository paymentRepository,
             InvoiceRepository invoiceRepository,
@@ -157,6 +171,9 @@ public class PaymentServiceImpl implements PaymentService {
                 null, null, null, null, null);
     }
 
+    /**
+     * [Hàm hỗ trợ]: Constructor tương thích ngược tối giản chỉ nhận các repository lõi phục vụ kiểm thử đơn vị.
+     */
     public PaymentServiceImpl(
             PaymentRepository paymentRepository,
             InvoiceRepository invoiceRepository,
@@ -177,18 +194,22 @@ public class PaymentServiceImpl implements PaymentService {
                 null, null, null, null, null);
     }
 
+    /**
+     * [Hàm hỗ trợ]: Thiết lập thủ công `PaymentAllocationService` khi cần tiêm bổ sung ngoài constructor.
+     */
     public void setPaymentAllocationService(com.cvdcms.service.PaymentAllocationService paymentAllocationService) {
         this.paymentAllocationService = paymentAllocationService;
     }
 
+    /**
+     * [Hàm hỗ trợ]: Thiết lập thủ công `ServiceCommissionService` để kích hoạt ghi nhận hoa hồng dịch vụ khi hóa đơn thanh toán đủ.
+     */
     public void setServiceCommissionService(com.cvdcms.service.ServiceCommissionService serviceCommissionService) {
         this.serviceCommissionService = serviceCommissionService;
     }
 
     /**
-     * Lấy hồ sơ nhân sự hợp lệ của người đăng nhập.
-     * Kiểm tra trạng thái hoạt động của User, StaffProfile và phân công chi nhánh.
-     * Tuyệt đối không lấy nhân viên đầu tiên, không tạo dummy profile.
+     * [Hàm hỗ trợ]: Xác thực và trả về hồ sơ nhân sự (`StaffProfile`) đang hoạt động của thu ngân, kiểm tra tài khoản `User` đang `ACTIVE`, có liên kết nhân sự hợp lệ và có phân công chi nhánh `ACTIVE` (trừ Admin); tuyệt đối không tự lấy nhân sự mặc định.
      */
     private StaffProfile getValidStaffProfile(Long userId, Long branchId) {
         if (userId == null) {
@@ -223,6 +244,10 @@ public class PaymentServiceImpl implements PaymentService {
         return staff;
     }
 
+    /**
+     * [Chức năng]: Xử lý ghi nhận một đợt thanh toán (thu một phần hoặc thu đủ) cho hóa đơn theo tiền mặt, chuyển khoản, thẻ POS hoặc ví tạm ứng (`DEPOSIT_WALLET`).
+     * [Mục đích]: Luồng thu tiền trung tâm đảm bảo an toàn đồng thời: khóa bi quan `Invoice` (`findByIdForUpdate`), xác thực quyền thu ngân tại chi nhánh trước khi kiểm tra chống ghi trùng bằng `idempotencyKey` và `transactionRef` (trả lại phiếu cũ nếu khớp toàn bộ nội dung hoặc báo xung đột nếu khác); chặn thu vượt `remainingDebt`; khóa bi quan `PatientProfile` và trừ `depositBalance` nếu dùng `DEPOSIT_WALLET`; lưu snapshot tài khoản ngân hàng khi `BANK_TRANSFER`; phân bổ FIFO vào từng dòng qua `paymentAllocationService.allocatePayment`; cập nhật hóa đơn sang `PARTIAL` hoặc `PAID` (khi trả đủ thì gọi `finalizeInvoiceBenefits`, `ensureCommissionsForInvoice` và `completeVisit`); ghi `InvoiceAuditLog`; và chỉ tích điểm thành viên khi phương thức KHÁC `DEPOSIT_WALLET` để không cộng trùng điểm lần 2 (do đã tích điểm lúc nạp cọc).
+     */
     @Override
     public Payment processPayment(PaymentRequestDTO request, Long cashierUserId) {
         if (request == null) {
@@ -387,6 +412,9 @@ public class PaymentServiceImpl implements PaymentService {
         return savedPayment;
     }
 
+    /**
+     * [Hàm hỗ trợ]: Khóa bi quan lượt khám gắn với hóa đơn đã trả đủ để chuyển trạng thái `WAITING_PAYMENT -> COMPLETED`, nhưng chỉ kết thúc khi không còn hóa đơn khác có nợ và không còn dịch vụ hoàn tất nào chưa lập hóa đơn; sau đó đồng bộ hoàn tất lịch hẹn và phát sự kiện chăm sóc/hàng đợi.
+     */
     private void completeVisit(Invoice invoice, Long actorUserId) {
         if (invoice.getVisit() == null) {
             return;
@@ -446,6 +474,9 @@ public class PaymentServiceImpl implements PaymentService {
         }
     }
 
+    /**
+     * [Hàm hỗ trợ]: Khi phương thức là `BANK_TRANSFER`, chọn tài khoản ngân hàng hợp lệ đang hoạt động của đúng chi nhánh (ưu tiên `bankAccountId` yêu cầu hoặc tài khoản mặc định) và lưu cứng snapshot (`bankBin`, `bankName`, `bankAccountNumber`, `bankAccountHolder`, `expectedTransferContent`) vào `Payment` để bảo toàn lịch sử đối soát.
+     */
     private void attachBankTransferSnapshot(Payment payment, PaymentRequestDTO request,
                                             Branch branch, String expectedContentPrefix) {
         if (payment.getPaymentMethod() != PaymentMethod.BANK_TRANSFER || branchBankAccountRepository == null) {
@@ -495,6 +526,9 @@ public class PaymentServiceImpl implements PaymentService {
         payment.setExpectedTransferContent(expectedContent.trim().toUpperCase());
     }
 
+    /**
+     * [Hàm hỗ trợ]: Fallback cộng điểm tích lũy, ghi `PointTransaction` loại `EARN` và xét nâng hạng thành viên (`MembershipTier`) trực tiếp khi `LoyaltyService` không được tiêm.
+     */
     private void updateLoyaltyAndTier(PatientProfile patient, BigDecimal amount, Invoice invoice) {
         PatientLoyaltyWallet wallet = patientLoyaltyWalletRepository.findByPatientProfile_ProfileId(patient.getProfileId())
                 .orElseGet(() -> {
@@ -542,6 +576,10 @@ public class PaymentServiceImpl implements PaymentService {
         }
     }
 
+    /**
+     * [Chức năng]: Xử lý nạp tiền tạm ứng vào ví cọc (`depositBalance`) của bệnh nhân và lập phiếu thu `TU...` loại `ADVANCE_DEPOSIT`.
+     * [Mục đích]: Cấm nạp cọc bằng chính nguồn `DEPOSIT_WALLET`, khóa bi quan `PatientProfile` (`findByIdForUpdate`), xác thực quyền thu ngân tại chi nhánh, chống ghi trùng bằng `idempotencyKey` và `transactionRef`, cộng dồn `depositBalance`, gắn snapshot ngân hàng nếu chuyển khoản và tích điểm tích lũy ngay tại thời điểm nạp cọc (để về sau khi trừ ví cọc thanh toán hóa đơn sẽ không cộng trùng điểm).
+     */
     @Override
     public Payment processAdvanceDeposit(PaymentRequestDTO request, Long cashierUserId) {
         if (request == null) {
@@ -650,6 +688,10 @@ public class PaymentServiceImpl implements PaymentService {
         return saved;
     }
 
+    /**
+     * [Chức năng]: Truy vấn phân trang danh sách phiếu thu (thanh toán hóa đơn và/hoặc nạp tạm ứng) theo bộ lọc chi nhánh, loại phiếu, phương thức, từ khóa và khoảng thời gian.
+     * [Mục đích]: Phục vụ màn hình lịch sử thanh toán `/payments` và lịch sử tạm ứng `/payments/deposits`.
+     */
     @Override
     @Transactional(readOnly = true)
     public Page<Payment> getPayments(
@@ -664,18 +706,30 @@ public class PaymentServiceImpl implements PaymentService {
         return paymentRepository.findFilteredPayments(branchId, paymentType, paymentMethod, startDate, endDate, keyword, pageable);
     }
 
+    /**
+     * [Chức năng]: Lấy danh sách các đợt thanh toán thuộc một hóa đơn sắp xếp theo thời điểm thu mới nhất giảm dần.
+     * [Mục đích]: Hiển thị lịch sử các đợt thu một phần/đủ trên màn hình chi tiết hóa đơn.
+     */
     @Override
     @Transactional(readOnly = true)
     public List<Payment> getPaymentsByInvoiceId(Long invoiceId) {
         return paymentRepository.findByInvoice_InvoiceIdOrderByPaidAtDesc(invoiceId);
     }
 
+    /**
+     * [Chức năng]: Lấy toàn bộ lịch sử nạp tiền tạm ứng (`ADVANCE_DEPOSIT`) của một bệnh nhân theo thời gian giảm dần.
+     * [Mục đích]: Hiển thị trên màn hình tạo nạp cọc và tra cứu ví tạm ứng của bệnh nhân.
+     */
     @Override
     @Transactional(readOnly = true)
     public List<Payment> getPatientDepositHistory(Long profileId) {
         return paymentRepository.findByPatientProfile_ProfileIdAndPaymentTypeOrderByPaidAtDesc(profileId, PaymentType.ADVANCE_DEPOSIT);
     }
 
+    /**
+     * [Chức năng]: Tải chi tiết một phiếu thu (kèm thông tin hóa đơn, bệnh nhân, chi nhánh, thu ngân) theo `paymentId`.
+     * [Mục đích]: Phục vụ trang in biên lai thu tiền `/payments/{id}/receipt`; ném `IllegalArgumentException` nếu không tìm thấy.
+     */
     @Override
     @Transactional(readOnly = true)
     public Payment getPaymentById(Long paymentId) {

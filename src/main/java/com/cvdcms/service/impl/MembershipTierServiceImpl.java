@@ -14,6 +14,10 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.util.List;
 
+/**
+ * [Phân hệ]: Hạng thành viên & Quy tắc tích điểm
+ * [Vai trò]: Service triển khai nghiệp vụ quản lý danh mục hạng thẻ thành viên, xác định hạng đủ điều kiện theo chi tiêu và tính lại hạng tự động cho bệnh nhân.
+ */
 @Service
 @Transactional
 public class MembershipTierServiceImpl implements MembershipTierService {
@@ -32,18 +36,30 @@ public class MembershipTierServiceImpl implements MembershipTierService {
         this.patientProfileRepository = patientProfileRepository;
     }
 
+    /**
+     * [Chức năng]: Lấy toàn bộ danh sách hạng thành viên trong hệ thống sắp xếp theo thứ tự hiển thị tăng dần.
+     * [Mục đích]: Phục vụ màn hình quản trị cấu hình hạng thẻ thành viên hiển thị cả hạng đang bật và đang tắt.
+     */
     @Override
     @Transactional(readOnly = true)
     public List<MembershipTier> getAllTiers() {
         return membershipTierRepository.findAllByOrderByDisplayOrderAsc();
     }
 
+    /**
+     * [Chức năng]: Lấy danh sách các hạng thành viên đang hoạt động theo thứ tự hiển thị tăng dần.
+     * [Mục đích]: Cung cấp dữ liệu lựa chọn hạng hợp lệ cho cấu hình khuyến mãi và các màn hình tra cứu.
+     */
     @Override
     @Transactional(readOnly = true)
     public List<MembershipTier> getActiveTiers() {
         return membershipTierRepository.findByIsActiveTrueOrderByDisplayOrderAsc();
     }
 
+    /**
+     * [Chức năng]: Tìm kiếm hạng thành viên theo ID.
+     * [Mục đích]: Trả về thực thể MembershipTier tương ứng hoặc ném IllegalArgumentException nếu không tồn tại.
+     */
     @Override
     @Transactional(readOnly = true)
     public MembershipTier getTierById(Long tierId) {
@@ -51,6 +67,10 @@ public class MembershipTierServiceImpl implements MembershipTierService {
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy hạng thành viên với ID: " + tierId));
     }
 
+    /**
+     * [Chức năng]: Tìm kiếm hạng thành viên theo mã hạng (tierCode).
+     * [Mục đích]: Tra cứu thực thể MembershipTier theo mã định danh nghiệp vụ hoặc ném IllegalArgumentException khi không tìm thấy.
+     */
     @Override
     @Transactional(readOnly = true)
     public MembershipTier getTierByCode(String tierCode) {
@@ -58,6 +78,10 @@ public class MembershipTierServiceImpl implements MembershipTierService {
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy hạng thành viên với mã: " + tierCode));
     }
 
+    /**
+     * [Chức năng]: Tạo mới một hạng thành viên và lưu vào bảng hạng thành viên.
+     * [Mục đích]: Chuẩn hóa mã hạng viết hoa, kiểm tra trùng mã, xác thực ngưỡng chi tiêu/chiết khấu/quy tắc điểm qua validateTierDto trước khi lưu vào cơ sở dữ liệu.
+     */
     @Override
     public MembershipTier createTier(MembershipTierDTO dto) {
         if (dto == null) {
@@ -83,6 +107,10 @@ public class MembershipTierServiceImpl implements MembershipTierService {
         return membershipTierRepository.save(tier);
     }
 
+    /**
+     * [Chức năng]: Cập nhật thông tin cấu hình của một hạng thành viên theo ID.
+     * [Mục đích]: Kiểm tra trùng mã hạng với bản ghi khác, xác thực tham số quy tắc tích điểm và bảo vệ quy tắc hệ thống phải luôn còn ít nhất một hạng cơ sở đang hoạt động có ngưỡng chi tiêu 0 đ.
+     */
     @Override
     public MembershipTier updateTier(Long tierId, MembershipTierDTO dto) {
         if (dto == null) {
@@ -125,6 +153,10 @@ public class MembershipTierServiceImpl implements MembershipTierService {
         return membershipTierRepository.save(existing);
     }
 
+    /**
+     * [Chức năng]: Đảo trạng thái kích hoạt (bật/tắt) của một hạng thành viên theo ID.
+     * [Mục đích]: Chặn thao tác vô hiệu hóa nếu đây là hạng cơ sở duy nhất có ngưỡng chi tiêu 0 đ đang hoạt động, sau đó lưu trạng thái mới.
+     */
     @Override
     public MembershipTier toggleTierStatus(Long tierId) {
         MembershipTier tier = getTierById(tierId);
@@ -141,6 +173,10 @@ public class MembershipTierServiceImpl implements MembershipTierService {
         return membershipTierRepository.save(tier);
     }
 
+    /**
+     * [Chức năng]: Xác định hạng thành viên đang hoạt động cao nhất mà tổng mức chi tiêu đạt điều kiện.
+     * [Mục đích]: Duyệt các hạng đang hoạt động tăng dần theo ngưỡng chi tiêu tối thiểu để chọn hạng cao nhất có minTotalSpent nhỏ hơn hoặc bằng totalSpent (hoặc hạng thấp nhất nếu chưa đạt ngưỡng nào).
+     */
     @Override
     @Transactional(readOnly = true)
     public MembershipTier findHighestQualifyingTier(BigDecimal totalSpent) {
@@ -160,6 +196,10 @@ public class MembershipTierServiceImpl implements MembershipTierService {
         return qualifying;
     }
 
+    /**
+     * [Chức năng]: Tính toán và cập nhật lại hạng thành viên cho một hồ sơ bệnh nhân dựa trên tổng chi tiêu tích lũy trong ví điểm.
+     * [Mục đích]: Được gọi sau khi ghi nhận thanh toán hoặc điều chỉnh hoàn tiền; so sánh hạng đủ điều kiện cao nhất với hạng hiện tại và lưu PatientProfile nếu có thay đổi.
+     */
     @Override
     public void recalculatePatientTier(Long profileId) {
         PatientProfile patient = patientProfileRepository.findById(profileId)
@@ -177,6 +217,9 @@ public class MembershipTierServiceImpl implements MembershipTierService {
         }
     }
 
+    /**
+     * [Hàm hỗ trợ]: Kiểm tra ràng buộc hợp lệ của các thông số số học trong MembershipTierDTO (ngưỡng chi tiêu, chiết khấu 0-100%, mức chi tiêu đổi 1 điểm và giá trị quy đổi điểm).
+     */
     private void validateTierDto(MembershipTierDTO dto) {
         if (dto.getMinTotalSpent() == null || dto.getMinTotalSpent().compareTo(BigDecimal.ZERO) < 0) {
             throw new IllegalArgumentException("Ngưỡng chi tiêu tối thiểu phải >= 0 đ.");

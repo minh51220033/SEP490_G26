@@ -18,6 +18,10 @@ import java.text.Normalizer;
 import java.util.*;
 import java.util.regex.Pattern;
 
+/**
+ * [Phân hệ]: Quản lý Tài khoản Ngân hàng Chi nhánh & Sinh mã VietQR
+ * [Vai trò]: Service triển khai nghiệp vụ CRUD tài khoản nhận chuyển khoản theo từng chi nhánh (có khóa bi quan chống tranh chấp tài khoản mặc định, bảo toàn lịch sử giao dịch, ghi audit log) và sinh link ảnh VietQR động.
+ */
 @Service
 @Transactional
 public class BranchBankAccountServiceImpl implements BranchBankAccountService {
@@ -30,6 +34,9 @@ public class BranchBankAccountServiceImpl implements BranchBankAccountService {
     private final SystemAuditLogRepository systemAuditLogRepository;
     private final ObjectMapper objectMapper;
 
+    /**
+     * [Hàm hỗ trợ]: Khởi tạo service với các repository tài khoản ngân hàng, chi nhánh, phiếu thu, hóa đơn, người dùng, audit log và `ObjectMapper`.
+     */
     @Autowired
     public BranchBankAccountServiceImpl(
             BranchBankAccountRepository branchBankAccountRepository,
@@ -49,6 +56,10 @@ public class BranchBankAccountServiceImpl implements BranchBankAccountService {
         this.objectMapper = objectMapper != null ? objectMapper : new ObjectMapper();
     }
 
+    /**
+     * [Chức năng]: Lấy danh sách tài khoản ngân hàng theo chi nhánh (hoặc toàn hệ thống nếu `branchId == null`).
+     * [Mục đích]: Phục vụ màn hình quản trị tài khoản ngân hàng, gắn thêm cờ `hasTransactions` (kiểm tra từ `paymentRepository`) để giao diện biết tài khoản nào đã phát sinh phiếu thu nhằm khóa sửa/xóa cứng.
+     */
     @Override
     @Transactional(readOnly = true)
     public List<BranchBankAccountDTO> getAccountsByBranch(Long branchId) {
@@ -67,6 +78,10 @@ public class BranchBankAccountServiceImpl implements BranchBankAccountService {
         return dtos;
     }
 
+    /**
+     * [Chức năng]: Lấy danh sách tùy chọn tài khoản ngân hàng đang hoạt động (`isActive = true`) của một chi nhánh, ưu tiên tài khoản mặc định lên đầu.
+     * [Mục đích]: Cung cấp dữ liệu nhẹ (`BranchBankAccountOptionDTO`) cho dropdown chọn tài khoản chuyển khoản/VietQR tại quầy thu ngân.
+     */
     @Override
     @Transactional(readOnly = true)
     public List<BranchBankAccountOptionDTO> getActiveAccountOptions(Long branchId) {
@@ -92,6 +107,10 @@ public class BranchBankAccountServiceImpl implements BranchBankAccountService {
         return options;
     }
 
+    /**
+     * [Chức năng]: Tra cứu chi tiết một tài khoản ngân hàng chi nhánh theo `accountId`.
+     * [Mục đích]: Trả về `BranchBankAccountDTO` kèm trạng thái đã phát sinh giao dịch (`hasTransactions`) hoặc ném `IllegalArgumentException` nếu không tồn tại.
+     */
     @Override
     @Transactional(readOnly = true)
     public BranchBankAccountDTO getAccountById(Long accountId) {
@@ -100,6 +119,10 @@ public class BranchBankAccountServiceImpl implements BranchBankAccountService {
         boolean hasTx = paymentRepository.existsByBankAccount_AccountId(accountId);
         return mapToDTO(account, hasTx);
     }
+
+    /**
+     * [Hàm hỗ trợ]: Kiểm tra hợp lệ dữ liệu tài khoản ngân hàng (mã BIN 6 số chuẩn VietQR/Napas, số tài khoản 6-25 ký tự chữ/số, tên chủ tài khoản sau chuẩn hóa, độ dài ghi chú) và chặn trùng lặp `(branchId, bankBin, accountNumber)`.
+     */
     private void validateAccountDTO(BranchBankAccountDTO dto, Long currentAccountId) {
         if (dto == null) {
             throw new IllegalArgumentException("Dữ liệu tài khoản không được để trống.");
@@ -146,6 +169,10 @@ public class BranchBankAccountServiceImpl implements BranchBankAccountService {
         }
     }
 
+    /**
+     * [Chức năng]: Tạo mới một tài khoản ngân hàng nhận tiền cho chi nhánh.
+     * [Mục đích]: Validate chống trùng, khóa bi quan bản ghi `Branch` và các `BranchBankAccount` của chi nhánh để chống race condition; tự động đặt làm mặc định nếu là tài khoản active đầu tiên, hạ cờ mặc định cũ và `flush()` trước khi `INSERT` để không vi phạm ràng buộc duy nhất, đồng thời ghi `SystemAuditLog` (`CREATE_BANK_ACCOUNT`).
+     */
     @Override
     public BranchBankAccountDTO createAccount(BranchBankAccountDTO dto, Long currentUserId, String ipAddress) {
         validateAccountDTO(dto, null);
@@ -209,6 +236,10 @@ public class BranchBankAccountServiceImpl implements BranchBankAccountService {
         return mapToDTO(effective, false);
     }
 
+    /**
+     * [Chức năng]: Cập nhật thông tin tài khoản ngân hàng chi nhánh.
+     * [Mục đích]: Khóa bi quan tài khoản và khóa chi nhánh theo thứ tự tăng dần ID (tránh deadlock khi đổi chi nhánh); bảo toàn lịch sử tài chính bằng cách cấm sửa `accountNumber`, `bankBin` hoặc `branchId` nếu tài khoản đã từng phát sinh giao dịch thu tiền; tự bỏ cờ mặc định nếu ngừng hoạt động, `flush()` cờ mặc định cũ trước khi bật mới và ghi `SystemAuditLog` (`UPDATE_BANK_ACCOUNT`).
+     */
     @Override
     public BranchBankAccountDTO updateAccount(Long accountId, BranchBankAccountDTO dto, Long currentUserId, String ipAddress) {
         if (accountId == null || dto == null) {
@@ -306,6 +337,10 @@ public class BranchBankAccountServiceImpl implements BranchBankAccountService {
         return mapToDTO(effective, hasTx);
     }
 
+    /**
+     * [Chức năng]: Kích hoạt hoặc ngừng sử dụng một tài khoản ngân hàng chi nhánh.
+     * [Mục đích]: Khóa bi quan bản ghi tài khoản và chi nhánh, cập nhật `isActive` (nếu ngừng sử dụng thì tự động đặt `isDefault = false` để không chọn nhầm khi sinh QR mặc định) và ghi audit log `ACTIVATE_BANK_ACCOUNT`/`DEACTIVATE_BANK_ACCOUNT`.
+     */
     @Override
     public void toggleAccountStatus(Long accountId, boolean active, Long currentUserId, String ipAddress) {
         BranchBankAccount account = branchBankAccountRepository.findByIdForUpdate(accountId)
@@ -329,6 +364,10 @@ public class BranchBankAccountServiceImpl implements BranchBankAccountService {
                 effective.getAccountId(), oldState, effective, ipAddress);
     }
 
+    /**
+     * [Chức năng]: Đặt một tài khoản ngân hàng đang hoạt động làm tài khoản mặc định duy nhất của chi nhánh.
+     * [Mục đích]: Khóa bi quan tài khoản đích, bản ghi chi nhánh và toàn bộ tài khoản thuộc chi nhánh để chống 2 request đặt mặc định đồng thời; hạ cờ `isDefault = false` ở các tài khoản khác rồi `flush()` trước khi bật mặc định mới và ghi audit log `SET_DEFAULT_BANK_ACCOUNT`.
+     */
     @Override
     public void setDefaultAccount(Long accountId, Long currentUserId, String ipAddress) {
         BranchBankAccount targetAccount = branchBankAccountRepository.findByIdForUpdate(accountId)
@@ -367,6 +406,10 @@ public class BranchBankAccountServiceImpl implements BranchBankAccountService {
         recordAuditLog(currentUserId, branch, "SET_DEFAULT_BANK_ACCOUNT", effective.getAccountId(), oldState, effective, ipAddress);
     }
 
+    /**
+     * [Chức năng]: Xóa cứng một tài khoản ngân hàng chi nhánh khỏi hệ thống.
+     * [Mục đích]: Kiểm tra `paymentRepository.existsByBankAccount_AccountId`; nếu đã từng gắn với phiếu thu quá khứ thì chặn xóa (`IllegalStateException`) để bảo toàn lịch sử đối soát, ngược lại xóa bản ghi và lưu `SystemAuditLog` (`DELETE_BANK_ACCOUNT`).
+     */
     @Override
     public void deleteAccount(Long accountId, Long currentUserId, String ipAddress) {
         BranchBankAccount account = branchBankAccountRepository.findById(accountId)
@@ -387,6 +430,10 @@ public class BranchBankAccountServiceImpl implements BranchBankAccountService {
         recordAuditLog(currentUserId, branch, "DELETE_BANK_ACCOUNT", accountId, oldState, null, ipAddress);
     }
 
+    /**
+     * [Chức năng]: Sinh thông tin chuyển khoản và URL ảnh VietQR chuẩn (`img.vietqr.io`) theo đúng chi nhánh cho hóa đơn hoặc phiếu nạp tạm ứng.
+     * [Mục đích]: Xác thực nhất quán chi nhánh theo hóa đơn (nếu có `invoiceId`), chọn đúng tài khoản hoạt động được chỉ định (`accountId`) hoặc tự động lấy tài khoản mặc định của chi nhánh, tạo nội dung chuyển khoản chuẩn hóa không dấu (`<InvoiceCode> <ref>` hoặc `TU<profileId> <ref>`) và đóng gói `PaymentQrInfoDTO` kèm danh sách tài khoản khả dụng.
+     */
     @Override
     @Transactional(readOnly = true)
     public PaymentQrInfoDTO getQrInfo(
@@ -553,6 +600,9 @@ public class BranchBankAccountServiceImpl implements BranchBankAccountService {
                 .build();
     }
 
+    /**
+     * [Hàm hỗ trợ]: Chuyển đổi entity `BranchBankAccount` sang `BranchBankAccountDTO` kèm thông tin chi nhánh và cờ `hasTransactions`.
+     */
     private BranchBankAccountDTO mapToDTO(BranchBankAccount b, boolean hasTransactions) {
         return BranchBankAccountDTO.builder()
                 .accountId(b.getAccountId())
@@ -573,6 +623,9 @@ public class BranchBankAccountServiceImpl implements BranchBankAccountService {
                 .build();
     }
 
+    /**
+     * [Hàm hỗ trợ]: Chuẩn hóa tên chủ tài khoản về chữ in hoa không dấu tiếng Việt, chỉ giữ chữ cái/số và khoảng trắng theo chuẩn ngân hàng/VietQR.
+     */
     private String normalizeAccountHolderName(String name) {
         if (name == null) return "";
         String normalized = Normalizer.normalize(name.trim(), Normalizer.Form.NFD);
@@ -581,6 +634,9 @@ public class BranchBankAccountServiceImpl implements BranchBankAccountService {
         return noAccents.toUpperCase().replaceAll("[^A-Z0-9 ]", "").trim();
     }
 
+    /**
+     * [Hàm hỗ trợ]: Làm sạch nội dung chuyển khoản VietQR (bỏ dấu tiếng Việt, bỏ ký tự đặc biệt, viết hoa và giới hạn tối đa 50 ký tự).
+     */
     private String sanitizeTransferContent(String content) {
         if (content == null) return "THANH TOAN";
         String normalized = Normalizer.normalize(content.trim(), Normalizer.Form.NFD);
@@ -593,6 +649,9 @@ public class BranchBankAccountServiceImpl implements BranchBankAccountService {
         return clean.toUpperCase();
     }
 
+    /**
+     * [Hàm hỗ trợ]: Chụp ảnh trạng thái (snapshot) các trường chính của `BranchBankAccount` thành `Map` trước khi thay đổi để lưu vết kiểm toán.
+     */
     private Map<String, Object> captureState(BranchBankAccount b) {
         if (b == null) return Collections.emptyMap();
         Map<String, Object> map = new HashMap<>();
@@ -607,6 +666,9 @@ public class BranchBankAccountServiceImpl implements BranchBankAccountService {
         return map;
     }
 
+    /**
+     * [Hàm hỗ trợ]: Ghi bản ghi nhật ký kiểm toán (`SystemAuditLog`) trên bảng `branch_bank_accounts` kèm JSON giá trị cũ/mới và IP người thao tác; bỏ qua lỗi ghi log để không làm gián đoạn giao dịch chính.
+     */
     private void recordAuditLog(Long userId, Branch branch, String action, Long entityId, Object oldVal, Object newVal, String ipAddress) {
         if (systemAuditLogRepository == null) return;
         try {

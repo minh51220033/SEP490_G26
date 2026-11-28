@@ -28,6 +28,10 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.*;
 
+/**
+ * [Phân hệ]: Tổng quan Thu ngân & Hàng đợi Lập hóa đơn / Thu tiền
+ * [Vai trò]: Service tổng hợp danh sách bệnh nhân đang chờ lập hóa đơn (dịch vụ hoàn tất hoặc đơn thuốc chưa thanh toán) và/hoặc còn hóa đơn nợ theo đúng phạm vi chi nhánh phân quyền.
+ */
 @Service
 @Transactional(readOnly = false)
 public class CashierOverviewServiceImpl implements CashierOverviewService {
@@ -38,6 +42,9 @@ public class CashierOverviewServiceImpl implements CashierOverviewService {
     private final PrescriptionRepository prescriptionRepository;
     private final InvoiceService invoiceService;
 
+    /**
+     * [Hàm hỗ trợ]: Khởi tạo service tổng quan thu ngân với các repository bệnh nhân, hóa đơn, lượt khám, đơn thuốc và `InvoiceService`.
+     */
     public CashierOverviewServiceImpl(
             PatientProfileRepository patientProfileRepository,
             InvoiceRepository invoiceRepository,
@@ -52,6 +59,10 @@ public class CashierOverviewServiceImpl implements CashierOverviewService {
         this.invoiceService = invoiceService;
     }
 
+    /**
+     * [Chức năng]: Truy vấn phân trang danh sách bệnh nhân cần xử lý tại quầy thu ngân (chờ lập hóa đơn và/hoặc còn công nợ).
+     * [Mục đích]: Phục vụ bảng hàng đợi trên màn hình Tổng quan Thu ngân; hỗ trợ tìm theo tên/SĐT/mã BN/mã hóa đơn/mã lượt khám, giới hạn chặt theo `allowedBranchIds`, lọc theo trạng thái (`PENDING_INVOICE`, `PENDING_PAYMENT`, `PENDING_BOTH`) và khoảng ngày phát sinh, sau đó sắp xếp theo thời điểm hoạt động gần nhất giảm dần.
+     */
     @Override
     public Page<CashierPendingPatientDTO> getPendingCashierPatients(
             String keyword,
@@ -188,6 +199,9 @@ public class CashierOverviewServiceImpl implements CashierOverviewService {
         return new PageImpl<>(pageContent, pageable, total);
     }
 
+    /**
+     * [Hàm hỗ trợ]: Kiểm tra hồ sơ bệnh nhân chờ thu ngân có khớp với bộ lọc trạng thái (`ALL`, `PENDING_INVOICE`, `PENDING_PAYMENT`, `PENDING_BOTH`) hay không.
+     */
     private boolean matchesStatus(CashierPendingPatientDTO dto, String status) {
         if (status == null || status.isBlank() || "ALL".equalsIgnoreCase(status.trim())) {
             return true;
@@ -203,6 +217,9 @@ public class CashierOverviewServiceImpl implements CashierOverviewService {
         return true;
     }
 
+    /**
+     * [Hàm hỗ trợ]: Kiểm tra bệnh nhân có ít nhất một lượt khám chờ lập hóa đơn, hóa đơn còn nợ hoặc hoạt động gần nhất nằm trong khoảng `[fromDate, toDate]`.
+     */
     private boolean matchesDateRange(CashierPendingPatientDTO dto, java.time.LocalDate fromDate, java.time.LocalDate toDate) {
         if (fromDate == null && toDate == null) {
             return true;
@@ -227,6 +244,9 @@ public class CashierOverviewServiceImpl implements CashierOverviewService {
         return false;
     }
 
+    /**
+     * [Hàm hỗ trợ]: Kiểm tra một ngày mục tiêu `target` có nằm trong đoạn đóng `[fromDate, toDate]` hay không.
+     */
     private boolean isDateInRange(java.time.LocalDate target, java.time.LocalDate fromDate, java.time.LocalDate toDate) {
         if (target == null) return false;
         if (fromDate != null && target.isBefore(fromDate)) return false;
@@ -234,6 +254,10 @@ public class CashierOverviewServiceImpl implements CashierOverviewService {
         return true;
     }
 
+    /**
+     * [Chức năng]: Lấy chi tiết các khoản chờ lập hóa đơn và hóa đơn còn nợ của một bệnh nhân cụ thể trong phạm vi chi nhánh được phân quyền.
+     * [Mục đích]: Phục vụ màn hình chi tiết công nợ `/payments/debts/{profileId}`; trả `Optional.empty()` nếu nhân sự không có chi nhánh được phép hoặc bệnh nhân không còn khoản chờ xử lý nào.
+     */
     @Override
     public Optional<CashierPendingPatientDTO> findDebtDetail(Long profileId, List<Long> allowedBranchIds) {
         if (allowedBranchIds != null && allowedBranchIds.isEmpty()) {
@@ -244,6 +268,9 @@ public class CashierOverviewServiceImpl implements CashierOverviewService {
                 .filter(detail -> !detail.getUnpaidInvoices().isEmpty() || !detail.getPendingVisits().isEmpty());
     }
 
+    /**
+     * [Hàm hỗ trợ]: Tổng hợp đầy đủ trạng thái thu ngân của một bệnh nhân gồm tổng hóa đơn/đã thu/còn nợ/ví tạm ứng, danh sách hóa đơn chưa thanh toán đủ, danh sách lượt khám `WAITING_PAYMENT` có dịch vụ/đơn thuốc chưa lập hóa đơn (kể cả đơn thuốc lẻ tại phòng khám) và phân loại trạng thái xử lý.
+     */
     private CashierPendingPatientDTO buildPatientDTO(PatientProfile patient, List<Long> allowedBranchIds) {
         CashierPendingPatientDTO dto = new CashierPendingPatientDTO();
         dto.setProfileId(patient.getProfileId());
@@ -430,6 +457,9 @@ public class CashierOverviewServiceImpl implements CashierOverviewService {
         return dto;
     }
 
+    /**
+     * [Hàm hỗ trợ]: Kiểm tra đơn thuốc có đủ điều kiện lập hóa đơn tại phòng khám hay không (chưa hủy, không mua ngoài, chưa hoàn tất mua tại phòng khám và vẫn còn ít nhất một dòng thuốc có `remainingQuantity > 0`).
+     */
     private boolean isPrescriptionEligibleForBilling(PrescriptionResponseDTO p) {
         if (p == null) return false;
         String status = p.getStatus();

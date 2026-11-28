@@ -20,6 +20,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+/**
+ * [Phân hệ]: Thẻ thành viên & Ví điểm tích lũy
+ * [Vai trò]: Service triển khai nghiệp vụ quản lý ví điểm tích lũy của bệnh nhân, cộng điểm khi thanh toán, trừ điểm khi hoàn tiền, điều chỉnh điểm thủ công và tra cứu thẻ thành viên.
+ */
 @Service
 @Transactional
 public class LoyaltyServiceImpl implements LoyaltyService {
@@ -44,6 +48,10 @@ public class LoyaltyServiceImpl implements LoyaltyService {
         this.membershipTierService = membershipTierService;
     }
 
+    /**
+     * [Chức năng]: Lấy ví điểm tích lũy hiện có của bệnh nhân hoặc tự động khởi tạo ví mới với 0 điểm và 0 đ chi tiêu.
+     * [Mục đích]: Đảm bảo mọi hồ sơ bệnh nhân hợp lệ đều có bản ghi PatientLoyaltyWallet trước khi thực hiện các giao dịch tích/đổi điểm.
+     */
     @Override
     public PatientLoyaltyWallet getOrCreateWallet(Long profileId) {
         return patientLoyaltyWalletRepository.findByPatientProfile_ProfileId(profileId)
@@ -58,6 +66,10 @@ public class LoyaltyServiceImpl implements LoyaltyService {
                 });
     }
 
+    /**
+     * [Chức năng]: Tổng hợp đầy đủ thông tin thẻ thành viên (MemberCardDTO) của một bệnh nhân theo profileId.
+     * [Mục đích]: Kết hợp dữ liệu hồ sơ bệnh nhân, ví điểm, hạng thành viên hiện tại (hoặc hạng đủ điều kiện cao nhất), tiến độ lên hạng tiếp theo và danh sách quyền lợi để hiển thị trên màn hình chi tiết thẻ.
+     */
     @Override
     @Transactional(readOnly = true)
     public MemberCardDTO getMemberCard(Long profileId) {
@@ -114,11 +126,17 @@ public class LoyaltyServiceImpl implements LoyaltyService {
         return card;
     }
 
+    /**
+     * [Hàm hỗ trợ]: Tải danh sách hạng đang hoạt động và tính tiến độ lên hạng tiếp theo cho thẻ thành viên.
+     */
     private void calculateProgression(MemberCardDTO card, BigDecimal totalSpent, MembershipTier currentTier) {
         List<MembershipTier> activeTiers = membershipTierRepository.findByIsActiveTrueOrderByMinTotalSpentAsc();
         calculateProgression(card, totalSpent, currentTier, activeTiers);
     }
 
+    /**
+     * [Hàm hỗ trợ]: Tính tên hạng kế tiếp, số tiền cần chi tiêu thêm và phần trăm hoàn thành tiến độ lên hạng từ danh sách hạng đang hoạt động đã nạp sẵn.
+     */
     private void calculateProgression(MemberCardDTO card, BigDecimal totalSpent, MembershipTier currentTier, List<MembershipTier> activeTiers) {
         MembershipTier nextTier = null;
         if (activeTiers != null) {
@@ -154,6 +172,9 @@ public class LoyaltyServiceImpl implements LoyaltyService {
         }
     }
 
+    /**
+     * [Hàm hỗ trợ]: Xây dựng danh sách mô tả quyền lợi hiển thị trên thẻ thành viên dựa trên chiết khấu, tỷ lệ tích điểm và giá trị quy đổi của hạng hiện tại.
+     */
     private void buildBenefitsList(MemberCardDTO card, MembershipTier tier) {
         List<String> benefits = new ArrayList<>();
         DecimalFormat currencyFmt = new DecimalFormat("#,###");
@@ -177,12 +198,20 @@ public class LoyaltyServiceImpl implements LoyaltyService {
         card.setBenefits(benefits);
     }
 
+    /**
+     * [Chức năng]: Lấy toàn bộ lịch sử biến động điểm tích lũy (PointTransaction) của một bệnh nhân theo thời gian giảm dần.
+     * [Mục đích]: Phục vụ hiển thị bảng sao kê lịch sử tích điểm, đổi điểm và điều chỉnh điểm trên trang chi tiết thành viên.
+     */
     @Override
     @Transactional(readOnly = true)
     public List<PointTransaction> getPointHistory(Long profileId) {
         return pointTransactionRepository.findByPatientProfile_ProfileIdOrderByCreatedAtDesc(profileId);
     }
 
+    /**
+     * [Chức năng]: Ghi nhận chi tiêu và cộng điểm tích lũy cho bệnh nhân từ một giao dịch thanh toán thành công.
+     * [Mục đích]: Chống cộng điểm trùng theo paymentId, khóa bản ghi ví điểm (findByProfileIdForUpdate), tính điểm lũy kế theo spendPerPoint của hạng hiện tại, tạo giao dịch PointTransaction loại EARN và gọi MembershipTierService.recalculatePatientTier để tự động xét nâng hạng.
+     */
     @Override
     public PointTransaction recordPaymentPoints(Payment payment) {
         if (payment == null || payment.getPaymentId() == null) {
@@ -258,6 +287,10 @@ public class LoyaltyServiceImpl implements LoyaltyService {
         return pt;
     }
 
+    /**
+     * [Chức năng]: Giảm trừ tổng chi tiêu tích lũy và thu hồi điểm tương ứng khi phát sinh phiếu hoàn tiền (Refund).
+     * [Mục đích]: Chống trừ điểm trùng theo mã phiếu hoàn tiền, khóa ví điểm (findByProfileIdForUpdate), cập nhật lại số dư điểm không âm, ghi PointTransaction loại ADJUST và gọi MembershipTierService.recalculatePatientTier để đánh giá lại hạng thành viên.
+     */
     @Override
     public PointTransaction recordRefundAdjustment(Refund refund) {
         if (refund == null || refund.getAmount() == null || refund.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
@@ -319,6 +352,10 @@ public class LoyaltyServiceImpl implements LoyaltyService {
         return pt;
     }
 
+    /**
+     * [Chức năng]: Thực hiện cộng hoặc trừ điểm thủ công vào ví điểm bệnh nhân kèm lý do ghi nhận.
+     * [Mục đích]: Kiểm tra số điểm khác 0 và có lý do hợp lệ, khóa ví điểm (findByProfileIdForUpdate), đảm bảo số dư sau điều chỉnh không âm rồi cập nhật ví và lưu PointTransaction loại ADJUST.
+     */
     @Override
     public PointTransaction adjustPoints(PointAdjustmentDTO dto, Long staffUserId) {
         if (dto == null || dto.getProfileId() == null || dto.getPoints() == null) {
@@ -361,6 +398,10 @@ public class LoyaltyServiceImpl implements LoyaltyService {
         return pointTransactionRepository.save(pt);
     }
 
+    /**
+     * [Chức năng]: Tìm kiếm danh sách thẻ thành viên bệnh nhân theo từ khóa và chi nhánh ưu tiên.
+     * [Mục đích]: Truy vấn hàng loạt bệnh nhân và ví điểm để tránh N+1 query, tính toán hạng thành viên, tiến độ lên hạng và danh sách quyền lợi trả về danh sách MemberCardDTO cho màn hình tra cứu lễ tân.
+     */
     @Override
     @Transactional(readOnly = true)
     public List<MemberCardDTO> searchMemberCards(String keyword, Long branchId) {

@@ -23,6 +23,10 @@ import org.springframework.web.bind.annotation.RequestParam;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * [Phân hệ]: Danh mục dịch vụ (Công khai / Cổng bệnh nhân)
+ * [Vai trò]: Controller cung cấp trang tra cứu bảng giá, danh sách dịch vụ và chi tiết dịch vụ nha khoa công khai kèm thông tin khuyến mãi theo chi nhánh.
+ */
 @Controller
 @RequestMapping("/services")
 public class PublicServiceCatalogController {
@@ -49,6 +53,9 @@ public class PublicServiceCatalogController {
         this.customerPortalService = customerPortalService;
     }
 
+    /**
+     * [Hàm hỗ trợ]: Xác định ID chi nhánh ưu tiên của người dùng từ hồ sơ bệnh nhân mặc định, tài khoản đăng nhập hoặc chi nhánh đang chọn trong phiên.
+     */
     private Long resolveUserBranchId(HttpSession session) {
         if (session == null) {
             return null;
@@ -75,6 +82,10 @@ public class PublicServiceCatalogController {
         return null;
     }
 
+    /**
+     * [Chức năng]: Hiển thị danh sách dịch vụ công khai với tham số lọc và phân trang (phiên bản không truyền HttpSession).
+     * [Mục đích]: Hỗ trợ gọi nội bộ hoặc kiểm thử bằng cách ủy quyền sang hàm showPublicServiceCatalog đầy đủ với session bằng null.
+     */
     public String showPublicServiceCatalog(
             Long categoryId,
             ServiceType serviceType,
@@ -86,6 +97,10 @@ public class PublicServiceCatalogController {
         return showPublicServiceCatalog(categoryId, serviceType, keyword, page, size, null, model);
     }
 
+    /**
+     * [Chức năng]: Xử lý trang GET /services và /services/ hiển thị danh sách dịch vụ nha khoa công khai có lọc, tìm kiếm và phân trang.
+     * [Mục đích]: Tải danh mục đang hoạt động, danh sách dịch vụ công khai từ ServiceCatalogService, ánh xạ khuyến mãi đang hiệu lực theo chi nhánh từ CustomerPortalService và trả về view services/list.
+     */
     @GetMapping({"", "/"})
     public String showPublicServiceCatalog(
             @RequestParam(required = false) Long categoryId,
@@ -132,6 +147,10 @@ public class PublicServiceCatalogController {
         return "services/list";
     }
 
+    /**
+     * [Chức năng]: Hiển thị trang chi tiết dịch vụ công khai theo ID (phiên bản không truyền HttpSession).
+     * [Mục đích]: Hỗ trợ gọi nội bộ hoặc kiểm thử bằng cách ủy quyền sang hàm showPublicServiceDetail đầy đủ với session bằng null.
+     */
     public String showPublicServiceDetail(
             Long id,
             HttpServletResponse response,
@@ -140,6 +159,10 @@ public class PublicServiceCatalogController {
         return showPublicServiceDetail(id, null, response, model);
     }
 
+    /**
+     * [Chức năng]: Xử lý trang GET /services/{id} hiển thị chi tiết một dịch vụ công khai, khuyến mãi áp dụng và các dịch vụ liên quan.
+     * [Mục đích]: Lấy thông tin dịch vụ công khai qua ServiceCatalogService, tải khuyến mãi và dịch vụ cùng nhóm từ CustomerPortalService; nếu dịch vụ không tồn tại hoặc ngừng cung cấp thì thiết lập HTTP 404 và trả về trang portal/not-found.
+     */
     @GetMapping("/{id}")
     public String showPublicServiceDetail(
             @PathVariable("id") Long id,

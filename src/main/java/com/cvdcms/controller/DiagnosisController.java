@@ -38,6 +38,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+/**
+ * [Phân hệ]: Bàn khám bệnh lâm sàng, chẩn đoán, kế hoạch điều trị & điều hướng lượt khám (Chương 7)
+ * [Vai trò]: Controller giao diện web (Thymeleaf) điều phối danh sách lượt khám hàng ngày của bác sĩ, màn hình khám bệnh hợp nhất (chẩn đoán, dịch vụ, quy trình, KHDT, đơn thuốc, X-quang, Labo, EMR) và màn hình lập kế hoạch điều trị.
+ */
 @Slf4j
 @Controller
 @RequiredArgsConstructor
@@ -81,28 +85,46 @@ public class DiagnosisController {
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private com.cvdcms.service.DoctorClinicalCapabilityService capabilityService;
 
+    /**
+     * [Hàm hỗ trợ]: Tiêm dependency tùy chọn `DoctorCoverGrantRepository` (hỗ trợ kiểm thử và ủy quyền khám thay).
+     */
     public void setDoctorCoverGrantRepository(
             com.cvdcms.repository.DoctorCoverGrantRepository doctorCoverGrantRepository) {
         this.doctorCoverGrantRepository = doctorCoverGrantRepository;
     }
 
+    /**
+     * [Hàm hỗ trợ]: Tiêm dependency tùy chọn `ClinicalQueueTicketRepository` (hỗ trợ kiểm thử và kiểm tra phiếu hàng chờ).
+     */
     public void setClinicalQueueTicketRepository(
             com.cvdcms.repository.ClinicalQueueTicketRepository clinicalQueueTicketRepository) {
         this.clinicalQueueTicketRepository = clinicalQueueTicketRepository;
     }
 
+    /**
+     * [Hàm hỗ trợ]: Tiêm dependency tùy chọn `NanopixXraySyncLogRepository` (hỗ trợ đồng bộ phim X-quang NanoPix).
+     */
     public void setNanopixXraySyncLogRepository(NanopixXraySyncLogRepository nanopixXraySyncLogRepository) {
         this.nanopixXraySyncLogRepository = nanopixXraySyncLogRepository;
     }
 
+    /**
+     * [Hàm hỗ trợ]: Mã hóa `visitId` thành token URL an toàn bằng `UrlIdCodec`.
+     */
     private String encodeVisit(Long visitId) {
         return urlIdCodec != null ? urlIdCodec.encodeVisit(visitId) : "";
     }
 
+    /**
+     * [Hàm hỗ trợ]: Mã hóa `patientId` thành token URL an toàn bằng `UrlIdCodec`.
+     */
     private String encodePatient(Long patientId) {
         return urlIdCodec != null ? urlIdCodec.encodePatient(patientId) : "";
     }
 
+    /**
+     * [Hàm hỗ trợ]: Giải mã tham chiếu `visitRef` trên URL thành `visitId`, ném HTTP 404 nếu không hợp lệ.
+     */
     private Long decodeVisitRef(String visitRef) {
         if (urlIdCodec == null) {
             throw new org.springframework.web.server.ResponseStatusException(
@@ -111,6 +133,9 @@ public class DiagnosisController {
         return urlIdCodec.decodeVisitOrThrow(visitRef);
     }
 
+    /**
+     * [Hàm hỗ trợ]: Giải mã tham chiếu `patientRef` trên URL thành `profileId`, ném HTTP 404 nếu không hợp lệ.
+     */
     private Long decodePatientRef(String patientRef) {
         if (urlIdCodec == null) {
             throw new org.springframework.web.server.ResponseStatusException(
@@ -119,6 +144,9 @@ public class DiagnosisController {
         return urlIdCodec.decodePatientOrThrow(patientRef);
     }
 
+    /**
+     * [Hàm hỗ trợ]: Lọc danh sách chi nhánh hiển thị theo phạm vi công tác khi tài khoản bác sĩ bị giới hạn chi nhánh.
+     */
     private List<Branch> filterAccessibleBranches(List<Branch> branches, boolean isDoctorRestricted,
             Branch assignedBranch) {
         if (isDoctorRestricted && assignedBranch != null) {
@@ -127,6 +155,9 @@ public class DiagnosisController {
         return branches;
     }
 
+    /**
+     * [Hàm hỗ trợ]: Lấy danh sách bác sĩ khả dụng theo chi nhánh của ca khám và luôn đảm bảo kèm bác sĩ chính cùng bác sĩ đang thao tác.
+     */
     private List<StaffProfile> getDoctorsForVisitOrBranch(Visit visit, Long branchId, StaffProfile actingDoctor) {
         Long resolvedBranchId = branchId;
         if (resolvedBranchId == null && visit != null && visit.getBranch() != null) {
@@ -151,6 +182,9 @@ public class DiagnosisController {
         return result;
     }
 
+    /**
+     * [Hàm hỗ trợ]: Lấy đối tượng `User` mới nhất từ cơ sở dữ liệu dựa trên thuộc tính `loggedInUser` trong `HttpSession`.
+     */
     private User getLoggedInUser(jakarta.servlet.http.HttpSession session) {
         if (session == null)
             return null;
@@ -161,6 +195,9 @@ public class DiagnosisController {
         return null;
     }
 
+    /**
+     * [Hàm hỗ trợ]: Xác định chi nhánh công tác được phân công cho tài khoản từ nhánh mặc định, bảng phân công nhân sự hoặc chi nhánh CSKH.
+     */
     private Branch getDoctorAssignedBranch(User user) {
         if (user == null)
             return null;
@@ -179,6 +216,10 @@ public class DiagnosisController {
         return null;
     }
 
+    /**
+     * [Chức năng]: Hiển thị trang danh sách lượt khám hàng ngày của bác sĩ (`GET /doctor/daily-visits`, `/doctor/visits`).
+     * [Mục đích]: Xác định quyền và chi nhánh làm việc của bác sĩ/admin, đồng bộ `doctorSelectedBranchId` trong session và truyền thông tin chi nhánh, hồ sơ bác sĩ sang view `doctor/daily-visits`.
+     */
     @GetMapping({ "/doctor/daily-visits", "/doctor/visits" })
     public String dailyVisits(
             @RequestParam(value = "branchId", required = false) Long branchId,
@@ -242,6 +283,10 @@ public class DiagnosisController {
         return "doctor/daily-visits";
     }
 
+    /**
+     * [Chức năng]: Chuyển hướng đường dẫn nhắc hẹn tái khám cũ của bác sĩ (`GET /doctor/recalls`, `/doctor/re-examinations`).
+     * [Mục đích]: Nạp thống kê cơ bản rồi điều hướng hợp nhất sang phân hệ CSKH & Nhắc hẹn tái khám chuẩn (`/customer-care`).
+     */
     @GetMapping({ "/doctor/recalls", "/doctor/re-examinations" })
     public String recallsView(Model model) {
         model.addAttribute("activeMenu", "recalls");
@@ -254,6 +299,10 @@ public class DiagnosisController {
         return "redirect:/customer-care";
     }
 
+    /**
+     * [Chức năng]: Phiên bản nạp chồng rút gọn để điều hướng vào bàn khám với `readOnly=false`.
+     * [Mục đích]: Ủy quyền cho hàm `index` đầy đủ nhằm giữ tương thích cho các lời gọi nội bộ hoặc bài kiểm thử.
+     */
     public String index(
             Long visitId,
             Long branchId,
@@ -263,6 +312,10 @@ public class DiagnosisController {
         return index(visitId, branchId, false, null, session, redirectAttributes, model);
     }
 
+    /**
+     * [Chức năng]: Điều hướng vào bàn khám bệnh hiện tại (`GET /doctor/examination`, `/doctor/diagnoses`, `/doctor/treatment`).
+     * [Mục đích]: Xác định chi nhánh làm việc, tự động chọn ca đang khám/điều trị trong ngày của bác sĩ (kể cả ca khám thay) nếu không truyền `visitId`, rồi chuyển hướng sang URL mã hóa `/doctor/examination/{visitRef}/diagnoses` hoặc hiển thị màn hình rỗng/quay về danh sách chờ.
+     */
     @GetMapping({ "/doctor/examination", "/doctor/diagnoses", "/doctor/treatment" })
     public String index(
             @RequestParam(value = "visitId", required = false) Long visitId,
@@ -372,6 +425,9 @@ public class DiagnosisController {
         return renderEmptyDiagnosisPage(branchId, session, model);
     }
 
+    /**
+     * [Hàm hỗ trợ]: Kiểm tra bác sĩ hiện tại (hoặc admin) có phải bác sĩ phụ trách chính hoặc đang có quyền khám thay còn hiệu lực cho ca khám hay không.
+     */
     private boolean canDoctorAccessVisitForExam(boolean isAdmin, StaffProfile currentDoctor, Visit visit) {
         if (isAdmin) {
             return true;
@@ -389,6 +445,10 @@ public class DiagnosisController {
                                 visit.getVisitId(), currentDoctor.getStaffId(), LocalDateTime.now());
     }
 
+    /**
+     * [Chức năng]: Mở bàn khám theo hồ sơ bệnh nhân hoặc khởi tạo lượt khám walk-in mới (`GET /doctor/examination/patient/{patientRef}`).
+     * [Mục đích]: Dọn ca quá hạn của bệnh nhân, chặn vượt hàng chờ nếu đang có lượt `WAITING`/`WAITING_RESULT`, tái mở ca đang hoạt động nếu bác sĩ có quyền (hoặc mở chỉ xem ca gần nhất), hoặc tạo lượt khám `WALK_IN` mới khi `newVisit=true` và khởi tạo phiếu khám lâm sàng.
+     */
     @GetMapping("/doctor/examination/patient/{patientRef}")
     public String examinationByPatient(
             @PathVariable("patientRef") String patientRef,
@@ -497,6 +557,10 @@ public class DiagnosisController {
         return "redirect:/doctor/examination/" + encodeVisit(newVisit.getVisitId()) + "/diagnoses";
     }
 
+    /**
+     * [Chức năng]: Mở giao diện bàn khám hợp nhất theo token lượt khám (`GET /doctor/examination/{visitRef}/diagnoses`, `/treatment`).
+     * [Mục đích]: Giải mã `visitRef` và `fromPatientRef`; nếu mở từ hàng chờ ở chế độ chỉ xem nhưng bác sĩ có quyền thao tác ca thì tự động chuyển sang chế độ chỉnh sửa, ngược lại ủy quyền cho `examinationDiagnosesInternal`.
+     */
     @GetMapping({ "/doctor/examination/{visitRef}/diagnoses", "/doctor/examination/{visitRef}/treatment" })
     public String examinationDiagnoses(
             @PathVariable("visitRef") String visitRef,
@@ -535,6 +599,9 @@ public class DiagnosisController {
                 redirectAttributes, model);
     }
 
+    /**
+     * [Hàm hỗ trợ]: Kiểm tra một lượt khám đang mở ở chế độ chỉ xem có đủ điều kiện trạng thái, chi nhánh và quyền `DoctorVisitAccess` để chuyển sang chế độ chỉnh sửa hay không.
+     */
     private boolean canSwitchReadOnlyToEditMode(
             jakarta.servlet.http.HttpSession session,
             Visit visit,
@@ -565,6 +632,10 @@ public class DiagnosisController {
         }
     }
 
+    /**
+     * [Chức năng]: Nạp toàn bộ dữ liệu lâm sàng và render trang bàn khám bệnh `doctor/diagnoses`.
+     * [Mục đích]: Kiểm tra phân quyền chỉnh sửa/chỉ xem qua `DoctorVisitAccess`, tự đồng bộ dịch vụ đặt lịch vào KHDT mặc định khi mở khám, rồi nạp chẩn đoán, dịch vụ thực hiện, đơn thuốc, KHDT, ảnh lâm sàng, X-quang/NanoPix, Labo, CSKH, EMR, cảnh báo năng lực bác sĩ và đếm tab quy trình.
+     */
     private String examinationDiagnosesInternal(
             Long visitId,
             Long branchIdParam,
@@ -899,8 +970,8 @@ public class DiagnosisController {
     }
 
     /**
-     * Trang chuyen dung Lap Ke hoach & Lo trinh dieu tri (lien ket da chan doan,
-     * chuan Bo Y te)
+     * [Chức năng]: Mở trang chuyên dụng lập Kế hoạch & Lộ trình điều trị theo token ca khám (`GET /doctor/examination/{visitRef}/treatment-plans/create`).
+     * [Mục đích]: Giải mã `visitRef`, xác thực quyền thao tác ca khám qua `doctorVisitAccess.require` và ủy quyền sang `showCreateTreatmentPlanPage`.
      */
     @GetMapping("/doctor/examination/{visitRef}/treatment-plans/create")
     public String showCreateTreatmentPlanPageByRef(
@@ -914,6 +985,10 @@ public class DiagnosisController {
         return showCreateTreatmentPlanPage(visitId, preselectedDiagId, model, redirectAttributes);
     }
 
+    /**
+     * [Chức năng]: Phiên bản nạp chồng rút gọn mở trang lập Kế hoạch điều trị không truyền `RedirectAttributes`.
+     * [Mục đích]: Ủy quyền sang hàm `showCreateTreatmentPlanPage` 4 tham số để giữ tương thích nội bộ và kiểm thử.
+     */
     public String showCreateTreatmentPlanPage(
             Long visitId,
             Long preselectedDiagId,
@@ -921,6 +996,10 @@ public class DiagnosisController {
         return showCreateTreatmentPlanPage(visitId, preselectedDiagId, model, null);
     }
 
+    /**
+     * [Chức năng]: Chuẩn bị dữ liệu và render trang lập Kế hoạch & Lộ trình điều trị `doctor/treatment-plan-create`.
+     * [Mục đích]: Kiểm tra ca khám đã phân bác sĩ, đang mở khám hợp lệ và đúng chi nhánh; nạp chẩn đoán, dịch vụ, mẫu quy trình, combo, ICD-10, KHDT hiện có và ngữ cảnh lâm sàng liên quan vào model.
+     */
     public String showCreateTreatmentPlanPage(
             Long visitId,
             Long preselectedDiagId,
@@ -1198,6 +1277,9 @@ public class DiagnosisController {
         return "doctor/treatment-plan-create";
     }
 
+    /**
+     * [Hàm hỗ trợ]: Render trang bàn khám ở trạng thái rỗng an toàn khi chưa có ca khám hợp lệ hoặc không tìm thấy `visitId`.
+     */
     private String renderEmptyDiagnosisPage(Long branchIdParam, jakarta.servlet.http.HttpSession session, Model model) {
         User currentUser = getLoggedInUser(session);
         boolean isAdmin = currentUser != null && userRepository.hasActiveAdminRole(currentUser.getUserId());
@@ -1292,6 +1374,9 @@ public class DiagnosisController {
         return "doctor/diagnoses";
     }
 
+    /**
+     * [Hàm hỗ trợ]: Tổng hợp và khử trùng lặp danh sách phim X-quang/hình ảnh chẩn đoán từ các chỉ định cận lâm sàng trong ca và log đồng bộ máy NanoPix của bệnh nhân.
+     */
     private List<Map<String, Object>> buildXrayPhotoList(
             List<com.cvdcms.DTO.ParaclinicalOrderItemResponseDTO> paraclinicalOrders,
             Visit visit,
@@ -1388,6 +1473,9 @@ public class DiagnosisController {
         return result;
     }
 
+    /**
+     * [Hàm hỗ trợ]: Đếm tổng số mục quy trình đang chạy và hạng mục KHDT chờ khởi tạo để hiển thị badge trên tab Quy trình của bàn khám.
+     */
     private int resolveWorkflowNavCount(Long visitId) {
         if (clinicalWorkflowService == null || visitId == null) {
             return 0;
@@ -1420,6 +1508,9 @@ public class DiagnosisController {
         }
     }
 
+    /**
+     * [Hàm hỗ trợ]: Kiểm tra năng lực bác sĩ và thiết bị phòng khám trên các dịch vụ hoạt động/KHDT để xây dựng bản đồ cảnh báo `serviceId -> lý do` hiển thị trên bàn khám.
+     */
     private Map<String, String> buildDoctorCapabilityIssues(
             Visit visit,
             boolean readOnly,
@@ -1471,6 +1562,10 @@ public class DiagnosisController {
         return issues;
     }
 
+    /**
+     * [Chức năng]: Xử lý ngoại lệ `IllegalArgumentException` khi ca khám không tồn tại trong `DiagnosisController`.
+     * [Mục đích]: Ghi log cảnh báo, đính kèm thông báo lỗi flash và chuyển hướng bác sĩ về trang `/doctor/daily-visits`.
+     */
     @ExceptionHandler(IllegalArgumentException.class)
     public String handleVisitNotFound(IllegalArgumentException ex, RedirectAttributes redirectAttributes) {
         log.warn("Lỗi ca khám không tồn tại trong DiagnosisController: {}", ex.getMessage());

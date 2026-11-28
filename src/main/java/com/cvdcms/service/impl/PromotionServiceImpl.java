@@ -17,6 +17,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+/**
+ * [Phân hệ]: Khuyến mãi & Voucher
+ * [Vai trò]: Service triển khai nghiệp vụ quản trị chương trình khuyến mãi, phát hành voucher cho bệnh nhân, tính toán mức chiết khấu và kiểm tra điều kiện áp dụng khuyến mãi trên hóa đơn.
+ */
 @Service
 @Transactional
 public class PromotionServiceImpl implements PromotionService {
@@ -44,6 +48,10 @@ public class PromotionServiceImpl implements PromotionService {
         this.branchRepository = branchRepository;
     }
 
+    /**
+     * [Chức năng]: Lấy danh sách chương trình khuyến mãi có lọc theo từ khóa (mã/tên), trạng thái hiệu lực và chi nhánh áp dụng.
+     * [Mục đích]: Phục vụ màn hình quản trị danh sách khuyến mãi với các trạng thái ACTIVE, EXPIRED, UPCOMING, INACTIVE hoặc ALL.
+     */
     @Override
     @Transactional(readOnly = true)
     public List<Promotion> getAllPromotions(String keyword, String status, Long branchId) {
@@ -90,6 +98,10 @@ public class PromotionServiceImpl implements PromotionService {
         return filtered;
     }
 
+    /**
+     * [Chức năng]: Tìm kiếm chương trình khuyến mãi theo ID.
+     * [Mục đích]: Trả về thực thể Promotion tương ứng hoặc ném IllegalArgumentException nếu không tồn tại.
+     */
     @Override
     @Transactional(readOnly = true)
     public Promotion getPromotionById(Long promotionId) {
@@ -97,6 +109,10 @@ public class PromotionServiceImpl implements PromotionService {
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy chương trình khuyến mãi ID: " + promotionId));
     }
 
+    /**
+     * [Chức năng]: Tìm kiếm chương trình khuyến mãi theo mã khuyến mãi (promoCode).
+     * [Mục đích]: Hỗ trợ tra cứu và áp dụng chương trình khuyến mãi theo mã định danh, ném IllegalArgumentException nếu không tìm thấy.
+     */
     @Override
     @Transactional(readOnly = true)
     public Promotion getPromotionByCode(String promoCode) {
@@ -104,6 +120,10 @@ public class PromotionServiceImpl implements PromotionService {
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy chương trình khuyến mãi mã: " + promoCode));
     }
 
+    /**
+     * [Chức năng]: Tạo mới một chương trình khuyến mãi và lưu vào cơ sở dữ liệu.
+     * [Mục đích]: Xác thực dữ liệu qua validatePromotionDto, chuẩn hóa mã viết hoa và kiểm tra trùng mã, gắn liên kết chi nhánh, hạng thành viên và dịch vụ áp dụng (nếu có) với usedCount khởi tạo bằng 0.
+     */
     @Override
     public Promotion createPromotion(PromotionDTO dto) {
         if (dto == null) {
@@ -151,6 +171,10 @@ public class PromotionServiceImpl implements PromotionService {
         return promotionRepository.save(promo);
     }
 
+    /**
+     * [Chức năng]: Cập nhật thông tin cấu hình của một chương trình khuyến mãi theo ID.
+     * [Mục đích]: Kiểm tra hợp lệ DTO, chống trùng mã với chương trình khác, đảm bảo giới hạn lượt dùng mới không nhỏ hơn số lượt đã dùng thực tế, đồng thời cập nhật lại liên kết chi nhánh/hạng/dịch vụ.
+     */
     @Override
     public Promotion updatePromotion(Long promotionId, PromotionDTO dto) {
         if (dto == null) {
@@ -210,6 +234,10 @@ public class PromotionServiceImpl implements PromotionService {
         return promotionRepository.save(existing);
     }
 
+    /**
+     * [Chức năng]: Đảo trạng thái kích hoạt (đang chạy/tạm dừng) của một chương trình khuyến mãi.
+     * [Mục đích]: Cho phép quản trị viên bật hoặc tắt nhanh chương trình khuyến mãi mà không xóa dữ liệu lịch sử.
+     */
     @Override
     public Promotion togglePromotionStatus(Long promotionId) {
         Promotion promo = getPromotionById(promotionId);
@@ -217,6 +245,10 @@ public class PromotionServiceImpl implements PromotionService {
         return promotionRepository.save(promo);
     }
 
+    /**
+     * [Chức năng]: Phát hành voucher cá nhân (PatientVoucher) hàng loạt cho danh sách bệnh nhân từ một chương trình khuyến mãi.
+     * [Mục đích]: Kiểm tra chương trình đang hoạt động và chưa hết hạn, hạn dùng voucher ở tương lai, kiểm tra điều kiện hạng thành viên (nếu chương trình yêu cầu), sinh mã voucher duy nhất và lưu ở trạng thái AVAILABLE.
+     */
     @Override
     public List<PatientVoucher> issueVouchers(IssueVoucherDTO dto) {
         if (dto == null || dto.getPromotionId() == null || dto.getPatientProfileIds() == null || dto.getPatientProfileIds().isEmpty()) {
@@ -276,18 +308,30 @@ public class PromotionServiceImpl implements PromotionService {
         return issuedList;
     }
 
+    /**
+     * [Chức năng]: Lấy danh sách tất cả voucher đã phát hành thuộc một chương trình khuyến mãi sắp xếp theo ngày hết hạn giảm dần.
+     * [Mục đích]: Phục vụ hiển thị danh sách theo dõi trạng thái voucher trên trang chi tiết chương trình khuyến mãi.
+     */
     @Override
     @Transactional(readOnly = true)
     public List<PatientVoucher> getVouchersByPromotion(Long promotionId) {
         return patientVoucherRepository.findByPromotion_PromotionIdOrderByExpiresAtDesc(promotionId);
     }
 
+    /**
+     * [Chức năng]: Lấy danh sách các voucher khả dụng (trạng thái AVAILABLE và còn hạn) của một bệnh nhân.
+     * [Mục đích]: Cung cấp danh sách voucher hợp lệ để bệnh nhân hoặc thu ngân chọn áp dụng khi lập hóa đơn thanh toán.
+     */
     @Override
     @Transactional(readOnly = true)
     public List<PatientVoucher> getAvailableVouchersForPatient(Long profileId) {
         return patientVoucherRepository.findAvailableVouchersForPatient(profileId, VoucherStatus.AVAILABLE, LocalDateTime.now());
     }
 
+    /**
+     * [Chức năng]: Tính số tiền giảm giá dự kiến của một chương trình khuyến mãi áp dụng trên giá trị hóa đơn.
+     * [Mục đích]: Trả về 0 nếu chưa đạt giá trị hóa đơn tối thiểu (minBillAmount), ngược lại ủy quyền sang computeBoundedDiscount để tính mức giảm bị chặn trần.
+     */
     @Override
     public BigDecimal calculateDiscount(Promotion promo, BigDecimal billAmount) {
         if (promo == null || billAmount == null || billAmount.compareTo(BigDecimal.ZERO) <= 0) {
@@ -300,7 +344,8 @@ public class PromotionServiceImpl implements PromotionService {
     }
 
     /**
-     * Tính mức giảm khuyến mãi được giới hạn trong [0, eligibleAmount] cho cả preview và lập hóa đơn.
+     * [Chức năng]: Tính mức giảm giá khuyến mãi (theo phần trăm có trần maxDiscountAmount hoặc giảm tiền cố định) được giới hạn an toàn trong khoảng [0, eligibleAmount].
+     * [Mục đích]: Dùng chung cho cả màn hình xem trước giá ưu đãi và luồng lập hóa đơn để đảm bảo số tiền giảm không âm và không vượt quá tổng tiền đủ điều kiện.
      */
     public static BigDecimal computeBoundedDiscount(Promotion promo, BigDecimal eligibleAmount) {
         if (promo == null || eligibleAmount == null || eligibleAmount.compareTo(BigDecimal.ZERO) <= 0) {
@@ -322,7 +367,8 @@ public class PromotionServiceImpl implements PromotionService {
     }
 
     /**
-     * Chặn cấu hình giảm giá không hợp lệ (kể cả dữ liệu legacy âm) trước khi áp dụng vào hóa đơn.
+     * [Chức năng]: Kiểm tra tính hợp lệ của cấu hình giảm giá trên thực thể Promotion trước khi áp dụng vào hóa đơn.
+     * [Mục đích]: Chặn các cấu hình khuyến mãi sai lệch (thiếu loại chiết khấu, giá trị giảm <= 0, phần trăm > 100%, mức giảm tối đa hoặc hóa đơn tối thiểu bị âm kể cả dữ liệu legacy).
      */
     public static void validatePromotionDiscountConfig(Promotion promo) {
         if (promo == null) {
@@ -345,6 +391,10 @@ public class PromotionServiceImpl implements PromotionService {
         }
     }
 
+    /**
+     * [Chức năng]: Xác thực toàn bộ điều kiện áp dụng của một chương trình khuyến mãi cho hóa đơn cụ thể.
+     * [Mục đích]: Kiểm tra cấu hình giảm giá, trạng thái kích hoạt, khoảng thời gian hiệu lực, phạm vi chi nhánh, giới hạn lượt dùng, giá trị hóa đơn tối thiểu, điều kiện hạng thành viên hoạt động (FT19) và dịch vụ bắt buộc phải có trong hóa đơn.
+     */
     @Override
     @Transactional(readOnly = true)
     public void validatePromotionForInvoice(
@@ -400,6 +450,9 @@ public class PromotionServiceImpl implements PromotionService {
         }
     }
 
+    /**
+     * [Hàm hỗ trợ]: Kiểm tra ràng buộc dữ liệu đầu vào của PromotionDTO (mã, tên, loại giảm giá, khoảng ngày hiệu lực, mức giảm, mức trần, hóa đơn tối thiểu và giới hạn lượt dùng).
+     */
     private void validatePromotionDto(PromotionDTO dto) {
         if (dto.getPromoCode() == null || dto.getPromoCode().trim().isEmpty()) {
             throw new IllegalArgumentException("Mã khuyến mãi không được để trống.");

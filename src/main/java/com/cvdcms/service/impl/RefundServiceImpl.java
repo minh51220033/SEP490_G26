@@ -22,6 +22,10 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+/**
+ * [Phân hệ]: Quản lý Hoàn tiền (Hóa đơn & Ví tạm ứng)
+ * [Vai trò]: Service xử lý nghiệp vụ hoàn tiền có kiểm soát quyền `REFUND_MANAGE`, chống ghi trùng theo `idempotencyKey`, khóa bi quan bản ghi tiền tệ, hỗ trợ hai chế độ hoàn hóa đơn (`reduceInvoiceTotal = true/false`), rollback phân bổ LIFO, tự động mở lại lượt khám khi phát sinh nợ lại và điều chỉnh điểm thành viên.
+ */
 @Service
 @Transactional
 public class RefundServiceImpl implements RefundService {
@@ -45,18 +49,30 @@ public class RefundServiceImpl implements RefundService {
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private PaymentAllocationRepository paymentAllocationRepository;
 
+    /**
+     * [Hàm hỗ trợ]: Tiêm `InvoiceItemRepository` phục vụ rollback số tiền đã thanh toán/phải thu trên từng dòng hóa đơn khi hoàn tiền.
+     */
     public void setInvoiceItemRepository(InvoiceItemRepository invoiceItemRepository) {
         this.invoiceItemRepository = invoiceItemRepository;
     }
 
+    /**
+     * [Hàm hỗ trợ]: Tiêm `VisitRepository` phục vụ mở lại lượt khám (`COMPLETED -> WAITING_PAYMENT`) nếu hoàn tiền làm hóa đơn phát sinh nợ lại.
+     */
     public void setVisitRepository(VisitRepository visitRepository) {
         this.visitRepository = visitRepository;
     }
 
+    /**
+     * [Hàm hỗ trợ]: Tiêm `PaymentAllocationRepository` phục vụ hoàn tác các bản ghi phân bổ chi tiết theo thứ tự LIFO.
+     */
     public void setPaymentAllocationRepository(PaymentAllocationRepository paymentAllocationRepository) {
         this.paymentAllocationRepository = paymentAllocationRepository;
     }
 
+    /**
+     * [Hàm hỗ trợ]: Constructor chính do Spring tiêm các repository hoàn tiền, hóa đơn, nhật ký hóa đơn, bệnh nhân, chi nhánh, nhân sự, người dùng và `LoyaltyService`.
+     */
     @org.springframework.beans.factory.annotation.Autowired
     public RefundServiceImpl(
             RefundRepository refundRepository,
@@ -80,6 +96,9 @@ public class RefundServiceImpl implements RefundService {
         this.loyaltyService = loyaltyService;
     }
 
+    /**
+     * [Hàm hỗ trợ]: Constructor tương thích ngược (không truyền `LoyaltyService`) phục vụ các bài kiểm thử đơn vị.
+     */
     public RefundServiceImpl(
             RefundRepository refundRepository,
             InvoiceRepository invoiceRepository,
@@ -96,9 +115,7 @@ public class RefundServiceImpl implements RefundService {
     }
 
     /**
-     * Lấy hồ sơ nhân sự hợp lệ của người đăng nhập.
-     * Kiểm tra trạng thái hoạt động của User, StaffProfile và phân công chi nhánh.
-     * Tuyệt đối không lấy nhân viên đầu tiên, không tạo dummy profile.
+     * [Hàm hỗ trợ]: Xác thực hồ sơ nhân sự (`StaffProfile`) hợp lệ của người thực hiện hoàn tiền: kiểm tra tài khoản `User` và `StaffProfile` đang `ACTIVE`, bắt buộc có vai trò Admin hoặc quyền `REFUND_MANAGE`, và phải thuộc chi nhánh được phân công `ACTIVE`.
      */
     private StaffProfile getValidStaffProfile(Long userId, Long branchId) {
         if (userId == null) {
@@ -136,6 +153,13 @@ public class RefundServiceImpl implements RefundService {
         return staff;
     }
 
+    /**
+     * [Chức năng]: Xử lý lập phiếu hoàn tiền (`HT...`) từ một hóa đơn đã thu hoặc từ số dư ví tạm ứng của bệnh nhân.
+     * [Mục đích]: Chống gửi trùng bằng `idempotencyKey` (kiểm tra quyền trước khi đối chiếu toàn bộ tham số nghiệp vụ để trả phiếu cũ hoặc báo xung đột); khóa bi quan `Invoice` (khi hoàn hóa đơn, chặn hoàn vượt `paidAmount` và chặn hóa đơn `CANCELLED`) hoặc khóa bi quan `PatientProfile` (khi hoàn từ ví tạm ứng, chặn hoàn vượt `depositBalance` và trừ ví trong cùng transaction); với hóa đơn hỗ trợ 2 chế độ:
+     * - `reduceInvoiceTotal = true`: hoàn tiền kèm giảm nghĩa vụ hóa đơn (giảm phụ thu trước, sau đó giảm `payableAmount`/`paidAmount` và tăng `discountAmount` từng dòng theo thứ tự LIFO + rollback `PaymentAllocation`, giảm `totalAmount`, ghi đủ 2 audit log `REFUND` và `ADJUST`);
+     * - `reduceInvoiceTotal = false`: hoàn tiền đơn thuần (giữ nguyên `totalAmount`, tăng lại `remainingDebt`, hoàn tác `paidAmount` phụ thu và từng dòng theo LIFO + rollback `PaymentAllocation`, ghi audit log `REFUND`);
+     * ở cả hai chế độ nếu `remainingDebt > 0` và lượt khám đã `COMPLETED` thì tự động mở lại lượt khám về `WAITING_PAYMENT`, cuối cùng gọi `loyaltyService.recordRefundAdjustment` để điều chỉnh điểm tích lũy.
+     */
     @Override
     public Refund processRefund(RefundRequestDTO request, Long staffUserId) {
         if (request == null) {
@@ -446,6 +470,10 @@ public class RefundServiceImpl implements RefundService {
         return savedRefund;
     }
 
+    /**
+     * [Chức năng]: Truy vấn phân trang danh sách phiếu hoàn tiền theo bộ lọc chi nhánh, phương thức hoàn, từ khóa và khoảng ngày.
+     * [Mục đích]: Phục vụ màn hình lịch sử hoàn tiền `/payments/refunds`.
+     */
     @Override
     @Transactional(readOnly = true)
     public Page<Refund> getRefunds(
@@ -459,24 +487,40 @@ public class RefundServiceImpl implements RefundService {
         return refundRepository.findFilteredRefunds(branchId, refundMethod, startDate, endDate, keyword, pageable);
     }
 
+    /**
+     * [Chức năng]: Lấy toàn bộ lịch sử phiếu hoàn tiền gắn với một hóa đơn cụ thể theo thời gian mới nhất giảm dần.
+     * [Mục đích]: Hiển thị trên trang chi tiết hóa đơn để kế toán đối chiếu các khoản đã hoàn.
+     */
     @Override
     @Transactional(readOnly = true)
     public List<Refund> getRefundsByInvoiceId(Long invoiceId) {
         return refundRepository.findByInvoice_InvoiceIdOrderByRefundedAtDesc(invoiceId);
     }
 
+    /**
+     * [Chức năng]: Lấy toàn bộ lịch sử phiếu hoàn tiền của một bệnh nhân trên tất cả chi nhánh theo thời gian giảm dần.
+     * [Mục đích]: Hỗ trợ tra cứu lịch sử hoàn tiền toàn hệ thống của bệnh nhân (Admin/báo cáo tổng hợp).
+     */
     @Override
     @Transactional(readOnly = true)
     public List<Refund> getRefundsByProfileId(Long profileId) {
         return refundRepository.findByPatientProfile_ProfileIdOrderByRefundedAtDesc(profileId);
     }
 
+    /**
+     * [Chức năng]: Lấy danh sách phiếu hoàn tiền của một bệnh nhân trong phạm vi `allowedBranchIds`.
+     * [Mục đích]: Phục vụ Dashboard tài chính bệnh nhân đảm bảo nhân sự chi nhánh chỉ nhìn thấy phiếu hoàn thuộc chi nhánh mình quản lý.
+     */
     @Override
     @Transactional(readOnly = true)
     public List<Refund> getRefundsByProfileId(Long profileId, List<Long> allowedBranchIds) {
         return refundRepository.findByPatientProfile_ProfileIdAndAllowedBranches(profileId, allowedBranchIds);
     }
 
+    /**
+     * [Chức năng]: Tải chi tiết một phiếu hoàn tiền theo `refundId`.
+     * [Mục đích]: Phục vụ xem/in chi tiết phiếu hoàn tiền; ném `IllegalArgumentException` nếu không tồn tại.
+     */
     @Override
     @Transactional(readOnly = true)
     public Refund getRefundById(Long refundId) {
@@ -484,6 +528,9 @@ public class RefundServiceImpl implements RefundService {
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy phiếu hoàn tiền ID: " + refundId));
     }
 
+    /**
+     * [Hàm hỗ trợ]: Lọc các bản ghi `PaymentAllocation` loại `SURCHARGE` của hóa đơn và hoàn tác số tiền đã phân bổ phụ thu theo thứ tự LIFO.
+     */
     private void rollbackSurchargeAllocations(Long invoiceId, BigDecimal amountToRollback, String refundCode) {
         if (paymentAllocationRepository == null || invoiceId == null
                 || amountToRollback == null || amountToRollback.compareTo(BigDecimal.ZERO) <= 0) {
@@ -500,6 +547,9 @@ public class RefundServiceImpl implements RefundService {
         rollbackAllocationsList(surchargeAllocs, amountToRollback, refundCode);
     }
 
+    /**
+     * [Hàm hỗ trợ]: Tải các bản ghi `PaymentAllocation` của một dòng hóa đơn (`itemId`) và hoàn tác số tiền phân bổ theo thứ tự LIFO.
+     */
     private void rollbackItemAllocations(Long itemId, BigDecimal amountToRollback, String refundCode) {
         if (paymentAllocationRepository == null || itemId == null
                 || amountToRollback == null || amountToRollback.compareTo(BigDecimal.ZERO) <= 0) {
@@ -509,6 +559,9 @@ public class RefundServiceImpl implements RefundService {
         rollbackAllocationsList(itemAllocs, amountToRollback, refundCode);
     }
 
+    /**
+     * [Hàm hỗ trợ]: Sắp xếp danh sách `PaymentAllocation` ngược thời gian (LIFO) để trừ dần số tiền hoàn: xóa bản ghi nếu phân bổ về 0 hoặc giảm `allocatedAmount` kèm ghi chú mã phiếu hoàn nếu còn dư.
+     */
     private void rollbackAllocationsList(List<PaymentAllocation> allocations, BigDecimal amountToRollback, String refundCode) {
         if (allocations == null || allocations.isEmpty()
                 || amountToRollback == null || amountToRollback.compareTo(BigDecimal.ZERO) <= 0) {
@@ -542,6 +595,9 @@ public class RefundServiceImpl implements RefundService {
         }
     }
 
+    /**
+     * [Hàm hỗ trợ]: Nối thêm vết hoàn tiền `[Hoàn <số tiền> đ - <mã phiếu hoàn>]` vào trường `notes` của `PaymentAllocation` và cắt gọn tối đa 255 ký tự.
+     */
     private void appendRefundNote(PaymentAllocation pa, String refundCode, BigDecimal refundedAmount) {
         String addition = "[Hoàn " + refundedAmount.stripTrailingZeros().toPlainString() + " đ - " + refundCode + "]";
         String existing = pa.getNotes();

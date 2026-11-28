@@ -35,11 +35,8 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Pattern;
 
 /**
- * Xử lý nghiệp vụ Công nợ & Thanh toán Nhà cung cấp (Supplier Payment):
- * - Tổng hợp công nợ nhà cung cấp theo từng chi nhánh (Tổng tiền nhập - Tổng tiền đã thanh toán) tối ưu chống N+1 query.
- * - Khóa bi quan (Pessimistic Write Lock) trên Nhà cung cấp & Phiếu nhập khi thanh toán để chống race condition.
- * - Chặn gửi trùng thanh toán (clientRequestId idempotency + kiểm tra giao dịch trùng trong 5 giây).
- * - Kiểm tra số tiền thanh toán không vượt quá công nợ còn lại của phiếu nhập VÀ tổng công nợ nhà cung cấp tại chi nhánh.
+ * [Phân hệ]: Tài chính & Kho - Công nợ và thanh toán nhà cung cấp
+ * [Vai trò]: Triển khai nghiệp vụ tổng hợp công nợ NCC theo chi nhánh (tối ưu chống N+1 query), tra cứu phiếu nhập/lịch sử thanh toán và tạo phiếu thanh toán NCC với khóa bi quan (Pessimistic Write Lock), chống gửi trùng (clientRequestId + cửa sổ 5 giây) và kiểm soát không chi vượt công nợ.
  */
 @Service
 public class SupplierPaymentServiceImpl implements SupplierPaymentService {
@@ -770,10 +767,16 @@ public class SupplierPaymentServiceImpl implements SupplierPaymentService {
         return dto;
     }
 
+    /**
+     * [Hàm hỗ trợ]: Cắt khoảng trắng đầu cuối chuỗi đầu vào và trả về null nếu chuỗi rỗng hoặc toàn khoảng trắng.
+     */
     private static String trimToNull(String s) {
         return s == null || s.isBlank() ? null : s.trim();
     }
 
+    /**
+     * [Hàm hỗ trợ]: Ném ResponseStatusException với mã 400 BAD_REQUEST và thông điệp lỗi truyền vào.
+     */
     private static void bad(String message) {
         throw new ResponseStatusException(HttpStatus.BAD_REQUEST, message);
     }

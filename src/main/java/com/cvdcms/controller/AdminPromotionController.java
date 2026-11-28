@@ -23,6 +23,10 @@ import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
 
+/**
+ * [Phân hệ]: Khuyến mãi & Voucher (Quản trị)
+ * [Vai trò]: Controller quản trị chương trình khuyến mãi và phát hành voucher cho bệnh nhân tại đường dẫn /admin/promotions.
+ */
 @Controller
 @RequestMapping("/admin/promotions")
 public class AdminPromotionController {
@@ -50,6 +54,9 @@ public class AdminPromotionController {
         this.userRepository = userRepository;
     }
 
+    /**
+     * [Hàm hỗ trợ]: Nạp các thuộc tính giao diện chung (menu đang chọn, vai trò, tên hiển thị, tài khoản đăng nhập) vào Model.
+     */
     private void addLayoutAttributes(HttpSession session, Model model) {
         model.addAttribute("activeMenu", "admin-promotions");
         if (session != null) {
@@ -59,6 +66,9 @@ public class AdminPromotionController {
         }
     }
 
+    /**
+     * [Hàm hỗ trợ]: Kiểm tra phiên đăng nhập và quyền quản trị chương trình khuyến mãi (Admin, CATALOG_PROMOTIONS hoặc CATALOG_MANAGE).
+     */
     private String checkAdmin(HttpSession session) {
         if (session == null || !(session.getAttribute("loggedInUser") instanceof User user)) {
             return "redirect:/login";
@@ -72,6 +82,10 @@ public class AdminPromotionController {
         return null;
     }
 
+    /**
+     * [Chức năng]: Xử lý trang GET /admin/promotions hiển thị danh sách chương trình khuyến mãi có lọc theo từ khóa, trạng thái và chi nhánh.
+     * [Mục đích]: Kiểm tra quyền quản trị, tải danh sách khuyến mãi qua PromotionService và danh sách chi nhánh để render view admin/promotions/list.
+     */
     @GetMapping
     public String listPromotions(
             @RequestParam(required = false) String keyword,
@@ -97,6 +111,10 @@ public class AdminPromotionController {
         return "admin/promotions/list";
     }
 
+    /**
+     * [Chức năng]: Xử lý GET /admin/promotions/create mở biểu mẫu tạo mới chương trình khuyến mãi.
+     * [Mục đích]: Khởi tạo PromotionDTO với khoảng thời gian hiệu lực mặc định 1 tháng, nạp danh sách chi nhánh, hạng thành viên đang hoạt động, dịch vụ và trả về view admin/promotions/form.
+     */
     @GetMapping("/create")
     public String createForm(Model model, HttpSession session) {
         String authRedirect = checkAdmin(session);
@@ -117,6 +135,10 @@ public class AdminPromotionController {
         return "admin/promotions/form";
     }
 
+    /**
+     * [Chức năng]: Xử lý GET /admin/promotions/{id}/edit mở biểu mẫu chỉnh sửa chương trình khuyến mãi hiện có.
+     * [Mục đích]: Tải thực thể Promotion theo ID từ PromotionService, chuyển đổi sang PromotionDTO kèm danh mục tham chiếu (chi nhánh, hạng, dịch vụ) và trả về view admin/promotions/form.
+     */
     @GetMapping("/{id}/edit")
     public String editForm(@PathVariable Long id, Model model, HttpSession session) {
         String authRedirect = checkAdmin(session);
@@ -153,6 +175,10 @@ public class AdminPromotionController {
         return "admin/promotions/form";
     }
 
+    /**
+     * [Chức năng]: Xử lý POST /admin/promotions/save để tạo mới hoặc cập nhật chương trình khuyến mãi.
+     * [Mục đích]: Kiểm tra quyền quản trị và validation của PromotionDTO; gọi PromotionService để lưu hoặc cập nhật, sau đó chuyển hướng về trang danh sách hoặc quay lại form khi có lỗi.
+     */
     @PostMapping("/save")
     public String savePromotion(
             @Valid @ModelAttribute("promotionForm") PromotionDTO dto,
@@ -188,6 +214,10 @@ public class AdminPromotionController {
         }
     }
 
+    /**
+     * [Chức năng]: Xử lý POST /admin/promotions/{id}/toggle-status để kích hoạt hoặc tạm dừng chương trình khuyến mãi.
+     * [Mục đích]: Xác thực quyền quản trị, gọi PromotionService.togglePromotionStatus và chuyển hướng về /admin/promotions kèm flash message kết quả.
+     */
     @PostMapping("/{id}/toggle-status")
     public String toggleStatus(
             @PathVariable Long id,
@@ -208,6 +238,10 @@ public class AdminPromotionController {
         return "redirect:/admin/promotions";
     }
 
+    /**
+     * [Chức năng]: Xử lý GET /admin/promotions/{id} hiển thị chi tiết chương trình khuyến mãi, danh sách voucher đã phát hành và biểu mẫu cấp phát voucher.
+     * [Mục đích]: Lấy thông tin khuyến mãi, các PatientVoucher thuộc chương trình và danh sách hồ sơ bệnh nhân để render view admin/promotions/detail.
+     */
     @GetMapping("/{id}")
     public String viewDetail(
             @PathVariable Long id,
@@ -235,6 +269,10 @@ public class AdminPromotionController {
         return "admin/promotions/detail";
     }
 
+    /**
+     * [Chức năng]: Xử lý POST /admin/promotions/{id}/issue-vouchers để phát hành voucher hàng loạt cho danh sách bệnh nhân đã chọn.
+     * [Mục đích]: Kiểm tra quyền quản trị và tính hợp lệ của IssueVoucherDTO, gọi PromotionService.issueVouchers và chuyển hướng về trang chi tiết chương trình kèm số lượng voucher đã phát hành hoặc thông báo lỗi.
+     */
     @PostMapping("/{id}/issue-vouchers")
     public String issueVouchers(
             @PathVariable Long id,
